@@ -1,0 +1,20 @@
+{
+    "fileName": "3534Swerve.json",
+    "name": "3534Swerve",
+    "version": "2024.3.5",
+    "frcYear": 2024,
+    "uuid": "7247f731-7345-497b-85ba-95d4879ca606",
+    "mavenUrls": [
+        "https://jitpack.io"
+    ],
+    "jsonUrl": "https://raw.githubusercontent.com/HOC-Team-3534/3534Swerve/master/3534Swerve.json",
+    "javaDependencies": [
+        {
+            "groupId": "com.github.HOC-Team-3534",
+            "artifactId": "3534Swerve",
+            "version": "2024.3.5"
+        }
+    ],
+    "jniDependencies": [],
+    "cppDependencies": []
+}
