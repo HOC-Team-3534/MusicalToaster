@@ -37,27 +37,27 @@ public class SwerveDrive extends SwerveSubsystem {
     final static double br_degrees = (Constants.ROBOTTYPE == RobotType.TBOT) ? 23.90
             : (Constants.ROBOTTYPE == RobotType.PBOT) ? 20.39 : 153.37;
     final static SwerveParams swerveParams = SwerveHelper.loadSwerveParams();
-    final static TalonFX FL_drive = new TalonFX(1);
-    final static TalonFX FL_steer = new TalonFX(3);
-    final static CANcoder FL_cancoder = new CANcoder(2);
+    final static TalonFX FL_drive = new TalonFX(1, "Swerve");
+    final static TalonFX FL_steer = new TalonFX(3, "Swerve");
+    final static CANcoder FL_cancoder = new CANcoder(2, "Swerve");
     final static SwerveModule fl = new SwerveModule(FL_drive, FL_steer, FL_cancoder,
             Rotation2d.fromDegrees(fl_degrees));
-    final static TalonFX FR_drive = new TalonFX(4);
-    final static TalonFX FR_steer = new TalonFX(6);
-    final static CANcoder FR_cancoder = new CANcoder(5);
+    final static TalonFX FR_drive = new TalonFX(4, "Swerve");
+    final static TalonFX FR_steer = new TalonFX(6, "Swerve");
+    final static CANcoder FR_cancoder = new CANcoder(5, "Swerve");
     final static SwerveModule fr = new SwerveModule(FR_drive, FR_steer, FR_cancoder,
             Rotation2d.fromDegrees(fr_degrees));
-    final static TalonFX BL_drive = new TalonFX(7);
-    final static TalonFX BL_steer = new TalonFX(9);
-    final static CANcoder BL_cancoder = new CANcoder(8);
+    final static TalonFX BL_drive = new TalonFX(7, "Swerve");
+    final static TalonFX BL_steer = new TalonFX(9, "Swerve");
+    final static CANcoder BL_cancoder = new CANcoder(8, "Swerve");
     final static SwerveModule bl = new SwerveModule(BL_drive, BL_steer, BL_cancoder,
             Rotation2d.fromDegrees(bl_degrees));
-    final static TalonFX BR_drive = new TalonFX(10);
-    final static TalonFX BR_steer = new TalonFX(12);
-    final static CANcoder BR_cancoder = new CANcoder(11);
+    final static TalonFX BR_drive = new TalonFX(10, "Swerve");
+    final static TalonFX BR_steer = new TalonFX(12, "Swerve");
+    final static CANcoder BR_cancoder = new CANcoder(11, "Swerve");
     final static SwerveModule br = new SwerveModule(BR_drive, BR_steer, BR_cancoder,
             Rotation2d.fromDegrees(br_degrees));
-    final static Pigeon2 pigeon2 = new Pigeon2(Config.PIGEON2_ID);
+    final static Pigeon2 pigeon2 = new Pigeon2(Config.PIGEON2_ID, "Swerve");
     static SwerveDrivetrainModel dt;
     Pose2d gridPose;
     double timeCharacterizing;
