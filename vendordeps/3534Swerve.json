@@ -1,7 +1,7 @@
 {
     "fileName": "3534Swerve.json",
     "name": "3534Swerve",
-    "version": "2024.3.5",
+    "version": "2024.4.2",
     "frcYear": 2024,
     "uuid": "7247f731-7345-497b-85ba-95d4879ca606",
     "mavenUrls": [
@@ -12,7 +12,7 @@
         {
             "groupId": "com.github.HOC-Team-3534",
             "artifactId": "3534Swerve",
-            "version": "2024.3.5"
+            "version": "2024.4.2"
         }
     ],
     "jniDependencies": [],

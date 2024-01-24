@@ -35,7 +35,7 @@ public class SwerveHelper {
                 driveSlotConfigs.kV /= 12;
                 driveSlotConfigs.kA /= 12;
                 var config = Constants.Drive.Known.SDS_MODULE_CONFIGURATION;
-                var newConfig = new SDSModuleConfiguration(Units.inchesToMeters(3.81),
+                var newConfig = new SDSModuleConfiguration(Units.inchesToMeters(3.9375),
                                 config.angleGearRatio,
                                 config.driveGearRatio,
                                 config.angleSlotConfigs,

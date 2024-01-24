@@ -31,7 +31,7 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     // Load PathPlanner paths/trajectories from their files. Takes some time.
-    Arrays.asList(Path.values()).stream().forEach(path -> path.loadPath());
+    // Arrays.asList(Path.values()).stream().forEach(path -> path.loadPath());
     // Instantiate our RobotContainer. This will perform all our button bindings,
     // and put our
     // autonomous chooser on the dashboard.
