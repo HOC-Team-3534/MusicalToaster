@@ -5,16 +5,24 @@ package frc.robot;
 
 import java.util.concurrent.Callable;
 
+import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
+
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.Constants.Drive.Config.DriveCharacterization;
 import frc.robot.Constants.EnabledDebugModes;
-import frc.robot.subsystems.SwerveDrive;
+import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.Swerve.FieldCentricWithProperDeadband;
+import swerve.CommandSwerveDrivetrain;
 
 /**
  * This class is where the bulk of the robot should be declared. Since
@@ -25,14 +33,24 @@ import frc.robot.subsystems.SwerveDrive;
  */
 public class RobotContainer {
 	// The robot's subsystems and commands are defined here...
-	public static final SwerveDrive swerveDrive = new SwerveDrive();
 	// The driver station connected controllers are defined here...
+	private double MaxAngularRate = 4 * Math.PI;
+
 	private static final CommandXboxController driverController = new CommandXboxController(0);
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
 	static SlewRateLimiter slewRateLimiterX = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
 	private static final SendableChooser<Callable<Command>> autonChooser = new SendableChooser<>();
+	private final CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain;
+	private final FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
+			.withDeadband(TunerConstants.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
+			.withMaxSpeed(TunerConstants.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
+			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+	private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
+	private final Telemetry logger = new Telemetry(TunerConstants.kSpeedAt12VoltsMps);
+
+	private final boolean CHARACTERIZATION_ENABLED = true;
 
 	/**
 	 * The container for the robot. Contains subsystems, OI devices, and
@@ -43,14 +61,12 @@ public class RobotContainer {
 		configureBindings();
 
 		// Set Default Commands for Subsystems
-		swerveDrive.setDefaultCommand(swerveDrive.drive());
 
 		// Autonomous Command Sendable Chooser
 		autonChooser.setDefaultOption("No Auton", () -> Commands.none());
 
 		// Show Status of Subsystems on Dashboard
 		SmartDashboard.putData(autonChooser);
-		SmartDashboard.putData(swerveDrive);
 	}
 
 	/**
@@ -67,8 +83,37 @@ public class RobotContainer {
 	 */
 	private void configureBindings() {
 		// The following triggered commands are for debug purposes only
-		TGR.Characterize.tgr().whileTrue(swerveDrive.characterizeDrive(DriveCharacterization.QUASIASTIC_VOLTAGE,
-				DriveCharacterization.QUASIASTIC_DURATION));
+		drivetrain.setDefaultCommand( // Drivetrain will execute this command periodically
+				drivetrain.applyRequest(
+						() -> drive.withVelocityX(-driverController.getLeftY() * TunerConstants.kSpeedAt12VoltsMps) // Drive
+								// forward
+								// with
+								// negative Y (forward)
+								.withVelocityY(-driverController.getLeftX() * TunerConstants.kSpeedAt12VoltsMps) // Drive
+																													// left
+								// with
+								// negative
+								// X
+								// (left)
+								.withRotationalRate(-driverController.getRightX() * MaxAngularRate)
+								.withCreepEnabled(driverController.getRightTriggerAxis() > 0.15) // Drive
+																									// counterclockwise
+																									// with
+				// negative X (left)
+				));
+		driverController.a().and(() -> CHARACTERIZATION_ENABLED).whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
+		driverController.b().whileTrue(drivetrain
+				.applyRequest(
+						() -> point.withModuleDirection(
+								new Rotation2d(-driverController.getLeftY(), -driverController.getLeftX()))));
+
+		// reset the field-centric heading on left bumper press
+		driverController.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
+
+		if (Utils.isSimulation()) {
+			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
+		}
+		drivetrain.registerTelemetry(logger::telemeterize);
 	}
 
 	/**

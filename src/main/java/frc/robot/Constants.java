@@ -7,7 +7,6 @@ import com.pathplanner.lib.path.PathConstraints;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import swerve.SDSModuleConfiguration;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide
@@ -44,8 +43,6 @@ public final class Constants {
        */
       public final static double WHEELBASE_METERS = (Constants.ROBOTTYPE == RobotType.TBOT) ? 0.578
           : (Constants.ROBOTTYPE == RobotType.PBOT) ? 0.508 : 0.5207;
-      public static final SDSModuleConfiguration SDS_MODULE_CONFIGURATION = SDSModuleConfiguration
-          .SDSMK4(SDSModuleConfiguration.driveGearRatios.SDSMK4_L2);
       public static final double MAX_DRIVE_MOTOR_RPM = 6380.0; // Falcon500
                                                                // max rpm
     }
@@ -57,13 +54,6 @@ public final class Constants {
       public static final double WHEELBASE_RADIUS = FL_POS.getNorm();
       public static final SwerveDriveKinematics KINEMATICS = new SwerveDriveKinematics(FL_POS, FR_POS,
           FR_POS.unaryMinus(), FL_POS.unaryMinus());
-      // Drivetrain Performance Mechanical limits
-      static public final double MAX_FWD_REV_SPEED_MPS_EST = Known.MAX_DRIVE_MOTOR_RPM / 60.0
-          / Known.SDS_MODULE_CONFIGURATION.driveGearRatio * Known.SDS_MODULE_CONFIGURATION.wheelCircumference;
-      static public final double MAX_ROTATE_SPEED_RAD_PER_SEC_EST = MAX_FWD_REV_SPEED_MPS_EST
-          / (Math.PI * Math.pow(WHEELBASE_RADIUS, 2)) * 2 * Math.PI;
-      static public final double MAX_ROTATE_SPEED_RAD_PER_SEC_MOTOR_EST = Known.MAX_DRIVE_MOTOR_RPM / 60
-          / Known.SDS_MODULE_CONFIGURATION.angleGearRatio * 2 * Math.PI;
     }
 
     public static final class Config {
