@@ -18,7 +18,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
  * wherever the constants are needed, to reduce verbosity.
  */
 public final class Constants {
-  public static RobotType ROBOTTYPE = RobotType.CBOT;
+  public static RobotType ROBOTTYPE = RobotType.TBOT;
   public static double LOOP_PERIOD_MILLIS = 20;
 
   public enum RobotType {
@@ -34,14 +34,14 @@ public final class Constants {
        * <p>
        * Should be measured from center to center.
        */
-      public final static double TRACKWIDTH_METERS = (Constants.ROBOTTYPE == RobotType.TBOT) ? 0.578
+      public final static double TRACKWIDTH_METERS = (Constants.ROBOTTYPE == RobotType.TBOT) ? 0.5842
           : (Constants.ROBOTTYPE == RobotType.PBOT) ? 0.508 : 0.508;
       /**
        * The front-to-back distance between the drivetrain wheels.
        * <p>
        * Should be measured from center to center.
        */
-      public final static double WHEELBASE_METERS = (Constants.ROBOTTYPE == RobotType.TBOT) ? 0.578
+      public final static double WHEELBASE_METERS = (Constants.ROBOTTYPE == RobotType.TBOT) ? 0.5842
           : (Constants.ROBOTTYPE == RobotType.PBOT) ? 0.508 : 0.5207;
       public static final double MAX_DRIVE_MOTOR_RPM = 6380.0; // Falcon500
                                                                // max rpm

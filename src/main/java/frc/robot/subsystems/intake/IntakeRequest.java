@@ -22,7 +22,6 @@ public interface IntakeRequest {
         public StatusCode apply(IntakeControlRequestParameters parameters, TalonSRX frontBack, TalonSRX leftRight) {
             var frontBackPercentOut = run ? reversed || parameters.leftRightHasNote ? intakePercent * -1 : intakePercent
                     : 0;
-
             var leftRightPercentOut = run ? reversed || parameters.frontBackHasNote ? intakePercent * -1 : intakePercent
                     : 0;
             frontBack.set(ControlMode.PercentOutput, frontBackPercentOut);
