@@ -3,6 +3,9 @@ package frc.robot.subsystems.intake;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveModule;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.SwerveControlRequestParameters;
 
 public interface IntakeRequest {
     public class IntakeControlRequestParameters {
@@ -43,6 +46,14 @@ public interface IntakeRequest {
             this.intakePercent = intakePercent;
             return this;
         }
+    }
+
+    public class Idle implements IntakeRequest {
+        @Override
+        public StatusCode apply(IntakeControlRequestParameters parameters, TalonSRX frontBack, TalonSRX leftRight) {
+            return StatusCode.OK;
+        }
+
     }
 
 }
