@@ -5,6 +5,8 @@ package frc.robot;
 
 import java.util.concurrent.Callable;
 
+import javax.sound.sampled.Control;
+
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
@@ -21,6 +23,8 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swerve.FieldCentricWithProperDeadband;
 import swerve.CommandSwerveDrivetrain;
 
@@ -49,6 +53,11 @@ public class RobotContainer {
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 	private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 	private final Telemetry logger = new Telemetry(TunerConstants.kSpeedAt12VoltsMps);
+
+	private final Intake intake = new Intake();
+	private final ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
+	private final ControlIntake runExtake = new ControlIntake().withIntakePercent(0.5).withIntakeReversed(true);
+	private final ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
 
 	private final boolean CHARACTERIZATION_ENABLED = true;
 
@@ -108,12 +117,16 @@ public class RobotContainer {
 								new Rotation2d(-driverController.getLeftY(), -driverController.getLeftX()))));
 
 		// reset the field-centric heading on left bumper press
-		driverController.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
+		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
+
+		TGR.Intake.tgr().whileTrue(intake.runEnd(() -> intake.applyRequest(() -> runIntake),
+				() -> intake.applyRequest(() -> stopIntake)));
 
 		if (Utils.isSimulation()) {
 			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
 		}
 		drivetrain.registerTelemetry(logger::telemeterize);
+
 	}
 
 	/**
@@ -132,7 +145,10 @@ public class RobotContainer {
 
 	public enum TGR {
 		Creep(driverController.leftBumper()),
-		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled));
+		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled)),
+		ResetFieldRelative(driverController.start()),
+		Intake(driverController.rightTrigger(0.15)),
+		Extake(driverController.rightBumper());
 
 		Trigger trigger;
 

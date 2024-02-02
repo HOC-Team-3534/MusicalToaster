@@ -6,7 +6,6 @@ import com.ctre.phoenix6.StatusCode;
 
 public interface IntakeRequest {
     public class IntakeControlRequestParameters {
-        boolean leftRightHasNote, frontBackHasNote;
 
     }
 
@@ -17,16 +16,28 @@ public interface IntakeRequest {
         private boolean run;
         private boolean reversed;
         private double intakePercent;
+        private boolean leftRightHasNote;
+        private boolean frontBackHasNote;
 
         @Override
         public StatusCode apply(IntakeControlRequestParameters parameters, TalonSRX frontBack, TalonSRX leftRight) {
-            var frontBackPercentOut = run ? reversed || parameters.leftRightHasNote ? intakePercent * -1 : intakePercent
+            var frontBackPercentOut = run ? reversed || leftRightHasNote ? intakePercent * -1 : intakePercent
                     : 0;
-            var leftRightPercentOut = run ? reversed || parameters.frontBackHasNote ? intakePercent * -1 : intakePercent
+            var leftRightPercentOut = run ? reversed || frontBackHasNote ? intakePercent * -1 : intakePercent
                     : 0;
             frontBack.set(ControlMode.PercentOutput, frontBackPercentOut);
             leftRight.set(ControlMode.PercentOutput, leftRightPercentOut);
             return StatusCode.OK;
+        }
+
+        public ControlIntake withFronBackHasNote(boolean hasNote) {
+            this.frontBackHasNote = hasNote;
+            return this;
+        }
+
+        public ControlIntake withLeftRightHasNote(boolean hasNote) {
+            this.leftRightHasNote = hasNote;
+            return this;
         }
 
         public ControlIntake withIntakeRunning(boolean run) {
