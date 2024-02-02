@@ -1,4 +1,4 @@
-package frc.robot.subsystems.swerve;
+package frc.robot.subsystems.swervedrive;
 
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule;

@@ -5,8 +5,6 @@ package frc.robot;
 
 import java.util.concurrent.Callable;
 
-import javax.sound.sampled.Control;
-
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
@@ -25,7 +23,7 @@ import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
-import frc.robot.subsystems.swerve.FieldCentricWithProperDeadband;
+import frc.robot.subsystems.swervedrive.*;
 import swerve.CommandSwerveDrivetrain;
 
 /**
