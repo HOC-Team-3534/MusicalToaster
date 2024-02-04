@@ -24,6 +24,8 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.*;
+import frc.robot.subsystems.turret.ShooterRequest;
+import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import swerve.CommandSwerveDrivetrain;
 
 /**
@@ -56,6 +58,9 @@ public class RobotContainer {
 	private final ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
 	private final ControlIntake runExtake = new ControlIntake().withIntakePercent(0.5).withIntakeReversed(true);
 	private final ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
+	private final ControlShooter shooterOff = new ControlShooter().withVoltage(0);
+	private final ControlShooter shooterAmp = new ControlShooter().withVoltage(3);
+	private final ControlShooter shooterSpeaker = new ControlShooter().withVoltage(6);
 
 	private final boolean CHARACTERIZATION_ENABLED = true;
 
