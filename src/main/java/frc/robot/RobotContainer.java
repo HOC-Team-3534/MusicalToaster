@@ -5,6 +5,8 @@ package frc.robot;
 
 import java.util.concurrent.Callable;
 
+import org.opencv.features2d.FlannBasedMatcher;
+
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
@@ -13,6 +15,7 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.internal.DriverStationModeThread;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -25,7 +28,12 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.*;
 import frc.robot.subsystems.turret.ShooterRequest;
+import frc.robot.subsystems.turret.Turret;
+import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
+import frc.robot.subsystems.turret.TurretRequest.AimForAmp;
+import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
+import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
 import swerve.CommandSwerveDrivetrain;
 
 /**
@@ -59,8 +67,18 @@ public class RobotContainer {
 	private final ControlIntake runExtake = new ControlIntake().withIntakePercent(0.5).withIntakeReversed(true);
 	private final ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
 	private final ControlShooter shooterOff = new ControlShooter().withVoltage(0);
-	private final ControlShooter shooterAmp = new ControlShooter().withVoltage(3);
-	private final ControlShooter shooterSpeaker = new ControlShooter().withVoltage(6);
+	private final ControlShooter shooterAmp = new ControlShooter().withVoltage(3);// TODO Find these valuess
+	private final ControlShooter shooterSpeaker = new ControlShooter().withVoltage(6);// TODO Find these
+
+	private final Turret turret = new Turret(() -> drivetrain.getState());
+	private final IndexFromIntake indexFromIntake = new IndexFromIntake().withRollerOutput(0.25)
+			.withRotateTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(-35))
+			.withIntakeState(() -> intake.getState());// TODO
+	// Tune
+	// all
+	// values
+	private final AimForSpeaker aimForSpeaker = new AimForSpeaker();
+	private final AimForAmp aimForAmp = new AimForAmp();
 
 	private final boolean CHARACTERIZATION_ENABLED = true;
 
@@ -113,6 +131,12 @@ public class RobotContainer {
 																									// with
 				// negative X (left)
 				));
+
+		intake.setDefaultCommand(intake.applyRequest(() -> stopIntake));
+
+		turret.setDefaultCommand(
+				turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
+
 		driverController.a().and(() -> CHARACTERIZATION_ENABLED).whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
 		driverController.b().whileTrue(drivetrain
 				.applyRequest(
@@ -122,8 +146,16 @@ public class RobotContainer {
 		// reset the field-centric heading on left bumper press
 		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
 
-		TGR.Intake.tgr().whileTrue(intake.runEnd(() -> intake.applyRequest(() -> runIntake),
-				() -> intake.applyRequest(() -> stopIntake)));
+		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> runIntake));
+
+		TGR.ShootSpeaker.tgr().whileTrue(
+				turret.applyRequest(() -> indexFromIntake, () -> shooterSpeaker)
+						.until(() -> turret.getState().noteLoaded)
+						.andThen(turret.applyRequest(() -> aimForSpeaker, () -> shooterSpeaker)));
+		TGR.ShootAmp.tgr().whileTrue(
+				turret.applyRequest(() -> indexFromIntake, () -> shooterAmp)
+						.until(() -> turret.getState().noteLoaded)
+						.andThen(turret.applyRequest(() -> aimForAmp, () -> shooterAmp)));
 
 		if (Utils.isSimulation()) {
 			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
@@ -151,7 +183,9 @@ public class RobotContainer {
 		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled)),
 		ResetFieldRelative(driverController.start()),
 		Intake(driverController.rightTrigger(0.15)),
-		Extake(driverController.rightBumper());
+		Extake(driverController.rightBumper()),
+		ShootSpeaker(driverController.x()),
+		ShootAmp(driverController.b());
 
 		Trigger trigger;
 

@@ -8,6 +8,7 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
@@ -16,11 +17,11 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.intake.IntakeRequest;
+import frc.robot.subsystems.intake.Intake.IntakeState;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 
 public class Turret extends SubsystemBase {
-    Supplier<Rotation2d> robotHeading;
+    final Supplier<SwerveDriveState> swerveDriveStateSupplier;
 
     TalonFX rightShooterMotor, leftShooterMotor, rotateMotor, tiltMotor;
     TalonSRX rollerMotor;
@@ -33,7 +34,7 @@ public class Turret extends SubsystemBase {
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
 
-    public Turret(Supplier<Rotation2d> robotHeading) {
+    public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
         super();
         rightShooterMotor = new TalonFX(0);
         leftShooterMotor = new TalonFX(0);
@@ -46,7 +47,7 @@ public class Turret extends SubsystemBase {
         // TODO Configuration of gear ratio and set them, add analog sensor for position
         // on motor,
 
-        this.robotHeading = robotHeading;
+        this.swerveDriveStateSupplier = swerveDriveStateSupplier;
     }
 
     @Override
@@ -154,12 +155,22 @@ public class Turret extends SubsystemBase {
         }
     }
 
+    public TurretState getState() {
+        try {
+            m_stateLock.readLock().lock();
+
+            return m_cachedState;
+        } finally {
+            m_stateLock.readLock().unlock();
+        }
+    }
+
     public Rotation2d getRobotRelativeAngle() {
         return null;
     }
 
     public Rotation2d getFieldRelativeAngle() {
-        return getRobotRelativeAngle().plus(robotHeading.get());
+        return getRobotRelativeAngle().plus(swerveDriveStateSupplier.get().Pose.getRotation());
     }
 
 }

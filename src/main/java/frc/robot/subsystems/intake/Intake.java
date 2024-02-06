@@ -63,6 +63,8 @@ public class Intake extends SubsystemBase {
 
         public boolean noteInPosition[] = new boolean[4];
 
+        public int loopsWithoutNote[] = new int[4];
+
     }
 
     final IntakeState m_cachedState = new IntakeState();
@@ -130,9 +132,17 @@ public class Intake extends SubsystemBase {
 
                     for (int i = 0; 0 < sensors.length; i++) {
                         m_cachedState.noteInPosition[i] = m_cachedState.noteInPosition[i]
-                                || (m_cachedState.seeingNote[i] && !sensors[i].get());
+                                || (!m_cachedState.seeingNote[i] && sensors[i].get());
 
                         m_cachedState.seeingNote[i] = sensors[i].get();
+                        if (sensors[i].get()) {
+                            m_cachedState.loopsWithoutNote[i] = 0;
+                        } else {
+                            m_cachedState.loopsWithoutNote[i]++;
+                        }
+                        if (m_cachedState.loopsWithoutNote[i] >= 5) {
+                            m_cachedState.noteInPosition[i] = false;
+                        }
                     }
 
                     m_requestParameters.intakeState = m_cachedState;
