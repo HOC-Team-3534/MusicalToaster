@@ -1,4 +1,6 @@
-package math;
+package frc.robot.helpers.shooting;
+
+;
 
 public class QuadraticEquation {
 	double a, b, c;

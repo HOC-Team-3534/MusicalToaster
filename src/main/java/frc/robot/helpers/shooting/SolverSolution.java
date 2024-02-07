@@ -1,16 +1,18 @@
-package frc.robot.helpers.shooting;;
+package frc.robot.helpers.shooting;
 
 import java.util.function.Function;
+
+import edu.wpi.first.math.geometry.Translation2d;
 
 public class SolverSolution {
 	final double timeOfFlightGuess;
 	double timeOfFlight;
-	final Vector2D goalFinalGuess;
-	Vector2D goalFinal;
+	final Translation2d goalFinalGuess;
+	Translation2d goalFinal;
 	double error;
 
-	public SolverSolution(double timeOfFlightGuess, Vector2D goalFinalGuess, GoalFinalEquation goalFinalEquation,
-			Function<Vector2D, Double> timeOfFlightEquation) {
+	public SolverSolution(double timeOfFlightGuess, Translation2d goalFinalGuess, GoalFinalEquation goalFinalEquation,
+			Function<Translation2d, Double> timeOfFlightEquation) {
 		this.timeOfFlightGuess = timeOfFlightGuess;
 		this.goalFinalGuess = goalFinalGuess;
 		this.calculate(goalFinalEquation, timeOfFlightEquation);
@@ -20,7 +22,7 @@ public class SolverSolution {
 		return timeOfFlightGuess;
 	}
 
-	public Vector2D getGoalFinalGuess() {
+	public Translation2d getGoalFinalGuess() {
 		return goalFinalGuess;
 	}
 
@@ -28,7 +30,7 @@ public class SolverSolution {
 		return timeOfFlight;
 	}
 
-	public Vector2D getGoalFinalCalculated() {
+	public Translation2d getGoalFinalCalculated() {
 		return goalFinal;
 	}
 
@@ -36,7 +38,7 @@ public class SolverSolution {
 		return error;
 	}
 
-	void calculate(GoalFinalEquation goalFinalEquation, Function<Vector2D, Double> timeOfFlightEquation) {
+	void calculate(GoalFinalEquation goalFinalEquation, Function<Translation2d, Double> timeOfFlightEquation) {
 		timeOfFlight = timeOfFlightEquation.apply(goalFinalGuess);
 		goalFinal = goalFinalEquation.getGoalFinal(timeOfFlightGuess);
 
