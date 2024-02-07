@@ -88,6 +88,7 @@ public interface TurretRequest {
     public class AimForSpeaker implements TurretRequest {
         private Rotation2d tolerance;
         private Rotation2d tilt;
+        private Rotation2d tiltTolerance;
         private double rollerPercentOut;
         private Supplier<SwerveDriveState> swerveDriveStateSupplier;
 
@@ -111,7 +112,8 @@ public interface TurretRequest {
                 targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
                 if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()) {
                     outputTilt = tiltFunction.apply(distanceToGoal);
-                    rollerOn = true;
+                    if (tiltMotor.getClosedLoopError().getValueAsDouble() <= tiltTolerance.getRotations())
+                        rollerOn = true;
                 }
             }
 
@@ -137,6 +139,11 @@ public interface TurretRequest {
             return this;
         }
 
+        public AimForSpeaker withTiltTolerance(Rotation2d tiltTolerance) {
+            this.tiltTolerance = tiltTolerance;
+            return this;
+        }
+
         public AimForSpeaker withTilt(Rotation2d tilt) {
             this.tilt = tilt;
             return this;
@@ -154,6 +161,7 @@ public interface TurretRequest {
         private Rotation2d tolerance;
         private Rotation2d tilt;
         private double rollerPercentOut;
+        private Rotation2d tiltTolerance;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
@@ -170,7 +178,8 @@ public interface TurretRequest {
                 targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
                 if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()) {
                     outputTilt = tilt;
-                    rollerOn = true;
+                    if (tiltMotor.getClosedLoopError().getValueAsDouble() <= tiltTolerance.getRotations())
+                        rollerOn = true;
                 }
             }
 
@@ -188,6 +197,11 @@ public interface TurretRequest {
 
         public AimForAmp withRotateTolerance(Rotation2d tolerance) {
             this.tolerance = tolerance;
+            return this;
+        }
+
+        public AimForAmp withTiltTolerance(Rotation2d tiltTolerance) {
+            this.tiltTolerance = tiltTolerance;
             return this;
         }
 
