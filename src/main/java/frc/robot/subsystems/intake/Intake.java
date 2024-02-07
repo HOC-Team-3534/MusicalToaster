@@ -167,15 +167,4 @@ public class Intake extends SubsystemBase {
         }
     }
 
-    public void resetNoteInPosition(int index) {
-        // TODO Once turret is done, implement resetting a note into position
-        try {
-            m_stateLock.writeLock().lock();
-
-            m_cachedState.noteInPosition[index] = false;
-        } finally {
-            m_stateLock.writeLock().unlock();
-        }
-    }
-
 }

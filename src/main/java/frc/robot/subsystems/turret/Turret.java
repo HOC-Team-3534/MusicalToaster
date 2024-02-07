@@ -13,15 +13,26 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.Unit;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.intake.Intake.IntakeState;
+import frc.robot.helpers.shooting.GoalFinalEquation;
+import frc.robot.helpers.shooting.QuadraticEquation;
+import frc.robot.helpers.shooting.ShootWhileMovingSolver;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 
 public class Turret extends SubsystemBase {
     final Supplier<SwerveDriveState> swerveDriveStateSupplier;
+    final Supplier<ChassisSpeeds> chassisSpeeSupplier;
+
+    final QuadraticEquation timeOfFlightEquation = new QuadraticEquation().withA(0).withB(0).withC(0);
 
     TalonFX rightShooterMotor, leftShooterMotor, rotateMotor, tiltMotor;
     TalonSRX rollerMotor;
@@ -34,7 +45,7 @@ public class Turret extends SubsystemBase {
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
 
-    public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
+    public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedSupplier) {
         super();
         rightShooterMotor = new TalonFX(0);
         leftShooterMotor = new TalonFX(0);
@@ -48,6 +59,7 @@ public class Turret extends SubsystemBase {
         // on motor,
 
         this.swerveDriveStateSupplier = swerveDriveStateSupplier;
+        this.chassisSpeeSupplier = chassisSpeedSupplier;
     }
 
     @Override
@@ -77,6 +89,10 @@ public class Turret extends SubsystemBase {
         public Rotation2d elevation;
 
         public boolean noteLoaded;
+
+        public int loopsWithoutNote;
+
+        public Translation2d virtualGoalLocationDisplacement;
 
     }
 
@@ -143,6 +159,28 @@ public class Turret extends SubsystemBase {
                     m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
 
                     m_cachedState.noteLoaded = sensor.get() || m_cachedState.noteLoaded;
+
+                    if (sensor.get())
+                        m_cachedState.loopsWithoutNote = 0;
+                    else
+                        m_cachedState.loopsWithoutNote++;
+                    if (m_cachedState.loopsWithoutNote >= 5)
+                        m_cachedState.noteLoaded = false;
+
+                    var robotPosition = swerveDriveStateSupplier.get().Pose.getTranslation();
+                    var robotVelocity = chassisSpeeSupplier.get();
+                    var goalPosition = DriverStation.getAlliance().get().compareTo(Alliance.Blue) == 0
+                            ? new Translation2d(Units.inchesToMeters(9), Units.inchesToMeters(218.64))
+                            : new Translation2d(Units.feetToMeters(54.75) - Units.inchesToMeters(9),
+                                    Units.inchesToMeters(218.64));
+                    var goalFinalEquation = new GoalFinalEquation().withRobotPosition(robotPosition)
+                            .withRobotVelocity(robotVelocity).withGoalPosition(goalPosition);
+
+                    var shootWhileMoving = new ShootWhileMovingSolver(goalFinalEquation,
+                            (vector) -> timeOfFlightEquation.get(vector.getNorm()));
+
+                    var solution = shootWhileMoving.findSolution(0.005, 20, 5);
+                    m_cachedState.virtualGoalLocationDisplacement = solution.getGoalFinalCalculated();
 
                     m_requestParameters.turretState = m_cachedState;
 

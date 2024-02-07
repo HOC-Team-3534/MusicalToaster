@@ -1,17 +1,20 @@
 package frc.robot.subsystems.turret;
 
-import java.lang.annotation.Target;
+import static frc.robot.subsystems.turret.TurretRequest.calculateTargetAzimuth;
+
 import java.util.function.Supplier;
+
+import java.util.function.*;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.subsystems.intake.Intake.IntakeState;
-import frc.robot.subsystems.intake.Intake.IntakeThread;
 import frc.robot.subsystems.turret.Turret.TurretState;
 
 public interface TurretRequest {
@@ -83,22 +86,119 @@ public interface TurretRequest {
     }
 
     public class AimForSpeaker implements TurretRequest {
+        private Rotation2d tolerance;
+        private Rotation2d tilt;
+        private double rollerPercentOut;
+        private Supplier<SwerveDriveState> swerveDriveStateSupplier;
+
+        private Function<Double, Rotation2d> tiltFunction;
+
         @Override
-        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor,
+                TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
+            var currentAzimuth = parameters.turretState.azimuth;
+            var rollerOn = false;
+            var outputTilt = new Rotation2d();
+            var targetAzimuth = currentAzimuth;
+
+            if (parameters.turretState.noteLoaded) {
+                var robotOrientation = swerveDriveStateSupplier.get().Pose.getRotation();
+                var virtualGoalLocationDisplacement = parameters.turretState.virtualGoalLocationDisplacement;
+                var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
+                var distanceToGoal = virtualGoalLocationDisplacement.getNorm();
+                targetAzimuth = rotationToGoal.minus(robotOrientation);
+                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
+                if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()) {
+                    outputTilt = tiltFunction.apply(distanceToGoal);
+                    rollerOn = true;
+                }
+            }
+
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);
+            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
+            tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
 
             return StatusCode.OK;
         }
 
+        public AimForSpeaker withTiltFunction(Function<Double, Rotation2d> tiltFunction) {
+            this.tiltFunction = tiltFunction;
+            return this;
+        }
+
+        public AimForSpeaker withSwerveDriveState(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
+            this.swerveDriveStateSupplier = swerveDriveStateSupplier;
+            return this;
+        }
+
+        public AimForSpeaker withRotateTolerance(Rotation2d tolerance) {
+            this.tolerance = tolerance;
+            return this;
+        }
+
+        public AimForSpeaker withTilt(Rotation2d tilt) {
+            this.tilt = tilt;
+            return this;
+        }
+
+        public AimForSpeaker withRollerOutput(double percentOut) {
+            this.rollerPercentOut = percentOut;
+            return this;
+
+        }
     }
 
     public class AimForAmp implements TurretRequest {
+        private Supplier<SwerveDriveState> swerveDriveStateSupplier;
+        private Rotation2d tolerance;
+        private Rotation2d tilt;
+        private double rollerPercentOut;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
 
+            var currentAzimuth = parameters.turretState.azimuth;
+            var rollerOn = false;
+            var outputTilt = new Rotation2d();
+            var targetAzimuth = currentAzimuth;
+            var robotOrientation = swerveDriveStateSupplier.get().Pose.getRotation();
+
+            if (parameters.turretState.noteLoaded) {
+                targetAzimuth = Rotation2d.fromDegrees(90).minus(robotOrientation);
+                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
+                if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()) {
+                    outputTilt = tilt;
+                    rollerOn = true;
+                }
+            }
+
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);
+            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
+            tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
+
             return StatusCode.OK;
+        }
+
+        public AimForAmp withSwerveDriveState(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
+            this.swerveDriveStateSupplier = swerveDriveStateSupplier;
+            return this;
+        }
+
+        public AimForAmp withRotateTolerance(Rotation2d tolerance) {
+            this.tolerance = tolerance;
+            return this;
+        }
+
+        public AimForAmp withTilt(Rotation2d tilt) {
+            this.tilt = tilt;
+            return this;
+        }
+
+        public AimForAmp withRollerOutput(double percentOut) {
+            this.rollerPercentOut = percentOut;
+            return this;
         }
     }
 
@@ -111,7 +211,7 @@ public interface TurretRequest {
 
     }
 
-    private static Rotation2d calculateTargetAzimuth(Rotation2d target, Rotation2d current, double lowerLimitDegrees,
+    public static Rotation2d calculateTargetAzimuth(Rotation2d target, Rotation2d current, double lowerLimitDegrees,
             double upperLimitDegrees) {
         double a = current.getDegrees();
         double b = target.getDegrees();

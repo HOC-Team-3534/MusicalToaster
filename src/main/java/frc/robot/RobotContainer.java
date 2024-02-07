@@ -70,12 +70,12 @@ public class RobotContainer {
 	private final ControlShooter shooterAmp = new ControlShooter().withVoltage(3);// TODO Find these valuess
 	private final ControlShooter shooterSpeaker = new ControlShooter().withVoltage(6);// TODO Find these
 
-	private final Turret turret = new Turret(() -> drivetrain.getState());
+	private final Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
 	private final IndexFromIntake indexFromIntake = new IndexFromIntake().withRollerOutput(0.25)
 			.withRotateTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(-35))
 			.withIntakeState(() -> intake.getState());// TODO
 	// Tune
-	// all
+	// all,
 	// values
 	private final AimForSpeaker aimForSpeaker = new AimForSpeaker();
 	private final AimForAmp aimForAmp = new AimForAmp();
