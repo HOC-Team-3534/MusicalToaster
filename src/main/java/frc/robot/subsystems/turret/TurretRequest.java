@@ -2,18 +2,19 @@ package frc.robot.subsystems.turret;
 
 import static frc.robot.subsystems.turret.TurretRequest.calculateTargetAzimuth;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
-
-import java.util.function.*;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.intake.Intake.IntakeState;
 import frc.robot.subsystems.turret.Turret.TurretState;
 
@@ -87,7 +88,6 @@ public interface TurretRequest {
 
     public class AimForSpeaker implements TurretRequest {
         private Rotation2d tolerance;
-        private Rotation2d tilt;
         private Rotation2d tiltTolerance;
         private double rollerPercentOut;
         private Supplier<SwerveDriveState> swerveDriveStateSupplier;
@@ -141,11 +141,6 @@ public interface TurretRequest {
 
         public AimForSpeaker withTiltTolerance(Rotation2d tiltTolerance) {
             this.tiltTolerance = tiltTolerance;
-            return this;
-        }
-
-        public AimForSpeaker withTilt(Rotation2d tilt) {
-            this.tilt = tilt;
             return this;
         }
 
@@ -214,6 +209,138 @@ public interface TurretRequest {
             this.rollerPercentOut = percentOut;
             return this;
         }
+    }
+
+    public class CalibrateShooter implements TurretRequest {
+        private Rotation2d tolerance;
+        private double rollerPercentOut;
+        private Rotation2d tiltTolerance;
+
+        public CalibrateShooter() {
+            SmartDashboard.putNumber("Tilt Degrees", 0);
+        }
+
+        @Override
+        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+                TalonSRX rollerMotor) {
+            var currentAzimuth = parameters.turretState.azimuth;
+            var rollerOn = false;
+            var outputTilt = new Rotation2d();
+            var targetAzimuth = currentAzimuth;
+
+            if (parameters.turretState.noteLoaded) {
+                targetAzimuth = new Rotation2d();
+                if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()) {
+                    var checkTilt = Rotation2d.fromDegrees(SmartDashboard.getNumber("Tilt Degrees", 0));
+                    if (checkTilt.getDegrees() < -50 || checkTilt.getDegrees() > 50)
+                        outputTilt = checkTilt;
+                    if (tiltMotor.getClosedLoopError().getValueAsDouble() <= tiltTolerance.getRotations())
+                        rollerOn = true;
+                }
+            }
+
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);
+            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
+            tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
+
+            return StatusCode.OK;
+        }
+
+        public CalibrateShooter withRotateTolerance(Rotation2d tolerance) {
+            this.tolerance = tolerance;
+            return this;
+        }
+
+        public CalibrateShooter withTiltTolerance(Rotation2d tiltTolerance) {
+            this.tiltTolerance = tiltTolerance;
+            return this;
+        }
+
+        public CalibrateShooter withRollerOutput(double percentOut) {
+            this.rollerPercentOut = percentOut;
+            return this;
+        }
+
+    }
+
+    public class TestingTurret implements TurretRequest {
+        private double inputPercentTilt;
+        private double inputPercentRotation;
+
+        @Override
+        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+                TalonSRX rollerMotor) {
+
+            rotateMotor.set(inputPercentRotation);
+            tiltMotor.set(inputPercentTilt);
+            return StatusCode.OK;
+        }
+
+        public TestingTurret withPercentTilt(double inputPercentTilt) {
+            this.inputPercentTilt = inputPercentTilt;
+            return this;
+        }
+
+        public TestingTurret withPercentRotate(double inputPercentRotation) {
+            this.inputPercentRotation = inputPercentRotation;
+            return this;
+        }
+
+    }
+
+    public class ShootFromSubwoofer implements TurretRequest {
+
+        private Rotation2d tilt;
+        private Rotation2d rotation;
+        private Supplier<Boolean> readyToShoot;
+        private Rotation2d tolerance;
+        private double rollerPercentOut;
+
+        @Override
+        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+                TalonSRX rollerMotor) {
+            var rollerOn = false;
+            var outputTilt = new Rotation2d();
+
+            if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()) {
+                outputTilt = tilt;
+                if (readyToShoot.get()) {
+                    rollerOn = true;
+                }
+            }
+
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);
+            rotateMotor.setControl(new MotionMagicVoltage(rotation.getRotations()));
+            tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
+
+            return StatusCode.OK;
+        }
+
+        public ShootFromSubwoofer withTilt(Rotation2d tilt) {
+            this.tilt = tilt;
+            return this;
+        }
+
+        public ShootFromSubwoofer withRotation(Rotation2d rotation) {
+            this.rotation = rotation;
+            return this;
+        }
+
+        public ShootFromSubwoofer withTolerance(Rotation2d tolerance) {
+            this.tolerance = tolerance;
+            return this;
+        }
+
+        public ShootFromSubwoofer withReadyToShoot(Supplier<Boolean> readyToShoot) {
+            this.readyToShoot = readyToShoot;
+            return this;
+        }
+
+        public ShootFromSubwoofer withRollerPercent(double rollerPercentOut) {
+            this.rollerPercentOut = rollerPercentOut;
+            return this;
+        }
+
     }
 
     public class Idle implements TurretRequest {

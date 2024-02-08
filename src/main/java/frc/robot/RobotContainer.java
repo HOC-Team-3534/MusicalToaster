@@ -5,17 +5,14 @@ package frc.robot;
 
 import java.util.concurrent.Callable;
 
-import org.opencv.features2d.FlannBasedMatcher;
-
-import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.internal.DriverStationModeThread;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -26,14 +23,15 @@ import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
-import frc.robot.subsystems.swervedrive.*;
-import frc.robot.subsystems.turret.ShooterRequest;
-import frc.robot.subsystems.turret.Turret;
-import frc.robot.subsystems.turret.TurretRequest;
+import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
+import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest.AimForAmp;
 import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
+import frc.robot.subsystems.turret.TurretRequest.CalibrateShooter;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
+import frc.robot.subsystems.turret.TurretRequest.ShootFromSubwoofer;
+import frc.robot.subsystems.turret.TurretRequest.TestingTurret;
 import swerve.CommandSwerveDrivetrain;
 
 /**
@@ -74,11 +72,24 @@ public class RobotContainer {
 	private final IndexFromIntake indexFromIntake = new IndexFromIntake().withRollerOutput(0.25)
 			.withRotateTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(-35))
 			.withIntakeState(() -> intake.getState());// TODO
+
+	private final TestingTurret testingShooter = new TestingTurret();
+	private final CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
+
 	// Tune
 	// all,
 	// values
-	private final AimForSpeaker aimForSpeaker = new AimForSpeaker();
-	private final AimForAmp aimForAmp = new AimForAmp();
+	private final AimForSpeaker aimForSpeaker = new AimForSpeaker().withRollerOutput(0.25)
+			.withRotateTolerance(Rotation2d.fromDegrees(1))
+			.withTiltTolerance(Rotation2d.fromDegrees(1)).withTiltFunction((distance) -> new Rotation2d())
+			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find distance table
+	private final AimForAmp aimForAmp = new AimForAmp().withRollerOutput(0.25)
+			.withRotateTolerance(Rotation2d.fromDegrees(1))
+			.withTiltTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(10))
+			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
+	private final ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer().withRollerPercent(0.25)
+			.withRotation(new Rotation2d()).withTilt(Rotation2d.fromDegrees(35))
+			.withTolerance(Rotation2d.fromDegrees(1));
 
 	private final boolean CHARACTERIZATION_ENABLED = true;
 
@@ -134,8 +145,9 @@ public class RobotContainer {
 
 		intake.setDefaultCommand(intake.applyRequest(() -> stopIntake));
 
-		turret.setDefaultCommand(
-				turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
+		if (!EnabledDebugModes.testingTurret)
+			turret.setDefaultCommand(
+					turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
 
 		driverController.a().and(() -> CHARACTERIZATION_ENABLED).whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
 		driverController.b().whileTrue(drivetrain
@@ -156,11 +168,27 @@ public class RobotContainer {
 				turret.applyRequest(() -> indexFromIntake, () -> shooterAmp)
 						.until(() -> turret.getState().noteLoaded)
 						.andThen(turret.applyRequest(() -> aimForAmp, () -> shooterAmp)));
+		TGR.ShootFromSubwoofer.tgr().whileTrue(turret.applyRequest(
+				() -> shootFromSubwoofer.withReadyToShoot(() -> TGR.PrepareShootForSubwoofer.tgr().getAsBoolean()),
+				() -> shooterSpeaker));
 
 		if (Utils.isSimulation()) {
 			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
 		}
 		drivetrain.registerTelemetry(logger::telemeterize);
+
+		TGR.TestingRotationPositive.tgr()
+				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0.05).withPercentTilt(0),
+						() -> shooterOff));
+		TGR.TestingRotationNegative.tgr()
+				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(-0.05).withPercentTilt(0),
+						() -> shooterOff));
+		TGR.TestingTiltPositive.tgr()
+				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(0.05),
+						() -> shooterOff));
+		TGR.TestingTiltNegative.tgr()
+				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(-0.05),
+						() -> shooterOff));
 
 	}
 
@@ -184,8 +212,16 @@ public class RobotContainer {
 		ResetFieldRelative(driverController.start()),
 		Intake(driverController.rightTrigger(0.15)),
 		Extake(driverController.rightBumper()),
-		ShootSpeaker(driverController.x()),
-		ShootAmp(driverController.b());
+		ShootSpeaker(driverController.x().and(() -> !EnabledDebugModes.testingTurret)),
+		ShootAmp(driverController.b().and(() -> !EnabledDebugModes.testingTurret)),
+		PrepareShootForSubwoofer(operatorController.a().and(() -> !EnabledDebugModes.testingTurret)),
+		ShootFromSubwoofer(operatorController.rightTrigger().and(() -> !EnabledDebugModes.testingTurret)),
+		CalibrateShooter(driverController.b()
+				.and(() -> !EnabledDebugModes.testingTurret && EnabledDebugModes.calibratingTurret)),
+		TestingRotationPositive(driverController.rightTrigger(0.15).and(() -> EnabledDebugModes.testingTurret)),
+		TestingRotationNegative(driverController.leftTrigger(0.15).and(() -> EnabledDebugModes.testingTurret)),
+		TestingTiltPositive(driverController.rightBumper().and(() -> EnabledDebugModes.testingTurret)),
+		TestingTiltNegative(driverController.leftBumper().and(() -> EnabledDebugModes.testingTurret));
 
 		Trigger trigger;
 
