@@ -5,7 +5,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.configs.FeedbackConfigs;
+import com.ctre.phoenix6.configs.MotionMagicConfigs;
+import com.ctre.phoenix6.configs.Slot0Configs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
@@ -16,11 +21,10 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.Unit;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.helpers.shooting.GoalFinalEquation;
@@ -53,6 +57,61 @@ public class Turret extends SubsystemBase {
         tiltMotor = new TalonFX(0);
         rollerMotor = new TalonSRX(0);
         sensor = new DigitalInput(4);
+
+        /*
+         * 
+         */
+        TalonFXConfiguration cfgRotate = new TalonFXConfiguration();
+
+        MotionMagicConfigs mmRotate = cfgRotate.MotionMagic;
+        mmRotate.MotionMagicCruiseVelocity = .5;
+        mmRotate.MotionMagicAcceleration = 5;
+        mmRotate.MotionMagicJerk = 30;
+
+        Slot0Configs slot0Rotate = cfgRotate.Slot0;
+        slot0Rotate.kP = 100;
+        slot0Rotate.kI = 0;
+        slot0Rotate.kV = 8.7184;// TODO Tune these values
+        slot0Rotate.kS = 0.6733;
+
+        FeedbackConfigs fdbRotate = cfgRotate.Feedback;
+        fdbRotate.SensorToMechanismRatio = 200;
+
+        StatusCode statusRotate = StatusCode.StatusCodeNotInitialized;
+
+        /*
+         * 
+         */
+        TalonFXConfiguration cfgTilt = new TalonFXConfiguration();
+
+        MotionMagicConfigs mmTilt = cfgRotate.MotionMagic;
+        mmTilt.MotionMagicCruiseVelocity = .15;
+        mmTilt.MotionMagicAcceleration = 2.5;
+        mmTilt.MotionMagicJerk = 30;
+
+        Slot0Configs slot0Tilt = cfgRotate.Slot0;
+        slot0Tilt.kP = 100;
+        slot0Tilt.kI = 0;
+        slot0Tilt.kV = 8.7184;// TODO Tune these values
+        slot0Tilt.kS = 0.6733;
+
+        FeedbackConfigs fdbTilt = cfgRotate.Feedback;
+        fdbTilt.SensorToMechanismRatio = 300;
+
+        StatusCode statusTilt = StatusCode.StatusCodeNotInitialized;
+
+        for (int i = 0; i < 5; i++) {
+            statusRotate = rotateMotor.getConfigurator().apply(cfgRotate);
+            statusTilt = tiltMotor.getConfigurator().apply(cfgTilt);
+            if (statusRotate.isOK())
+                break;
+        }
+        if (!statusRotate.isOK()) {
+            System.out.println("Could not configure device. Error: " + statusRotate.toString());
+        }
+        if (!statusTilt.isOK()) {
+            System.out.println("Could not configure device. Error: " + statusTilt.toString());
+        }
 
         leftShooterMotor.setControl(new Follower(0, true));// TODO Set master ID to right shooter
         // TODO Configuration of gear ratio and set them, add analog sensor for position
