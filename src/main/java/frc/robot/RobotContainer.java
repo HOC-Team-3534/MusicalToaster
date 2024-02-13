@@ -52,7 +52,7 @@ public class RobotContainer {
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
 	private static final SendableChooser<Callable<Command>> autonChooser = new SendableChooser<>();
-	private final CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain;
+	private final static CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain;
 	private final FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
 			.withDeadband(TunerConstants.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
 			.withMaxSpeed(TunerConstants.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
@@ -60,16 +60,16 @@ public class RobotContainer {
 	private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 	private final Telemetry logger = new Telemetry(TunerConstants.kSpeedAt12VoltsMps);
 
-	private final Intake intake = new Intake();
+	private final static Intake intake = new Intake();
 	private final ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
 	private final ControlIntake runExtake = new ControlIntake().withIntakePercent(0.5).withIntakeReversed(true);
 	private final ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
-	private final ControlShooter shooterOff = new ControlShooter().withVoltage(0);
-	private final ControlShooter shooterAmp = new ControlShooter().withVoltage(3);// TODO Find these valuess
-	private final ControlShooter shooterSpeaker = new ControlShooter().withVoltage(6);// TODO Find these
+	private final ControlShooter shooterOff = new ControlShooter().withVelocity(0);
+	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(1000);// TODO Find these valuess
+	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(6200);// TODO Find these
 
-	private final Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
-	private final IndexFromIntake indexFromIntake = new IndexFromIntake().withRollerOutput(0.25)
+	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
+	private final static IndexFromIntake indexFromIntake = new IndexFromIntake().withRollerOutput(0.25)
 			.withRotateTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(-35))
 			.withIntakeState(() -> intake.getState());// TODO
 
@@ -79,11 +79,11 @@ public class RobotContainer {
 	// Tune
 	// all,
 	// values
-	private final AimForSpeaker aimForSpeaker = new AimForSpeaker().withRollerOutput(0.25)
+	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker().withRollerOutput(0.25)
 			.withRotateTolerance(Rotation2d.fromDegrees(1))
 			.withTiltTolerance(Rotation2d.fromDegrees(1)).withTiltFunction((distance) -> new Rotation2d())
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find distance table
-	private final AimForAmp aimForAmp = new AimForAmp().withRollerOutput(0.25)
+	private final static AimForAmp aimForAmp = new AimForAmp().withRollerOutput(0.25)
 			.withRotateTolerance(Rotation2d.fromDegrees(1))
 			.withTiltTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(10))
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
@@ -160,14 +160,8 @@ public class RobotContainer {
 
 		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> runIntake));
 
-		TGR.ShootSpeaker.tgr().whileTrue(
-				turret.applyRequest(() -> indexFromIntake, () -> shooterSpeaker)
-						.until(() -> turret.getState().noteLoaded)
-						.andThen(turret.applyRequest(() -> aimForSpeaker, () -> shooterSpeaker)));
-		TGR.ShootAmp.tgr().whileTrue(
-				turret.applyRequest(() -> indexFromIntake, () -> shooterAmp)
-						.until(() -> turret.getState().noteLoaded)
-						.andThen(turret.applyRequest(() -> aimForAmp, () -> shooterAmp)));
+		TGR.ShootSpeaker.tgr().whileTrue(getShootSpeakerCommand());
+		TGR.ShootAmp.tgr().whileTrue(getShootAmpCommand());
 		TGR.ShootFromSubwoofer.tgr().whileTrue(turret.applyRequest(
 				() -> shootFromSubwoofer.withReadyToShoot(() -> TGR.PrepareShootForSubwoofer.tgr().getAsBoolean()),
 				() -> shooterSpeaker));
@@ -190,6 +184,18 @@ public class RobotContainer {
 				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(-0.05),
 						() -> shooterOff));
 
+	}
+
+	public static Command getShootAmpCommand() {
+		return turret.applyRequest(() -> indexFromIntake, () -> shooterAmp)
+				.until(() -> turret.getState().noteLoaded)
+				.andThen(turret.applyRequest(() -> aimForAmp, () -> shooterAmp));
+	}
+
+	public static Command getShootSpeakerCommand() {
+		return turret.applyRequest(() -> indexFromIntake, () -> shooterSpeaker)
+				.until(() -> turret.getState().noteLoaded)
+				.andThen(turret.applyRequest(() -> aimForSpeaker, () -> shooterSpeaker));
 	}
 
 	/**

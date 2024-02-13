@@ -1,7 +1,7 @@
 package frc.robot.subsystems.turret;
 
 import com.ctre.phoenix6.StatusCode;
-import com.ctre.phoenix6.controls.VoltageOut;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
@@ -10,17 +10,17 @@ public interface ShooterRequest {
     public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rightShooterMotor);
 
     public class ControlShooter implements ShooterRequest {
-        private double voltage = 0;
+        private double velocity = 0;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters,
                 TalonFX rightShooterMotor) {
-            rightShooterMotor.setControl(new VoltageOut(voltage));
+            rightShooterMotor.setControl(new VelocityVoltage(velocity));
             return StatusCode.OK;
         }
 
-        public ControlShooter withVoltage(double voltage) {
-            this.voltage = voltage;
+        public ControlShooter withVelocity(double velocity) {
+            this.velocity = velocity;
             return this;
         }
 

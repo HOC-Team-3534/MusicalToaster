@@ -12,6 +12,7 @@ import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
@@ -19,8 +20,10 @@ import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.struct.Rotation2dStruct;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.Velocity;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -84,12 +87,12 @@ public class Turret extends SubsystemBase {
          */
         TalonFXConfiguration cfgTilt = new TalonFXConfiguration();
 
-        MotionMagicConfigs mmTilt = cfgRotate.MotionMagic;
+        MotionMagicConfigs mmTilt = cfgTilt.MotionMagic;
         mmTilt.MotionMagicCruiseVelocity = .15;
         mmTilt.MotionMagicAcceleration = 2.5;
         mmTilt.MotionMagicJerk = 30;
 
-        Slot0Configs slot0Tilt = cfgRotate.Slot0;
+        Slot0Configs slot0Tilt = cfgTilt.Slot0;
         slot0Tilt.kP = 100;
         slot0Tilt.kI = 0;
         slot0Tilt.kV = 8.7184;// TODO Tune these values
@@ -99,10 +102,32 @@ public class Turret extends SubsystemBase {
         fdbTilt.SensorToMechanismRatio = 300;
 
         StatusCode statusTilt = StatusCode.StatusCodeNotInitialized;
+        /* 
+         * 
+        */
+
+        TalonFXConfiguration cfgShooterMotor = new TalonFXConfiguration();
+
+        Slot0Configs slot0ShooterMotor = cfgShooterMotor.Slot0;
+        slot0ShooterMotor.kP = 10;
+        slot0ShooterMotor.kI = 0;
+        slot0ShooterMotor.kV = 0;
+        slot0ShooterMotor.kS = 0;
+
+        FeedbackConfigs velocityConfigsShooterMotor = cfgShooterMotor.Feedback;
+        velocityConfigsShooterMotor.SensorToMechanismRatio = 1;
+
+        var shooterCurrentConfig = cfgShooterMotor.CurrentLimits;
+        shooterCurrentConfig.SupplyCurrentLimit = 30;
+
+        StatusCode statusShooterL = StatusCode.StatusCodeNotInitialized;
+        StatusCode statusShooterR = StatusCode.StatusCodeNotInitialized;
 
         for (int i = 0; i < 5; i++) {
             statusRotate = rotateMotor.getConfigurator().apply(cfgRotate);
             statusTilt = tiltMotor.getConfigurator().apply(cfgTilt);
+            statusShooterL = leftShooterMotor.getConfigurator().apply(cfgShooterMotor);
+            statusShooterR = rightShooterMotor.getConfigurator().apply(cfgShooterMotor);
             if (statusRotate.isOK())
                 break;
         }
@@ -112,10 +137,19 @@ public class Turret extends SubsystemBase {
         if (!statusTilt.isOK()) {
             System.out.println("Could not configure device. Error: " + statusTilt.toString());
         }
+        if (!statusShooterL.isOK()) {
+            System.out.println("Could not configure device. Error: " + statusShooterL.toString());
+        }
+        if (!statusShooterR.isOK()) {
+            System.out.println("Could not configure device. Error: " + statusShooterR.toString());
+        }
 
         leftShooterMotor.setControl(new Follower(0, true));// TODO Set master ID to right shooter
         // TODO Configuration of gear ratio and set them, add analog sensor for position
         // on motor,
+
+        tiltMotor.setPosition(0);
+        rotateMotor.setPosition(0);
 
         this.swerveDriveStateSupplier = swerveDriveStateSupplier;
         this.chassisSpeeSupplier = chassisSpeedSupplier;
@@ -152,6 +186,12 @@ public class Turret extends SubsystemBase {
         public int loopsWithoutNote;
 
         public Translation2d virtualGoalLocationDisplacement;
+
+        public Rotation2d rotateClosedLoop;
+
+        public Rotation2d tiltClosedLoop;
+
+        public double shooterMotorClosedLoop;
 
     }
 
@@ -218,6 +258,14 @@ public class Turret extends SubsystemBase {
                     m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
 
                     m_cachedState.noteLoaded = sensor.get() || m_cachedState.noteLoaded;
+
+                    m_cachedState.rotateClosedLoop = Rotation2d
+                            .fromRotations(rotateMotor.getClosedLoopError().getValueAsDouble());
+
+                    m_cachedState.tiltClosedLoop = Rotation2d
+                            .fromRotations(tiltMotor.getClosedLoopError().getValueAsDouble());
+
+                    m_cachedState.shooterMotorClosedLoop = rightShooterMotor.getClosedLoopError().getValueAsDouble();
 
                     if (sensor.get())
                         m_cachedState.loopsWithoutNote = 0;
