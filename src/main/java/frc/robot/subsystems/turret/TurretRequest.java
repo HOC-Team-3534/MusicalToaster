@@ -1,17 +1,12 @@
 package frc.robot.subsystems.turret;
 
-import static frc.robot.subsystems.turret.TurretRequest.calculateTargetAzimuth;
-
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import javax.swing.plaf.BorderUIResource.TitledBorderUIResource;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 

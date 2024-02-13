@@ -95,6 +95,6 @@ public final class Constants {
     public static final boolean updatePoseWithVisionEnabled = true;
     public static final boolean testingTurret = true;
     public static final boolean calibratingTurret = false;
-    public static final boolean isCalibratingOrTesting = testingTurret || calibratingTurret;
+    public static final boolean isCalibratingOrTesting = calibratingTurret || testingTurret;
   }
 }

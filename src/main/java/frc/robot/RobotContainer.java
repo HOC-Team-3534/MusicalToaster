@@ -5,14 +5,16 @@ package frc.robot;
 
 import java.util.concurrent.Callable;
 
-import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -71,7 +73,7 @@ public class RobotContainer {
 	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
 	private final static IndexFromIntake indexFromIntake = new IndexFromIntake().withRollerOutput(0.25)
 			.withRotateTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(-35))
-			.withIntakeState(() -> intake.getState());// TODO
+			.withIntakeState(() -> intake.getState());// TODO Validate this
 
 	private final TestingTurret testingShooter = new TestingTurret();
 	private final CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
@@ -123,15 +125,21 @@ public class RobotContainer {
 	 * joysticks}.
 	 */
 	private void configureBindings() {
+
 		// The following triggered commands are for debug purposes only
 		drivetrain.setDefaultCommand( // Drivetrain will execute this command periodically
 				drivetrain.applyRequest(
-						() -> drive.withVelocityX(-driverController.getLeftY() * TunerConstants.kSpeedAt12VoltsMps) // Drive
+						() -> drive
+								.withVelocityX(
+										-driverController.getLeftY() * TunerConstants.kSpeedAt12VoltsMps
+												* getCoordinateSystemInversionDriving()) // Drive
 								// forward
 								// with
 								// negative Y (forward)
-								.withVelocityY(-driverController.getLeftX() * TunerConstants.kSpeedAt12VoltsMps) // Drive
-																													// left
+								.withVelocityY(
+										-driverController.getLeftX() * TunerConstants.kSpeedAt12VoltsMps
+												* getCoordinateSystemInversionDriving()) // Drive
+								// left
 								// with
 								// negative
 								// X
@@ -184,6 +192,11 @@ public class RobotContainer {
 				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(-0.05),
 						() -> shooterOff));
 
+	}
+
+	public static int getCoordinateSystemInversionDriving() {
+		var alliance = DriverStation.getAlliance();
+		return alliance.isPresent() && alliance.get() == Alliance.Red ? -1 : 1;
 	}
 
 	public static Command getShootAmpCommand() {
