@@ -4,10 +4,10 @@
 
 package frc.robot.commands;
 
-import java.sql.Driver;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
-import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain;
-import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
@@ -18,7 +18,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import frc.robot.Path;
 import frc.robot.RobotContainer;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.turret.Turret;
@@ -27,23 +26,69 @@ import swerve.CommandSwerveDrivetrain;
 public final class Autos {
 
   public static Command getDynamicAutonomous(Pose2d initialPose, Turret turret, CommandSwerveDrivetrain drivetrain,
-      Translation2d positions[]) {
+      Translation2d... positions) {
+    done = false;
+    Autos.positions = new LinkedList<Translation2d>();
+    Autos.positions.add(initialPose.getTranslation());
+    for (Translation2d p : positions) {
+      Autos.positions.add(p);
+    }
     return Commands.runOnce(() -> drivetrain.seedFieldRelative(initialPose))
         .andThen(RobotContainer.getShootSpeakerCommand())
-        .andThen(Commands.repeatingSequence(
-        // drivetrain.pathfindToPose(new Pose2d(positions[0],new
-        // Rotation2d()),pathConstraints,new GoalEndState(0, null))
+        .andThen(Commands.repeatingSequence(Commands.deferredProxy(Autos::getCurrentPath))
+            .until(() -> Autos.positions.size() == 0)
+        // drivetrain.pathfindToPose(new Pose2d(positions[0],n
+        // Rotation2d()),pathConstraints,new GoalEndState(0, null))--Need to calculate
+        // approach heading
         // First step is path follow to first note pose in hierarchy with intake on
         // If note is not there, go to next note in hierarchy
         // If you are shooting note, path follow to shoot location and shoot
         // If you are moving note shoot toward alliance wall on ground
 
         // repeat for all notes in hierarchy
-        ));
+        );
   }
 
-  public static PathConstraints pathConstraints = new PathConstraints(TunerConstants.kAutonomousMaxSpeedMps, 6.0,
-      Math.PI * 3, Math.PI * 6);
+  private static LinkedList<Translation2d> positions;
+
+  public static boolean done = false;
+
+  public static Command getCurrentPath(CommandSwerveDrivetrain drivetrain) {
+    var current = positions.pop();
+    var next = positions.peek();
+    double endVelocity = 0;
+    if (next == null) {
+      done = true;
+      return Commands.none();
+    }
+
+    var currentDelta = next.minus(current);
+    var currentDeltaX = currentDelta.getX();
+    var nextDeltaX = positions.get(1).minus(next).getX();
+    if (Math.abs(nextDeltaX) < 0.05) {
+      endVelocity = slowVelocity;
+    } else if (currentDeltaX / Math.abs(currentDeltaX) - nextDeltaX / Math.abs(nextDeltaX) != 0) {
+      endVelocity = 0;
+    } else {
+
+    }
+
+    var maxSpeed = getPathConstraints().getMaxVelocityMps();
+    return drivetrain.pathfindToPose(new Pose2d(next, currentDelta.getAngle()), getPathConstraints(maxSpeed),
+        endVelocity);
+
+  }
+
+  public static double slowDist = 2.0, slowVelocity = 1.0;
+
+  public static PathConstraints getPathConstraints() {
+    return getPathConstraints(TunerConstants.kAutonomousMaxSpeedMps);
+  }
+
+  public static PathConstraints getPathConstraints(double maxSpeed) {
+    return new PathConstraints(maxSpeed, 6.0,
+        Math.PI * 3, Math.PI * 6);
+  }
 
   public static final double centerRowX = Units.inchesToMeters(324.6);
   public static final double blueRowX = Units.inchesToMeters(centerRowX - 210.6);
