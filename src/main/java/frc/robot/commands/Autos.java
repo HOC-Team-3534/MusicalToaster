@@ -4,16 +4,9 @@
 
 package frc.robot.commands;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
-
-import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.PathConstraints;
-import com.pathplanner.lib.path.PathPlannerPath;
-
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -35,7 +28,7 @@ public final class Autos {
     }
     return Commands.runOnce(() -> drivetrain.seedFieldRelative(initialPose))
         .andThen(RobotContainer.getShootSpeakerCommand())
-        .andThen(Commands.repeatingSequence(Commands.deferredProxy(Autos::getCurrentPath))
+        .andThen(Commands.repeatingSequence(Commands.deferredProxy(() -> Autos.getCurrentPath(drivetrain)))
             .until(() -> Autos.positions.size() == 0)
         // drivetrain.pathfindToPose(new Pose2d(positions[0],n
         // Rotation2d()),pathConstraints,new GoalEndState(0, null))--Need to calculate
@@ -88,6 +81,11 @@ public final class Autos {
   public static PathConstraints getPathConstraints(double maxSpeed) {
     return new PathConstraints(maxSpeed, 6.0,
         Math.PI * 3, Math.PI * 6);
+  }
+
+  public static Command placeHolderForPathFind(Translation2d targetPose, PathConstraints constraints,
+      double goalEndVelocity) {
+    return null;
   }
 
   public static final double centerRowX = Units.inchesToMeters(324.6);
