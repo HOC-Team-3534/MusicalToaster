@@ -25,7 +25,9 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.EnabledDebugModes;
+import frc.robot.commands.AutoPosition;
 import frc.robot.commands.Autos;
+import frc.robot.commands.Autos.AutoPositions;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
@@ -82,7 +84,7 @@ public class RobotContainer {
 	private final TestingTurret testingShooter = new TestingTurret();
 	private final CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
-	private static SendableChooser<Callable<Autos.AutoNotePositions>>[] noteHiearchyChoosers;
+	private static SendableChooser<Callable<Autos.AutoPositions>>[] noteHiearchyChoosers;
 
 	// Tune
 	// all,
@@ -121,21 +123,21 @@ public class RobotContainer {
 		}
 	}
 
-	public static SendableChooser<Callable<Autos.AutoNotePositions>> newNoteHiearchyChooser() {
-		SendableChooser<Callable<Autos.AutoNotePositions>> noteHiearchy = new SendableChooser<>();
+	public static SendableChooser<Callable<Autos.AutoPositions>> newNoteHiearchyChooser() {
+		SendableChooser<Callable<Autos.AutoPositions>> noteHiearchy = new SendableChooser<>();
 
 		noteHiearchy.setDefaultOption("None", () -> null);
-		noteHiearchy.addOption("Blue Note 1", () -> Autos.AutoNotePositions.BlueNote1);
-		noteHiearchy.addOption("Blue Note 2", () -> Autos.AutoNotePositions.BlueNote2);
-		noteHiearchy.addOption("Blue Note 3", () -> Autos.AutoNotePositions.BlueNote3);
-		noteHiearchy.addOption("Center Note 4", () -> Autos.AutoNotePositions.MiddleNote4);
-		noteHiearchy.addOption("Center Note 5", () -> Autos.AutoNotePositions.MiddleNote5);
-		noteHiearchy.addOption("Center Note 6", () -> Autos.AutoNotePositions.MiddleNote6);
-		noteHiearchy.addOption("Center Note 7", () -> Autos.AutoNotePositions.MiddleNote7);
-		noteHiearchy.addOption("Center Note 8", () -> Autos.AutoNotePositions.MiddleNote8);
-		noteHiearchy.addOption("Red Note 9", () -> Autos.AutoNotePositions.RedNote9);
-		noteHiearchy.addOption("Red Note 10", () -> Autos.AutoNotePositions.RedNote10);
-		noteHiearchy.addOption("Red Note 11", () -> Autos.AutoNotePositions.RedNote11);
+		noteHiearchy.addOption("Blue Note 1", () -> Autos.AutoPositions.BlueNote1);
+		noteHiearchy.addOption("Blue Note 2", () -> Autos.AutoPositions.BlueNote2);
+		noteHiearchy.addOption("Blue Note 3", () -> Autos.AutoPositions.BlueNote3);
+		noteHiearchy.addOption("Center Note 4", () -> Autos.AutoPositions.MiddleNote4);
+		noteHiearchy.addOption("Center Note 5", () -> Autos.AutoPositions.MiddleNote5);
+		noteHiearchy.addOption("Center Note 6", () -> Autos.AutoPositions.MiddleNote6);
+		noteHiearchy.addOption("Center Note 7", () -> Autos.AutoPositions.MiddleNote7);
+		noteHiearchy.addOption("Center Note 8", () -> Autos.AutoPositions.MiddleNote8);
+		noteHiearchy.addOption("Red Note 9", () -> Autos.AutoPositions.RedNote9);
+		noteHiearchy.addOption("Red Note 10", () -> Autos.AutoPositions.RedNote10);
+		noteHiearchy.addOption("Red Note 11", () -> Autos.AutoPositions.RedNote11);
 
 		return noteHiearchy;
 	}
@@ -153,19 +155,6 @@ public class RobotContainer {
 	 * joysticks}.
 	 */
 	private void configureBindings() {
-
-		Translation2d poses[] = new Translation2d[5];
-		for (int i = 0; i < 5; i++) {
-			var selection = noteHiearchyChoosers[i].getSelected();
-			try {
-				poses[i] = selection.call().getNoteTranslation();
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-		}
-
 		// The following triggered commands are for debug purposes only
 		drivetrain.setDefaultCommand( // Drivetrain will execute this command periodically
 				drivetrain.applyRequest(
@@ -234,6 +223,21 @@ public class RobotContainer {
 
 	}
 
+	public static AutoPositions[] getAutoPositions() {
+		AutoPositions notes[] = new AutoPositions[5];
+		for (int i = 0; i < 5; i++) {
+			var selection = noteHiearchyChoosers[i].getSelected();
+			try {
+				notes[i] = selection.call();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+		return notes;
+	}
+
 	public static int getCoordinateSystemInversionDriving() {
 		var alliance = DriverStation.getAlliance();
 		return alliance.isPresent() && alliance.get() == Alliance.Red ? -1 : 1;
@@ -257,11 +261,6 @@ public class RobotContainer {
 	 * @return the command to run in autonomous
 	 */
 	public Command getAutonomousCommand() {
-		try {
-			return autonChooser.getSelected().call();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		return Commands.none();
 	}
 

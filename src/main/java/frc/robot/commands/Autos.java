@@ -5,13 +5,16 @@
 package frc.robot.commands;
 
 import java.util.LinkedList;
+
 import com.pathplanner.lib.path.PathConstraints;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.RobotContainer;
+import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.turret.Turret;
 import swerve.CommandSwerveDrivetrain;
@@ -19,12 +22,16 @@ import swerve.CommandSwerveDrivetrain;
 public final class Autos {
 
   public static Command getDynamicAutonomous(Pose2d initialPose, Turret turret, CommandSwerveDrivetrain drivetrain,
-      Translation2d... positions) {
-    done = false;
-    Autos.positions = new LinkedList<Translation2d>();
-    Autos.positions.add(initialPose.getTranslation());
-    for (Translation2d p : positions) {
-      Autos.positions.add(p);
+      AutoPositions... positions) {
+    Autos.positions = new LinkedList<AutoPosition>();
+
+    Autos.positions.add(new AutoPosition(initialPose.getTranslation(), AutoPositionType.Shoot));
+    for (AutoPositions p : positions) {
+      Autos.positions.add(p.getNotePosition());
+      var shoot = p.getShootPostion();
+      if (shoot != null) {
+        Autos.positions.add(shoot);
+      }
     }
     return Commands.runOnce(() -> drivetrain.seedFieldRelative(initialPose))
         .andThen(RobotContainer.getShootSpeakerCommand())
@@ -42,32 +49,29 @@ public final class Autos {
         );
   }
 
-  private static LinkedList<Translation2d> positions;
-
-  public static boolean done = false;
+  private static LinkedList<AutoPosition> positions;
 
   public static Command getCurrentPath(CommandSwerveDrivetrain drivetrain) {
     var current = positions.pop();
     var next = positions.peek();
     double endVelocity = 0;
     if (next == null) {
-      done = true;
+      positions.pop();
       return Commands.none();
     }
 
-    var currentDelta = next.minus(current);
+    var currentDelta = next.getPosition().minus(current.getPosition());
     var currentDeltaX = currentDelta.getX();
-    var nextDeltaX = positions.get(1).minus(next).getX();
+    var nextDeltaX = positions.get(1).getPosition().minus(next.getPosition()).getX();
     if (Math.abs(nextDeltaX) < 0.05) {
       endVelocity = slowVelocity;
-    } else if (currentDeltaX / Math.abs(currentDeltaX) - nextDeltaX / Math.abs(nextDeltaX) != 0) {
-      endVelocity = 0;
-    } else {
-
     }
 
     var maxSpeed = getPathConstraints().getMaxVelocityMps();
-    return drivetrain.pathfindToPose(new Pose2d(next, currentDelta.getAngle()), getPathConstraints(maxSpeed),
+    if (Math.abs(currentDeltaX) < 0.05) {
+      maxSpeed = slowVelocity;
+    }
+    return drivetrain.pathfindToPose(next.getPosition(), getPathConstraints(maxSpeed),
         endVelocity);
 
   }
@@ -95,27 +99,41 @@ public final class Autos {
   public static final double offsetOfSideNotes = Units.inchesToMeters(57.0);
   public static final double offsetOfMiddleNotes = Units.inchesToMeters(66.0);
 
-  public enum AutoNotePositions {
-    BlueNote1(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes * 2))),
-    BlueNote2(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes))),
-    BlueNote3(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes)),
-    MiddleNote4(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes + (Autos.offsetOfMiddleNotes * 2))),
-    MiddleNote5(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes + (Autos.offsetOfMiddleNotes))),
-    MiddleNote6(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes)),
-    MiddleNote7(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes - (Autos.offsetOfMiddleNotes))),
-    MiddleNote8(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes - (Autos.offsetOfMiddleNotes * 2))),
-    RedNote9(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes * 2))),
-    RedNote10(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes))),
-    RedNote11(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes));
+  public enum AutoPositions {
+    BlueNote1(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes * 2)),
+        null),
+    BlueNote2(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes)),
+        null),
+    BlueNote3(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes), null),
+    MiddleNote4(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes + (Autos.offsetOfMiddleNotes * 2)),
+        null),
+    MiddleNote5(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes + (Autos.offsetOfMiddleNotes)),
+        null),
+    MiddleNote6(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes), null),
+    MiddleNote7(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes - (Autos.offsetOfMiddleNotes)),
+        null),
+    MiddleNote8(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes - (Autos.offsetOfMiddleNotes * 2)),
+        null),
+    RedNote9(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes * 2)),
+        null),
+    RedNote10(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes)),
+        null),
+    RedNote11(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes), null);
 
-    public Translation2d noteTranslation;
+    public AutoPosition note, shoot;
 
-    AutoNotePositions(Translation2d noteTranslation) {
-      this.noteTranslation = noteTranslation;
+    AutoPositions(Translation2d noteTranslation, Translation2d shootTranslation) {
+      this.note = new AutoPosition(noteTranslation, AutoPositionType.Note);
+      this.shoot = shootTranslation == null ? null : new AutoPosition(shootTranslation, AutoPositionType.Shoot);
+
     }
 
-    public Translation2d getNoteTranslation() {
-      return noteTranslation;
+    public AutoPosition getNotePosition() {
+      return this.note;
+    }
+
+    public AutoPosition getShootPostion() {
+      return this.shoot;
     }
 
   }
