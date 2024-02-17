@@ -101,8 +101,6 @@ public class RobotContainer {
 			.withRotation(new Rotation2d()).withTilt(Rotation2d.fromDegrees(35))
 			.withTolerance(Rotation2d.fromDegrees(1));
 
-	private final boolean CHARACTERIZATION_ENABLED = true;
-
 	/**
 	 * The container for the robot. Contains subsystems, OI devices, and
 	 * commands.
@@ -191,11 +189,7 @@ public class RobotContainer {
 	 * joysticks}.
 	 */
 	private void configureBindings() {
-		driverController.a().and(() -> CHARACTERIZATION_ENABLED).whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
-		driverController.b().whileTrue(drivetrain
-				.applyRequest(
-						() -> point.withModuleDirection(
-								new Rotation2d(-driverController.getLeftY(), -driverController.getLeftX()))));
+		TGR.Characterize.tgr().whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
 
 		// reset the field-centric heading on left bumper press
 		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
