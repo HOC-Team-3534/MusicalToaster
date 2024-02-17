@@ -4,136 +4,138 @@
 
 package frc.robot.commands;
 
+import java.sql.Driver;
 import java.util.LinkedList;
-
-import com.pathplanner.lib.path.PathConstraints;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.RobotContainer;
+import frc.robot.Constants.Drive.AUTO;
+import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.commands.AutoPosition.AutoPositionType;
-import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.turret.Turret;
 import swerve.CommandSwerveDrivetrain;
 
 public final class Autos {
 
-  public static Command getDynamicAutonomous(Pose2d initialPose, Turret turret, CommandSwerveDrivetrain drivetrain,
-      AutoPositions... positions) {
-    Autos.positions = new LinkedList<AutoPosition>();
-
-    Autos.positions.add(new AutoPosition(initialPose.getTranslation(), AutoPositionType.Shoot));
-    for (AutoPositions p : positions) {
-      Autos.positions.add(p.getNotePosition());
-      var shoot = p.getShootPostion();
-      if (shoot != null) {
-        Autos.positions.add(shoot);
-      }
-    }
-    return Commands.runOnce(() -> drivetrain.seedFieldRelative(initialPose))
+  public static Command getDynamicAutonomous(Turret turret, CommandSwerveDrivetrain drivetrain,
+      AutoPositionList positions) {
+    return Commands.runOnce(() -> drivetrain.seedFieldRelative(drivetrain.getState().Pose))
         .andThen(RobotContainer.getShootSpeakerCommand())
-        .andThen(Commands.repeatingSequence(Commands.deferredProxy(() -> Autos.getCurrentPath(drivetrain)))
-            .until(() -> Autos.positions.size() == 0)
-        // drivetrain.pathfindToPose(new Pose2d(positions[0],n
-        // Rotation2d()),pathConstraints,new GoalEndState(0, null))--Need to calculate
-        // approach heading
-        // First step is path follow to first note pose in hierarchy with intake on
-        // If note is not there, go to next note in hierarchy
-        // If you are shooting note, path follow to shoot location and shoot
-        // If you are moving note shoot toward alliance wall on ground
-
-        // repeat for all notes in hierarchy
-        );
+        .andThen(Commands
+            .repeatingSequence(Commands.deferredProxy(() -> followPathToNextPositionCommand(drivetrain, positions)))
+            .until(() -> positions.size() == 0));
   }
 
-  private static LinkedList<AutoPosition> positions;
-
-  public static Command getCurrentPath(CommandSwerveDrivetrain drivetrain) {
-    var current = positions.pop();
-    var next = positions.peek();
-    double endVelocity = 0;
-    if (next == null) {
-      positions.pop();
+  /**
+   * Create the command to follow a path from the current position to the next
+   * position
+   * 
+   * @param drivetrain
+   * @return
+   */
+  private static Command followPathToNextPositionCommand(CommandSwerveDrivetrain drivetrain,
+      LinkedList<AutoPosition> positions) {
+    if (positions.isEmpty())
       return Commands.none();
-    }
 
-    var currentDelta = next.getPosition().minus(current.getPosition());
-    var currentDeltaX = currentDelta.getX();
-    var nextDeltaX = positions.get(1).getPosition().minus(next.getPosition()).getX();
-    if (Math.abs(nextDeltaX) < 0.05) {
-      endVelocity = slowVelocity;
-    }
+    var next = positions.pop();
 
-    var maxSpeed = getPathConstraints().getMaxVelocityMps();
-    if (Math.abs(currentDeltaX) < 0.05) {
-      maxSpeed = slowVelocity;
-    }
-    return drivetrain.pathfindToPose(next.getPosition(), getPathConstraints(maxSpeed),
-        endVelocity);
+    var current = drivetrain.getState().Pose.getTranslation();
 
+    var constraints = current.getDistance(next.getPosition()) < Units.inchesToMeters(75.0)
+        ? AUTO.kSlowPathConstraints
+        : AUTO.kPathConstraints;
+
+    return drivetrain.pathfindToPose(next.getPosition(), constraints, 0);
   }
 
-  public static double slowDist = 2.0, slowVelocity = 1.0;
+  static final Translation2d OFFSET_CENTER_ROW_TO_SIDE = new Translation2d(Units.inchesToMeters(210.6), 0);
+  static final Translation2d OFFSET_SIDE_NOTES = new Translation2d(0, Units.inchesToMeters(57.0));
+  static final Translation2d OFFSET_CENTER_NOTES = new Translation2d(0, Units.inchesToMeters(66.0));
 
-  public static PathConstraints getPathConstraints() {
-    return getPathConstraints(TunerConstants.kAutonomousMaxSpeedMps);
-  }
+  static final Translation2d OFFSET_STAGE_NOTE = new Translation2d(Units.inchesToMeters(10), 0);
 
-  public static PathConstraints getPathConstraints(double maxSpeed) {
-    return new PathConstraints(maxSpeed, 6.0,
-        Math.PI * 3, Math.PI * 6);
-  }
+  static Translation2d getNotePosition(int noteId) {
+    var center = FIELD_DIMENSIONS.CENTER_OF_FIELD;
 
-  public static Command placeHolderForPathFind(Translation2d targetPose, PathConstraints constraints,
-      double goalEndVelocity) {
-    return null;
-  }
-
-  public static final double centerRowX = Units.inchesToMeters(324.6);
-  public static final double blueRowX = Units.inchesToMeters(centerRowX - 210.6);
-  public static final double redRowX = Units.inchesToMeters(centerRowX + 210.6);
-  public static final double centerOfFieldNotes = Units.inchesToMeters(161.64);
-  public static final double offsetOfSideNotes = Units.inchesToMeters(57.0);
-  public static final double offsetOfMiddleNotes = Units.inchesToMeters(66.0);
-
-  public enum AutoPositions {
-    BlueNote1(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes * 2)),
-        null),
-    BlueNote2(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes)),
-        null),
-    BlueNote3(new Translation2d(Autos.blueRowX, Autos.centerOfFieldNotes), null),
-    MiddleNote4(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes + (Autos.offsetOfMiddleNotes * 2)),
-        null),
-    MiddleNote5(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes + (Autos.offsetOfMiddleNotes)),
-        null),
-    MiddleNote6(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes), null),
-    MiddleNote7(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes - (Autos.offsetOfMiddleNotes)),
-        null),
-    MiddleNote8(new Translation2d(Autos.centerRowX, Autos.centerOfFieldNotes - (Autos.offsetOfMiddleNotes * 2)),
-        null),
-    RedNote9(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes * 2)),
-        null),
-    RedNote10(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes + (Autos.offsetOfSideNotes)),
-        null),
-    RedNote11(new Translation2d(Autos.redRowX, Autos.centerOfFieldNotes), null);
-
-    public AutoPosition note, shoot;
-
-    AutoPositions(Translation2d noteTranslation, Translation2d shootTranslation) {
-      this.note = new AutoPosition(noteTranslation, AutoPositionType.Note);
-      this.shoot = shootTranslation == null ? null : new AutoPosition(shootTranslation, AutoPositionType.Shoot);
-
+    var offsetStageNote = noteId == 3 || noteId == 11 ? OFFSET_STAGE_NOTE : new Translation2d();
+    if (noteId >= 1 && noteId <= 3) { // BLUE
+      return center.minus(OFFSET_CENTER_ROW_TO_SIDE.minus(offsetStageNote))
+          .plus(OFFSET_SIDE_NOTES.times(3 - noteId));
+    } else if (noteId >= 4 && noteId <= 8) { // CENTER
+      return center.plus(OFFSET_CENTER_NOTES.times(6 - noteId));
+    } else if (noteId >= 9 && noteId <= 11) {// RED
+      return center.plus(OFFSET_CENTER_ROW_TO_SIDE.plus(offsetStageNote))
+          .plus(OFFSET_SIDE_NOTES.times(11 - noteId));
+    } else {
+      return null;
     }
+  }
+
+  static final Translation2d OFFSET_UPPER_SHOOT_Y = OFFSET_CENTER_NOTES.plus(
+      new Translation2d(0, Units.inchesToMeters(48.0)));
+  static final Translation2d OFFSET_UPPER_SHOOT_X = new Translation2d(
+      FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER + 25.0, 0);
+  static final Translation2d OFFSET_LOWER_SHOOT_Y = OFFSET_UPPER_SHOOT_Y.times(1);
+  static final Translation2d OFFSET_LOWER_SHOOT_X = OFFSET_UPPER_SHOOT_Y.times(1); // times 1 just clones it
+
+  static Translation2d getShootPosition(int noteId) {
+    if (noteId >= 4 && noteId <= 8) {
+      var blue = DriverStation.getAlliance().get().equals(Alliance.Blue);
+      var center = FIELD_DIMENSIONS.CENTER_OF_FIELD;
+      if (noteId <= 6) { // upper
+        return center.plus(OFFSET_UPPER_SHOOT_Y).plus(blue ? OFFSET_UPPER_SHOOT_X.unaryMinus() : OFFSET_UPPER_SHOOT_X);
+      } else {
+        return center.plus(OFFSET_LOWER_SHOOT_Y).plus(blue ? OFFSET_LOWER_SHOOT_X.unaryMinus() : OFFSET_LOWER_SHOOT_X);
+      }
+    } else {
+      return null;
+    }
+  }
+
+  public enum ShootOrStealNote {
+    Shoot, Steal
+  }
+
+  public enum AutoNotes {
+    BlueNote1,
+    BlueNote2,
+    BlueNote3,
+    MiddleNote4,
+    MiddleNote5,
+    MiddleNote6,
+    MiddleNote7,
+    MiddleNote8,
+    RedNote9,
+    RedNote10,
+    RedNote11;
+
+    ShootOrStealNote shootOrStealNote;
 
     public AutoPosition getNotePosition() {
-      return this.note;
+      return new AutoPosition(Autos.getNotePosition(this.ordinal() + 1), AutoPositionType.Note);
     }
 
     public AutoPosition getShootPostion() {
-      return this.shoot;
+      var position = Autos.getShootPosition(this.ordinal() + 1);
+      if (position != null)
+        return new AutoPosition(position, AutoPositionType.Shoot);
+      return null;
+    }
+
+    public ShootOrStealNote getShootOrStealNote() {
+      return this.shootOrStealNote;
+    }
+
+    public AutoNotes withShootOrStealNote(ShootOrStealNote shootOrStealNote) {
+      this.shootOrStealNote = shootOrStealNote;
+      return this;
     }
 
   }

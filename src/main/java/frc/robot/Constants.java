@@ -7,6 +7,7 @@ import com.pathplanner.lib.path.PathConstraints;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.util.Units;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide
@@ -86,7 +87,17 @@ public final class Constants {
     }
 
     public static final class AUTO {
-      public static PathConstraints kPathConstraints = new PathConstraints(3.5, 2.0, Math.PI, Math.PI);
+      public static final PathConstraints kPathConstraints = new PathConstraints(3.5, 6.0,
+          Math.PI * 3, Math.PI * 6);
+      public static final PathConstraints kSlowPathConstraints = new PathConstraints(1.0, 6.0,
+          Math.PI * 3, Math.PI * 6);
+    }
+
+    public static final class FIELD_DIMENSIONS {
+      public static final double LENGTH = Units.feetToMeters(54) + Units.inchesToMeters(3.25);
+      public static final double WIDTH = Units.feetToMeters(26) + Units.inchesToMeters(11.25);
+      public static final Translation2d CENTER_OF_FIELD = new Translation2d(LENGTH / 2.0, WIDTH / 2.0);
+      public static final double OFFSET_ALLIANCE_LINE_FROM_CENTER = Units.inchesToMeters(95.4);
     }
   }
 

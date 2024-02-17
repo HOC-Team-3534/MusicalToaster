@@ -3,9 +3,8 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot;
 
+import java.util.LinkedList;
 import java.util.concurrent.Callable;
-
-import javax.swing.filechooser.FileFilter;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
@@ -15,19 +14,20 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.EnabledDebugModes;
+import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.commands.AutoPosition;
+import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
-import frc.robot.commands.Autos.AutoPositions;
+import frc.robot.commands.Autos.AutoNotes;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
@@ -59,7 +59,6 @@ public class RobotContainer {
 	static SlewRateLimiter slewRateLimiterX = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
-	private static final SendableChooser<Callable<Command>> autonChooser = new SendableChooser<>();
 	private final static CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain;
 	private final FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
 			.withDeadband(TunerConstants.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
@@ -84,7 +83,8 @@ public class RobotContainer {
 	private final TestingTurret testingShooter = new TestingTurret();
 	private final CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
-	private static SendableChooser<Callable<Autos.AutoPositions>>[] noteHiearchyChoosers;
+	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers;
+	private static SendableChooser<Autos.ShootOrStealNote>[] shootOrStealChoosers;
 
 	// Tune
 	// all,
@@ -113,33 +113,41 @@ public class RobotContainer {
 
 		// Set Default Commands for Subsystems
 
-		// Autonomous Command Sendable Chooser
-		autonChooser.setDefaultOption("No Auton", () -> Commands.none());
-
 		// Show Status of Subsystems on Dashboard
 		for (int i = 0; i < 5; i++) {
 			noteHiearchyChoosers[i] = newNoteHiearchyChooser();
 			SmartDashboard.putData("Note Hiearchy " + (i + 1), noteHiearchyChoosers[i]);
+			shootOrStealChoosers[i] = newShootOrStealChooser();
+			SmartDashboard.putData("Shoot|Steal " + (i + 1), shootOrStealChoosers[i]);
 		}
 	}
 
-	public static SendableChooser<Callable<Autos.AutoPositions>> newNoteHiearchyChooser() {
-		SendableChooser<Callable<Autos.AutoPositions>> noteHiearchy = new SendableChooser<>();
+	public static SendableChooser<Autos.AutoNotes> newNoteHiearchyChooser() {
+		SendableChooser<Autos.AutoNotes> noteHiearchy = new SendableChooser<>();
 
-		noteHiearchy.setDefaultOption("None", () -> null);
-		noteHiearchy.addOption("Blue Note 1", () -> Autos.AutoPositions.BlueNote1);
-		noteHiearchy.addOption("Blue Note 2", () -> Autos.AutoPositions.BlueNote2);
-		noteHiearchy.addOption("Blue Note 3", () -> Autos.AutoPositions.BlueNote3);
-		noteHiearchy.addOption("Center Note 4", () -> Autos.AutoPositions.MiddleNote4);
-		noteHiearchy.addOption("Center Note 5", () -> Autos.AutoPositions.MiddleNote5);
-		noteHiearchy.addOption("Center Note 6", () -> Autos.AutoPositions.MiddleNote6);
-		noteHiearchy.addOption("Center Note 7", () -> Autos.AutoPositions.MiddleNote7);
-		noteHiearchy.addOption("Center Note 8", () -> Autos.AutoPositions.MiddleNote8);
-		noteHiearchy.addOption("Red Note 9", () -> Autos.AutoPositions.RedNote9);
-		noteHiearchy.addOption("Red Note 10", () -> Autos.AutoPositions.RedNote10);
-		noteHiearchy.addOption("Red Note 11", () -> Autos.AutoPositions.RedNote11);
+		noteHiearchy.setDefaultOption("None", null);
+		noteHiearchy.addOption("Blue Note 1", Autos.AutoNotes.BlueNote1);
+		noteHiearchy.addOption("Blue Note 2", Autos.AutoNotes.BlueNote2);
+		noteHiearchy.addOption("Blue Note 3", Autos.AutoNotes.BlueNote3);
+		noteHiearchy.addOption("Center Note 4", Autos.AutoNotes.MiddleNote4);
+		noteHiearchy.addOption("Center Note 5", Autos.AutoNotes.MiddleNote5);
+		noteHiearchy.addOption("Center Note 6", Autos.AutoNotes.MiddleNote6);
+		noteHiearchy.addOption("Center Note 7", Autos.AutoNotes.MiddleNote7);
+		noteHiearchy.addOption("Center Note 8", Autos.AutoNotes.MiddleNote8);
+		noteHiearchy.addOption("Red Note 9", Autos.AutoNotes.RedNote9);
+		noteHiearchy.addOption("Red Note 10", Autos.AutoNotes.RedNote10);
+		noteHiearchy.addOption("Red Note 11", Autos.AutoNotes.RedNote11);
 
 		return noteHiearchy;
+	}
+
+	public static SendableChooser<Autos.ShootOrStealNote> newShootOrStealChooser() {
+		SendableChooser<Autos.ShootOrStealNote> shootOrSteal = new SendableChooser<>();
+
+		shootOrSteal.setDefaultOption("Shoot", Autos.ShootOrStealNote.Shoot);
+		shootOrSteal.addOption("Steal", Autos.ShootOrStealNote.Steal);
+
+		return shootOrSteal;
 	}
 
 	/**
@@ -223,19 +231,15 @@ public class RobotContainer {
 
 	}
 
-	public static AutoPositions[] getAutoPositions() {
-		AutoPositions notes[] = new AutoPositions[5];
-		for (int i = 0; i < 5; i++) {
-			var selection = noteHiearchyChoosers[i].getSelected();
-			try {
-				notes[i] = selection.call();
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
+	public static AutoPositionList getAutoPositions() {
+		AutoPositionList positions = new AutoPositionList();
+		for (int i = 0; i < noteHiearchyChoosers.length && i < shootOrStealChoosers.length; i++) {
+			var note = noteHiearchyChoosers[i].getSelected();
+			var shootOrSteal = shootOrStealChoosers[i].getSelected();
+			if (note != null)
+				positions.add(note.withShootOrStealNote(shootOrSteal));
 		}
-		return notes;
+		return positions;
 	}
 
 	public static int getCoordinateSystemInversionDriving() {
@@ -255,13 +259,25 @@ public class RobotContainer {
 				.andThen(turret.applyRequest(() -> aimForSpeaker, () -> shooterSpeaker));
 	}
 
+	public static boolean getShooterWithinRange() {
+		var x = drivetrain.getState().Pose.getX();
+		var alliance = DriverStation.getAlliance().get();
+		return alliance.equals(Alliance.Blue)
+				? x < FIELD_DIMENSIONS.CENTER_OF_FIELD.getX() - FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER
+				: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.getX() + FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER;
+	}
+
 	/**
 	 * Use this to pass the autonomous command to the main {@link Robot} class.
 	 *
 	 * @return the command to run in autonomous
 	 */
 	public Command getAutonomousCommand() {
-		return Commands.none();
+		var positions = getAutoPositions();
+		if (positions.isEmpty()) {
+			// return Shoot and Drive Forward Command;
+		}
+		return Autos.getDynamicAutonomous(turret, drivetrain, positions);
 	}
 
 	public enum TGR {

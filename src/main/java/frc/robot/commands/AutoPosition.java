@@ -19,6 +19,10 @@ public class AutoPosition {
         return type;
     }
 
+    public Translation2d minus(AutoPosition otherPosition) {
+        return position.minus(otherPosition.getPosition());
+    }
+
     public enum AutoPositionType {
         Note,
         Shoot
