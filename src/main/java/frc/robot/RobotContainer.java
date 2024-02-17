@@ -243,11 +243,14 @@ public class RobotContainer {
 		return getShootCommand(aimForSpeaker, shooterSpeaker);
 	}
 
-	private static Command getShootCommand(TurretRequest aimForRequest, ShooterRequest shooterRequest) {
-		return Commands.either(
-				turret.applyRequest(() -> indexFromIntake, () -> shooterRequest),
-				turret.applyRequest(() -> aimForRequest, () -> shooterRequest),
-				() -> !turret.getState().noteLoaded || !isValidShootPosition());
+	private static Command getShootCommand(TurretRequest aimForRequestWhenReady, ShooterRequest shooterRequest) {
+		var notReady = turret.applyRequest(() -> indexFromIntake, () -> shooterRequest);
+		var ready = turret.applyRequest(() -> aimForRequestWhenReady, () -> shooterRequest);
+		return (notReady.until(() -> isReadyToShoot()).andThen(ready).until(() -> !isReadyToShoot())).repeatedly();
+	}
+
+	private static boolean isReadyToShoot() {
+		return turret.getState().noteLoaded && isValidShootPosition();
 	}
 
 	public static boolean isValidShootPosition() {
