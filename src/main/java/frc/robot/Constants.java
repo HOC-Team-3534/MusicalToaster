@@ -97,7 +97,14 @@ public final class Constants {
       public static final double LENGTH = Units.feetToMeters(54) + Units.inchesToMeters(3.25);
       public static final double WIDTH = Units.feetToMeters(26) + Units.inchesToMeters(11.25);
       public static final Translation2d CENTER_OF_FIELD = new Translation2d(LENGTH / 2.0, WIDTH / 2.0);
-      public static final double OFFSET_ALLIANCE_LINE_FROM_CENTER = Units.inchesToMeters(95.4);
+
+      public static final Translation2d OFFSET_ALLIANCE_LINE_FROM_CENTER = new Translation2d(Units.inchesToMeters(95.4),
+          0);
+      public static final Translation2d OFFSET_CENTER_TO_SIDE_ROW_OF_NOTES = new Translation2d(
+          Units.inchesToMeters(210.6), 0);
+
+      public static final Translation2d OFFSET_SIDE_NOTES = new Translation2d(0, Units.inchesToMeters(57.0));
+      public static final Translation2d OFFSET_CENTER_NOTES = new Translation2d(0, Units.inchesToMeters(66.0));
     }
   }
 

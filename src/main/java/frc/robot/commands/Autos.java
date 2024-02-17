@@ -55,10 +55,6 @@ public final class Autos {
     return drivetrain.pathfindToPose(next.getPosition(), constraints, 0);
   }
 
-  static final Translation2d OFFSET_CENTER_ROW_TO_SIDE = new Translation2d(Units.inchesToMeters(210.6), 0);
-  static final Translation2d OFFSET_SIDE_NOTES = new Translation2d(0, Units.inchesToMeters(57.0));
-  static final Translation2d OFFSET_CENTER_NOTES = new Translation2d(0, Units.inchesToMeters(66.0));
-
   static final Translation2d OFFSET_STAGE_NOTE = new Translation2d(Units.inchesToMeters(10), 0);
 
   static Translation2d getNotePosition(int noteId) {
@@ -66,22 +62,22 @@ public final class Autos {
 
     var offsetStageNote = noteId == 3 || noteId == 11 ? OFFSET_STAGE_NOTE : new Translation2d();
     if (noteId >= 1 && noteId <= 3) { // BLUE
-      return center.minus(OFFSET_CENTER_ROW_TO_SIDE.minus(offsetStageNote))
-          .plus(OFFSET_SIDE_NOTES.times(3 - noteId));
+      return center.minus(FIELD_DIMENSIONS.OFFSET_CENTER_TO_SIDE_ROW_OF_NOTES.minus(offsetStageNote))
+          .plus(FIELD_DIMENSIONS.OFFSET_SIDE_NOTES.times(3 - noteId));
     } else if (noteId >= 4 && noteId <= 8) { // CENTER
-      return center.plus(OFFSET_CENTER_NOTES.times(6 - noteId));
+      return center.plus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES.times(6 - noteId));
     } else if (noteId >= 9 && noteId <= 11) {// RED
-      return center.plus(OFFSET_CENTER_ROW_TO_SIDE.plus(offsetStageNote))
-          .plus(OFFSET_SIDE_NOTES.times(11 - noteId));
+      return center.plus(FIELD_DIMENSIONS.OFFSET_CENTER_TO_SIDE_ROW_OF_NOTES.plus(offsetStageNote))
+          .plus(FIELD_DIMENSIONS.OFFSET_SIDE_NOTES.times(11 - noteId));
     } else {
       return null;
     }
   }
 
-  static final Translation2d OFFSET_UPPER_SHOOT_Y = OFFSET_CENTER_NOTES.plus(
+  static final Translation2d OFFSET_UPPER_SHOOT_Y = FIELD_DIMENSIONS.OFFSET_CENTER_NOTES.plus(
       new Translation2d(0, Units.inchesToMeters(48.0)));
-  static final Translation2d OFFSET_UPPER_SHOOT_X = new Translation2d(
-      FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER + 25.0, 0);
+  static final Translation2d OFFSET_UPPER_SHOOT_X = FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER
+      .plus(new Translation2d(25.0, 0));
   static final Translation2d OFFSET_LOWER_SHOOT_Y = OFFSET_UPPER_SHOOT_Y.times(1);
   static final Translation2d OFFSET_LOWER_SHOOT_X = OFFSET_UPPER_SHOOT_Y.times(1); // times 1 just clones it
 

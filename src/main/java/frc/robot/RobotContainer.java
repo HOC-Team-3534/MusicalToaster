@@ -259,12 +259,44 @@ public class RobotContainer {
 				.andThen(turret.applyRequest(() -> aimForSpeaker, () -> shooterSpeaker));
 	}
 
-	public static boolean getShooterWithinRange() {
+	public static boolean isValidShootPosition() {
 		var x = drivetrain.getState().Pose.getX();
 		var alliance = DriverStation.getAlliance().get();
-		return alliance.equals(Alliance.Blue)
-				? x < FIELD_DIMENSIONS.CENTER_OF_FIELD.getX() - FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER
-				: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.getX() + FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER;
+		var behindAllianceLine = alliance.equals(Alliance.Blue)
+				? x < FIELD_DIMENSIONS.CENTER_OF_FIELD.minus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX()
+				: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX();
+		if (!behindAllianceLine)
+			return false;
+		return !isUnderStage();
+	}
+
+	public static Translation2d STAGE_BOUNDARY_1 = FIELD_DIMENSIONS.CENTER_OF_FIELD
+			.minus(FIELD_DIMENSIONS.OFFSET_CENTER_TO_SIDE_ROW_OF_NOTES);
+	public static Translation2d BETWEEN_BOUNDARY_2_AND_3 = FIELD_DIMENSIONS.CENTER_OF_FIELD
+			.minus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER);
+	public static Translation2d STAGE_BOUNDARY_2 = BETWEEN_BOUNDARY_2_AND_3.plus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES);
+	public static Translation2d STAGE_BOUNDARY_3 = BETWEEN_BOUNDARY_2_AND_3.minus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES);
+
+	private static boolean isUnderStage() {
+		var current = drivetrain.getState().Pose.getTranslation();
+		var curretFlippedForBlue = current.getX() > FIELD_DIMENSIONS.CENTER_OF_FIELD.getX()
+				? new Translation2d(FIELD_DIMENSIONS.LENGTH - current.getX(), current.getY())
+				: current;
+		return isPointInTriangle(curretFlippedForBlue, STAGE_BOUNDARY_1, STAGE_BOUNDARY_2, STAGE_BOUNDARY_3);
+	}
+
+	private static boolean isPointInTriangle(Translation2d pt, Translation2d v1, Translation2d v2, Translation2d v3) {
+		boolean b1, b2, b3;
+
+		b1 = sign(pt, v1, v2) < 0.0f;
+		b2 = sign(pt, v2, v3) < 0.0f;
+		b3 = sign(pt, v3, v1) < 0.0f;
+
+		return ((b1 == b2) && (b2 == b3));
+	}
+
+	private static double sign(Translation2d p1, Translation2d p2, Translation2d p3) {
+		return (p1.getX() - p3.getX()) * (p2.getY() - p3.getY()) - (p2.getX() - p3.getX()) * (p1.getY() - p3.getY());
 	}
 
 	/**
