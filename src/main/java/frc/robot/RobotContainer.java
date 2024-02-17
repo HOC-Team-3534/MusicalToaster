@@ -38,7 +38,7 @@ import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest;
-import frc.robot.subsystems.turret.TurretRequest.AimForAmp;
+import frc.robot.subsystems.turret.TurretRequest.AimWithRotation;
 import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
 import frc.robot.subsystems.turret.TurretRequest.CalibrateShooter;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
@@ -76,35 +76,53 @@ public class RobotContainer {
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
 	private final ControlIntake runExtake = new ControlIntake().withIntakePercent(0.5).withIntakeReversed(true);
 	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
+
+	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
+	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
+			.withRollerOutput(0.25)
+			.withRotateTolerance(Rotation2d.fromDegrees(1))
+			.withTilt(Rotation2d.fromDegrees(-35))
+			.withIntakeState(() -> intake.getState());// TODO Validate this
+	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
+			.withRollerOutput(0.25)
+			.withRotateTolerance(Rotation2d.fromDegrees(1))
+			.withTiltTolerance(Rotation2d.fromDegrees(1))
+			.withTiltFunction((distance) -> new Rotation2d())
+			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find distance table
+	private final static AimWithRotation aimForAmp = new AimWithRotation()
+			.withRotation(() -> Rotation2d.fromDegrees(90))
+			.withRollerOutput(0.25)
+			.withRotateTolerance(Rotation2d.fromDegrees(1))
+			.withTiltTolerance(Rotation2d.fromDegrees(1))
+			.withTilt(Rotation2d.fromDegrees(10))
+			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
+	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
+			.withRollerPercent(0.25)
+			.withRotation(new Rotation2d())
+			.withTilt(Rotation2d.fromDegrees(35))
+			.withTolerance(Rotation2d.fromDegrees(1));
+	private final static AimWithRotation aimForSteal = new AimWithRotation()
+			.withRotation(() -> {
+				var targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
+						? Rotation2d.fromDegrees(180)
+						: new Rotation2d();
+				return targetAzimuth.minus(drivetrain.getState().Pose.getRotation());
+			})
+			.withRollerOutput(0.25)
+			.withRotateTolerance(Rotation2d.fromDegrees(1))
+			.withTiltTolerance(Rotation2d.fromDegrees(1))
+			.withTilt(Rotation2d.fromDegrees(10))
+			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
+	private final static TestingTurret testingShooter = new TestingTurret();
+
 	private final static ControlShooter shooterOff = new ControlShooter().withVelocity(0);
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(1000);// TODO Find these valuess
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(6200);// TODO Find these
-
-	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
-	private final static IndexFromIntake indexFromIntake = new IndexFromIntake().withRollerOutput(0.25)
-			.withRotateTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(-35))
-			.withIntakeState(() -> intake.getState());// TODO Validate this
-
-	private final static TestingTurret testingShooter = new TestingTurret();
+	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(500);
 	private final CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers;
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers;
-
-	// Tune
-	// all,
-	// values
-	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker().withRollerOutput(0.25)
-			.withRotateTolerance(Rotation2d.fromDegrees(1))
-			.withTiltTolerance(Rotation2d.fromDegrees(1)).withTiltFunction((distance) -> new Rotation2d())
-			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find distance table
-	private final static AimForAmp aimForAmp = new AimForAmp().withRollerOutput(0.25)
-			.withRotateTolerance(Rotation2d.fromDegrees(1))
-			.withTiltTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(10))
-			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
-	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer().withRollerPercent(0.25)
-			.withRotation(new Rotation2d()).withTilt(Rotation2d.fromDegrees(35))
-			.withTolerance(Rotation2d.fromDegrees(1));
 
 	/**
 	 * The container for the robot. Contains subsystems, OI devices, and
@@ -260,7 +278,7 @@ public class RobotContainer {
 				case Subwoofer:
 					return shootFromSubwoofer.withReadyToShoot(() -> TGR.PrepareShootForSubwoofer.tgr().getAsBoolean());
 				case Steal:
-					return null; // TODO define Turret Request to shoot towards alliance wall when stealing
+					return aimForSteal;
 				default:
 					return indexFromIntake;
 
@@ -273,7 +291,7 @@ public class RobotContainer {
 				case Speaker:
 					return shooterSpeaker;
 				case Steal:
-					return null; // TODO define shooter request to shoot at a softer speed
+					return shooterSteal;
 				case Subwoofer:
 					return shooterSpeaker;
 				default:

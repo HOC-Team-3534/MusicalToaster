@@ -11,6 +11,8 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RobotContainer;
 import frc.robot.subsystems.intake.Intake.IntakeState;
@@ -159,13 +161,14 @@ public interface TurretRequest {
         }
     }
 
-    public class AimForAmp implements TurretRequest {
+    public class AimWithRotation implements TurretRequest {
         private Supplier<SwerveDriveState> swerveDriveStateSupplier;
         private Rotation2d tolerance;
         private Rotation2d tilt;
         private double rollerPercentOut;
         private Rotation2d tiltTolerance;
         private double shooterTolerance;
+        private Supplier<Rotation2d> rotationSupplier;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
@@ -181,7 +184,7 @@ public interface TurretRequest {
             var shooterError = parameters.turretState.shooterMotorClosedLoop;
 
             if (parameters.turretState.noteLoaded) {
-                targetAzimuth = Rotation2d.fromDegrees(90).minus(robotOrientation);
+                targetAzimuth = rotationSupplier.get().minus(robotOrientation);
                 targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
                 if (Math.abs(azimuthErrorDegrees) <= tolerance.getDegrees()) {
                     outputTilt = tilt;
@@ -197,33 +200,38 @@ public interface TurretRequest {
             return StatusCode.OK;
         }
 
-        public AimForAmp withSwerveDriveState(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
+        public AimWithRotation withSwerveDriveState(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
             this.swerveDriveStateSupplier = swerveDriveStateSupplier;
             return this;
         }
 
-        public AimForAmp withRotateTolerance(Rotation2d tolerance) {
+        public AimWithRotation withRotateTolerance(Rotation2d tolerance) {
             this.tolerance = tolerance;
             return this;
         }
 
-        public AimForAmp withTiltTolerance(Rotation2d tiltTolerance) {
+        public AimWithRotation withTiltTolerance(Rotation2d tiltTolerance) {
             this.tiltTolerance = tiltTolerance;
             return this;
         }
 
-        public AimForAmp withTilt(Rotation2d tilt) {
+        public AimWithRotation withTilt(Rotation2d tilt) {
             this.tilt = tilt;
             return this;
         }
 
-        public AimForAmp withRollerOutput(double percentOut) {
+        public AimWithRotation withRollerOutput(double percentOut) {
             this.rollerPercentOut = percentOut;
             return this;
         }
 
-        public AimForAmp withShooterTolerance(double shooterTolerance) {
+        public AimWithRotation withShooterTolerance(double shooterTolerance) {
             this.shooterTolerance = shooterTolerance;
+            return this;
+        }
+
+        public AimWithRotation withRotation(Supplier<Rotation2d> rotationSupplier) {
+            this.rotationSupplier = rotationSupplier;
             return this;
         }
     }
