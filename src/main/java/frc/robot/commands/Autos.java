@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.Constants.Drive.AUTO;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
+import frc.robot.RobotContainer.ShooterType;
 import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.RobotContainer;
 import frc.robot.subsystems.turret.Turret;
@@ -24,13 +25,20 @@ public final class Autos {
   public static Command getDynamicAutonomous(Turret turret, CommandSwerveDrivetrain drivetrain,
       AutoPositionList positions) {
     return Commands.runOnce(() -> drivetrain.seedFieldRelative(drivetrain.getState().Pose))
-        .andThen(Commands.parallel(
-            RobotContainer.getShootSpeakerCommand(), // TODO add logic to switch between shoot speaker and shoot steal
-            // TODO add intake command during auto
+        .andThen(Commands.deadline(
             Commands
                 .repeatingSequence(Commands.deferredProxy(() -> followPathToNextPositionCommand(drivetrain, positions)))
-                .until(() -> positions.size() == 0)));
+                .until(() -> positions.size() == 0))
+            .andThen(Commands.waitSeconds(2.0)),
+            RobotContainer.getShootCommand(() -> {
+              if (prevAutoPosition == null)
+                return ShooterType.Speaker;
+              return prevAutoPosition.getShootOrStealNote();
+            }),
+            RobotContainer.getIntakeAutonomouslyCommand());
   }
+
+  public static AutoPosition currentTargetAutoPosition, prevAutoPosition;
 
   /**
    * Create the command to follow a path from the current position to the next
@@ -44,15 +52,17 @@ public final class Autos {
     if (positions.isEmpty())
       return Commands.none();
 
-    var next = positions.pop();
+    prevAutoPosition = currentTargetAutoPosition;
+
+    var currentTargetAutoPosition = positions.pop();
 
     var current = drivetrain.getState().Pose.getTranslation();
 
-    var constraints = current.getDistance(next.getPosition()) < Units.inchesToMeters(75.0)
+    var constraints = current.getDistance(currentTargetAutoPosition.getPosition()) < Units.inchesToMeters(75.0)
         ? AUTO.kSlowPathConstraints
         : AUTO.kPathConstraints;
 
-    return drivetrain.pathfindToPose(next.getPosition(), constraints, 0);
+    return drivetrain.pathfindToPose(currentTargetAutoPosition.getPosition(), constraints, 0);
   }
 
   static final Translation2d OFFSET_STAGE_NOTE = new Translation2d(Units.inchesToMeters(10), 0);
@@ -112,7 +122,7 @@ public final class Autos {
     RedNote10,
     RedNote11;
 
-    ShootOrStealNote shootOrStealNote;
+    ShooterType shootOrStealNote;
 
     public AutoPosition getNotePosition() {
       return new AutoPosition(Autos.getNotePosition(this.ordinal() + 1), AutoPositionType.Note);
@@ -125,11 +135,11 @@ public final class Autos {
       return null;
     }
 
-    public ShootOrStealNote getShootOrStealNote() {
+    public ShooterType getShootOrStealNote() {
       return this.shootOrStealNote;
     }
 
-    public AutoNotes withShootOrStealNote(ShootOrStealNote shootOrStealNote) {
+    public AutoNotes withShootOrStealNote(ShooterType shootOrStealNote) {
       this.shootOrStealNote = shootOrStealNote;
       return this;
     }

@@ -4,6 +4,7 @@
 package frc.robot;
 
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
@@ -13,6 +14,7 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -23,8 +25,11 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
+import frc.robot.commands.AutoPosition;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
+import frc.robot.commands.AutoPosition.AutoPositionType;
+import frc.robot.commands.Autos.ShootOrStealNote;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
@@ -52,7 +57,7 @@ import swerve.CommandSwerveDrivetrain;
 public class RobotContainer {
 	// The robot's subsystems and commands are defined here...
 	// The driver station connected controllers are defined here...
-	private double MaxAngularRate = 4 * Math.PI;
+	private static double MaxAngularRate = 4 * Math.PI;
 
 	private static final CommandXboxController driverController = new CommandXboxController(0);
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
@@ -60,18 +65,18 @@ public class RobotContainer {
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
 	private final static CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain;
-	private final FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
+	private final static FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
 			.withDeadband(TunerConstants.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
 			.withMaxSpeed(TunerConstants.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 	private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
-	private final Telemetry logger = new Telemetry(TunerConstants.kSpeedAt12VoltsMps);
+	private final static Telemetry logger = new Telemetry(TunerConstants.kSpeedAt12VoltsMps);
 
 	private final static Intake intake = new Intake();
-	private final ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
+	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
 	private final ControlIntake runExtake = new ControlIntake().withIntakePercent(0.5).withIntakeReversed(true);
-	private final ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
-	private final ControlShooter shooterOff = new ControlShooter().withVelocity(0);
+	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
+	private final static ControlShooter shooterOff = new ControlShooter().withVelocity(0);
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(1000);// TODO Find these valuess
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(6200);// TODO Find these
 
@@ -80,11 +85,11 @@ public class RobotContainer {
 			.withRotateTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(-35))
 			.withIntakeState(() -> intake.getState());// TODO Validate this
 
-	private final TestingTurret testingShooter = new TestingTurret();
+	private final static TestingTurret testingShooter = new TestingTurret();
 	private final CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers;
-	private static SendableChooser<Autos.ShootOrStealNote>[] shootOrStealChoosers;
+	private static SendableChooser<ShooterType>[] shootOrStealChoosers;
 
 	// Tune
 	// all,
@@ -97,7 +102,7 @@ public class RobotContainer {
 			.withRotateTolerance(Rotation2d.fromDegrees(1))
 			.withTiltTolerance(Rotation2d.fromDegrees(1)).withTilt(Rotation2d.fromDegrees(10))
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
-	private final ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer().withRollerPercent(0.25)
+	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer().withRollerPercent(0.25)
 			.withRotation(new Rotation2d()).withTilt(Rotation2d.fromDegrees(35))
 			.withTolerance(Rotation2d.fromDegrees(1));
 
@@ -105,7 +110,7 @@ public class RobotContainer {
 	 * The container for the robot. Contains subsystems, OI devices, and
 	 * commands.
 	 */
-	public RobotContainer() {
+	public static void initialize() {
 		// Configure the trigger bindings
 		configureBindings();
 
@@ -167,11 +172,11 @@ public class RobotContainer {
 		return noteHiearchy;
 	}
 
-	public static SendableChooser<Autos.ShootOrStealNote> newShootOrStealChooser() {
-		SendableChooser<Autos.ShootOrStealNote> shootOrSteal = new SendableChooser<>();
+	public static SendableChooser<ShooterType> newShootOrStealChooser() {
+		SendableChooser<ShooterType> shootOrSteal = new SendableChooser<>();
 
-		shootOrSteal.setDefaultOption("Shoot", Autos.ShootOrStealNote.Shoot);
-		shootOrSteal.addOption("Steal", Autos.ShootOrStealNote.Steal);
+		shootOrSteal.setDefaultOption("Shoot", ShooterType.Speaker);
+		shootOrSteal.addOption("Steal", ShooterType.Steal);
 
 		return shootOrSteal;
 	}
@@ -188,7 +193,7 @@ public class RobotContainer {
 	 * {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
 	 * joysticks}.
 	 */
-	private void configureBindings() {
+	private static void configureBindings() {
 		TGR.Characterize.tgr().whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
 
 		// reset the field-centric heading on left bumper press
@@ -196,11 +201,9 @@ public class RobotContainer {
 
 		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> runIntake));
 
-		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(aimForSpeaker, shooterSpeaker));
-		TGR.ShootAmp.tgr().whileTrue(getShootCommand(aimForAmp, shooterAmp));
-		TGR.ShootFromSubwoofer.tgr().whileTrue(turret.applyRequest(
-				() -> shootFromSubwoofer.withReadyToShoot(() -> TGR.PrepareShootForSubwoofer.tgr().getAsBoolean()),
-				() -> shooterSpeaker));
+		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
+		TGR.ShootAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
+		TGR.ShootFromSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
 		TGR.TestingRotationPositive.tgr()
 				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0.05).withPercentTilt(0),
@@ -217,15 +220,21 @@ public class RobotContainer {
 
 	}
 
-	public static AutoPositionList getAutoPositions() {
-		AutoPositionList positions = new AutoPositionList();
-		for (int i = 0; i < noteHiearchyChoosers.length && i < shootOrStealChoosers.length; i++) {
-			var note = noteHiearchyChoosers[i].getSelected();
-			var shootOrSteal = shootOrStealChoosers[i].getSelected();
-			if (note != null)
-				positions.add(note.withShootOrStealNote(shootOrSteal));
+	public static Command getIntakeAutonomouslyCommand() {
+		return intake.applyRequest(() -> {
+			if (isNoteInRobot())
+				return stopIntake;
+			return runIntake;
+		});
+	}
+
+	public static boolean isNoteInRobot() {
+		for (boolean note : intake.getState().noteInPosition) {
+			if (note) {
+				return true;
+			}
 		}
-		return positions;
+		return turret.getState().noteLoaded;
 	}
 
 	public static int getCoordinateSystemInversionDriving() {
@@ -233,18 +242,45 @@ public class RobotContainer {
 		return alliance.isPresent() && alliance.get() == Alliance.Red ? -1 : 1;
 	}
 
-	public static Command getShootSpeakerCommand() {
-		return getShootCommand(aimForSpeaker, shooterSpeaker);
+	public enum ShooterType {
+		Speaker, Amp, Steal, Subwoofer
 	}
 
-	private static Command getShootCommand(TurretRequest aimForRequestWhenReady, ShooterRequest shooterRequest) {
-		var notReady = turret.applyRequest(() -> indexFromIntake, () -> shooterRequest);
-		var ready = turret.applyRequest(() -> aimForRequestWhenReady, () -> shooterRequest);
-		return (notReady.until(() -> isReadyToShoot()).andThen(ready).until(() -> !isReadyToShoot())).repeatedly();
-	}
+	public static Command getShootCommand(Supplier<ShooterType> shooterTypeSupplier) {
+		return turret.applyRequest(() -> {
+			var type = shooterTypeSupplier.get();
+			if (!turret.getState().noteLoaded
+					|| (type.equals(ShooterType.Speaker) && !isValidShootPosition()))
+				return indexFromIntake;
+			switch (type) {
+				case Amp:
+					return aimForAmp;
+				case Speaker:
+					return aimForSpeaker;
+				case Subwoofer:
+					return shootFromSubwoofer.withReadyToShoot(() -> TGR.PrepareShootForSubwoofer.tgr().getAsBoolean());
+				case Steal:
+					return null; // TODO define Turret Request to shoot towards alliance wall when stealing
+				default:
+					return indexFromIntake;
 
-	private static boolean isReadyToShoot() {
-		return turret.getState().noteLoaded && isValidShootPosition();
+			}
+		}, () -> {
+			var type = shooterTypeSupplier.get();
+			switch (type) {
+				case Amp:
+					return shooterAmp;
+				case Speaker:
+					return shooterSpeaker;
+				case Steal:
+					return null; // TODO define shooter request to shoot at a softer speed
+				case Subwoofer:
+					return shooterSpeaker;
+				default:
+					return shooterSpeaker;
+
+			}
+		});
 	}
 
 	public static boolean isValidShootPosition() {
@@ -274,15 +310,30 @@ public class RobotContainer {
 				STAGE_BOUNDARY_3);
 	}
 
+	static final Translation2d DriveStraightForwardLine = FIELD_DIMENSIONS.CENTER_OF_FIELD
+			.minus(FIELD_DIMENSIONS.OFFSET_AUTO_CROSS_LINE_FROM_CENTER)
+			.plus(new Translation2d(Units.inchesToMeters(25.0), 0));
+
 	/**
 	 * Use this to pass the autonomous command to the main {@link Robot} class.
 	 *
 	 * @return the command to run in autonomous
 	 */
-	public Command getAutonomousCommand() {
-		var positions = getAutoPositions();
+	public static Command getAutonomousCommand() {
+		AutoPositionList positions = new AutoPositionList();
+		for (int i = 0; i < noteHiearchyChoosers.length && i < shootOrStealChoosers.length; i++) {
+			var note = noteHiearchyChoosers[i].getSelected();
+			var shootOrSteal = shootOrStealChoosers[i].getSelected();
+			if (note != null)
+				positions.add(note.withShootOrStealNote(shootOrSteal));
+		}
 		if (positions.isEmpty()) {
-			// return Shoot and Drive Forward Command;
+			var current = drivetrain.getState().Pose.getTranslation();
+			var x = DriverStation.getAlliance().get().equals(Alliance.Blue) ? DriveStraightForwardLine.getX()
+					: FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
+			var driveAcrossLinePosition = new Translation2d(x, current.getY());
+			positions.add(new AutoPosition(driveAcrossLinePosition, AutoPositionType.Shoot, ShooterType.Speaker)
+					.withNotSkippable());
 		}
 		return Autos.getDynamicAutonomous(turret, drivetrain, positions);
 	}

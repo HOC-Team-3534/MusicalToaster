@@ -100,6 +100,8 @@ public final class Constants {
 
       public static final Translation2d OFFSET_ALLIANCE_LINE_FROM_CENTER = new Translation2d(Units.inchesToMeters(95.4),
           0);
+      public static final Translation2d OFFSET_AUTO_CROSS_LINE_FROM_CENTER = new Translation2d(
+          Units.inchesToMeters(250.50), 0);
       public static final Translation2d OFFSET_CENTER_TO_SIDE_ROW_OF_NOTES = new Translation2d(
           Units.inchesToMeters(210.6), 0);
 

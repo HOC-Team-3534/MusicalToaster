@@ -4,6 +4,7 @@ import java.util.LinkedList;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
+import frc.robot.RobotContainer.ShooterType;
 import frc.robot.commands.AutoPosition.AutoPositionType;
 
 public class AutoPositionList extends LinkedList<AutoPosition> {
@@ -16,7 +17,7 @@ public class AutoPositionList extends LinkedList<AutoPosition> {
 
         var n = note.getNotePosition();
         var s = note.getShootPostion();
-        var steal = note.getShootOrStealNote().equals(Autos.ShootOrStealNote.Steal);
+        var steal = note.getShootOrStealNote().equals(ShooterType.Steal);
 
         /**
          * Add a shoot point before note 3 and note 11
@@ -31,7 +32,7 @@ public class AutoPositionList extends LinkedList<AutoPosition> {
                 removeLast();
             add(new AutoPosition(
                     workaroundPosition,
-                    AutoPositionType.Shoot));
+                    AutoPositionType.Shoot, prev.getShootOrStealNote()).withNotSkippable());
         }
 
         add(n);
