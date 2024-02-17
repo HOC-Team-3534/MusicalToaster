@@ -12,6 +12,7 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.intake.Intake.IntakeState;
 import frc.robot.subsystems.turret.Turret.TurretState;
 
@@ -50,7 +51,8 @@ public interface TurretRequest {
             if (!parameters.turretState.noteLoaded && index != -1) {
                 targetAzimuth = Rotation2d.fromRotations(0.25 * index);
                 targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
-                if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()) {
+                if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()
+                        && !RobotContainer.isRobotUnderStage()) {
                     outputTilt = tilt;
                     rollerOn = true;
                 }

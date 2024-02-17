@@ -1,4 +1,4 @@
-package frc.robot.helpers.shooting;
+package frc.robot.utils.shooting;
 
 import java.util.function.Function;
 

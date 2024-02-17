@@ -1,4 +1,4 @@
-package frc.robot.helpers.shooting;
+package frc.robot.utils.shooting;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;

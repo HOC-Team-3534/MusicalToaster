@@ -27,15 +27,11 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.helpers.shooting.GoalFinalEquation;
-import frc.robot.helpers.shooting.QuadraticEquation;
-import frc.robot.helpers.shooting.ShootWhileMovingSolver;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
+import frc.robot.utils.ShootingUtils;
+import frc.robot.utils.shooting.QuadraticEquation;
 
 public class Turret extends SubsystemBase {
-    final Supplier<SwerveDriveState> swerveDriveStateSupplier;
-    final Supplier<ChassisSpeeds> chassisSpeeSupplier;
-
     final QuadraticEquation timeOfFlightEquation = new QuadraticEquation().withA(0).withB(0).withC(0);
 
     TalonFX rightShooterMotor, leftShooterMotor, rotateMotor, tiltMotor;
@@ -49,7 +45,7 @@ public class Turret extends SubsystemBase {
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
 
-    public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedSupplier) {
+    public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedsSupplier) {
         super();
         rightShooterMotor = new TalonFX(0);
         leftShooterMotor = new TalonFX(0);
@@ -148,8 +144,14 @@ public class Turret extends SubsystemBase {
         tiltMotor.setPosition(0);
         rotateMotor.setPosition(0);
 
-        this.swerveDriveStateSupplier = swerveDriveStateSupplier;
-        this.chassisSpeeSupplier = chassisSpeedSupplier;
+        var goalPosition = DriverStation.getAlliance().get().equals(Alliance.Blue)
+                ? new Translation2d(Units.inchesToMeters(9), Units.inchesToMeters(218.64))
+                : new Translation2d(Units.feetToMeters(54.75) - Units.inchesToMeters(9),
+                        Units.inchesToMeters(218.64));
+
+        ShootingUtils.configureShootWhileMoving(() -> goalPosition, chassisSpeedsSupplier,
+                () -> swerveDriveStateSupplier.get().Pose.getTranslation(),
+                (vector) -> timeOfFlightEquation.get(vector.getNorm()));
     }
 
     @Override
@@ -271,20 +273,13 @@ public class Turret extends SubsystemBase {
                     if (m_cachedState.loopsWithoutNote >= 5)
                         m_cachedState.noteLoaded = false;
 
-                    var robotPosition = swerveDriveStateSupplier.get().Pose.getTranslation();
-                    var robotVelocity = chassisSpeeSupplier.get();
-                    var goalPosition = DriverStation.getAlliance().get().compareTo(Alliance.Blue) == 0
-                            ? new Translation2d(Units.inchesToMeters(9), Units.inchesToMeters(218.64))
-                            : new Translation2d(Units.feetToMeters(54.75) - Units.inchesToMeters(9),
-                                    Units.inchesToMeters(218.64));
-                    var goalFinalEquation = new GoalFinalEquation().withRobotPosition(robotPosition)
-                            .withRobotVelocity(robotVelocity).withGoalPosition(goalPosition);
-
-                    var shootWhileMoving = new ShootWhileMovingSolver(goalFinalEquation,
-                            (vector) -> timeOfFlightEquation.get(vector.getNorm()));
-
-                    var solution = shootWhileMoving.findSolution(0.005, 20, 5);
-                    m_cachedState.virtualGoalLocationDisplacement = solution.getGoalFinalCalculated();
+                    try {
+                        m_cachedState.virtualGoalLocationDisplacement = ShootingUtils
+                                .findVirtualGoalDisplacementFromRobot(0.005, 20, 5);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        m_cachedState.virtualGoalLocationDisplacement = null;
+                    }
 
                     m_requestParameters.turretState = m_cachedState;
 
@@ -306,13 +301,4 @@ public class Turret extends SubsystemBase {
             m_stateLock.readLock().unlock();
         }
     }
-
-    public Rotation2d getRobotRelativeAngle() {
-        return null;
-    }
-
-    public Rotation2d getFieldRelativeAngle() {
-        return getRobotRelativeAngle().plus(swerveDriveStateSupplier.get().Pose.getRotation());
-    }
-
 }

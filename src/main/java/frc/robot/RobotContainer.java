@@ -3,7 +3,6 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot;
 
-import java.util.LinkedList;
 import java.util.concurrent.Callable;
 
 import com.ctre.phoenix6.Utils;
@@ -14,32 +13,33 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
-import frc.robot.commands.AutoPosition;
+import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
-import frc.robot.commands.Autos.AutoNotes;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
+import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.Turret;
+import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.TurretRequest.AimForAmp;
 import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
 import frc.robot.subsystems.turret.TurretRequest.CalibrateShooter;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
 import frc.robot.subsystems.turret.TurretRequest.ShootFromSubwoofer;
 import frc.robot.subsystems.turret.TurretRequest.TestingTurret;
+import frc.robot.utils.PositionUtils;
 import swerve.CommandSwerveDrivetrain;
 
 /**
@@ -112,6 +112,34 @@ public class RobotContainer {
 		configureBindings();
 
 		// Set Default Commands for Subsystems
+		drivetrain.setDefaultCommand(
+				// Drivetrain will execute this command periodically
+				drivetrain.applyRequest(
+						() -> drive
+								.withVelocityX(
+										// Drive forward with negative Y (forward)
+										-driverController.getLeftY() * TunerConstants.kSpeedAt12VoltsMps
+												* getCoordinateSystemInversionDriving())
+								.withVelocityY(
+										// Drive left with negative X (left)
+										-driverController.getLeftX() * TunerConstants.kSpeedAt12VoltsMps
+												* getCoordinateSystemInversionDriving())
+								.withRotationalRate(
+										// Drive counterclockwise with negative X (left)
+										-driverController.getRightX() * MaxAngularRate)
+								.withCreepEnabled(driverController.getRightTriggerAxis() > 0.15)));
+
+		intake.setDefaultCommand(intake.applyRequest(() -> stopIntake));
+
+		if (!EnabledDebugModes.testingTurret)
+			turret.setDefaultCommand(
+					turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
+
+		if (Utils.isSimulation()) {
+			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
+		}
+
+		drivetrain.registerTelemetry(logger::telemeterize);
 
 		// Show Status of Subsystems on Dashboard
 		for (int i = 0; i < 5; i++) {
@@ -163,37 +191,6 @@ public class RobotContainer {
 	 * joysticks}.
 	 */
 	private void configureBindings() {
-		// The following triggered commands are for debug purposes only
-		drivetrain.setDefaultCommand( // Drivetrain will execute this command periodically
-				drivetrain.applyRequest(
-						() -> drive
-								.withVelocityX(
-										-driverController.getLeftY() * TunerConstants.kSpeedAt12VoltsMps
-												* getCoordinateSystemInversionDriving()) // Drive
-								// forward
-								// with
-								// negative Y (forward)
-								.withVelocityY(
-										-driverController.getLeftX() * TunerConstants.kSpeedAt12VoltsMps
-												* getCoordinateSystemInversionDriving()) // Drive
-								// left
-								// with
-								// negative
-								// X
-								// (left)
-								.withRotationalRate(-driverController.getRightX() * MaxAngularRate)
-								.withCreepEnabled(driverController.getRightTriggerAxis() > 0.15) // Drive
-																									// counterclockwise
-																									// with
-				// negative X (left)
-				));
-
-		intake.setDefaultCommand(intake.applyRequest(() -> stopIntake));
-
-		if (!EnabledDebugModes.testingTurret)
-			turret.setDefaultCommand(
-					turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
-
 		driverController.a().and(() -> CHARACTERIZATION_ENABLED).whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
 		driverController.b().whileTrue(drivetrain
 				.applyRequest(
@@ -205,16 +202,11 @@ public class RobotContainer {
 
 		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> runIntake));
 
-		TGR.ShootSpeaker.tgr().whileTrue(getShootSpeakerCommand());
-		TGR.ShootAmp.tgr().whileTrue(getShootAmpCommand());
+		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(aimForSpeaker, shooterSpeaker));
+		TGR.ShootAmp.tgr().whileTrue(getShootCommand(aimForAmp, shooterAmp));
 		TGR.ShootFromSubwoofer.tgr().whileTrue(turret.applyRequest(
 				() -> shootFromSubwoofer.withReadyToShoot(() -> TGR.PrepareShootForSubwoofer.tgr().getAsBoolean()),
 				() -> shooterSpeaker));
-
-		if (Utils.isSimulation()) {
-			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
-		}
-		drivetrain.registerTelemetry(logger::telemeterize);
 
 		TGR.TestingRotationPositive.tgr()
 				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0.05).withPercentTilt(0),
@@ -247,16 +239,15 @@ public class RobotContainer {
 		return alliance.isPresent() && alliance.get() == Alliance.Red ? -1 : 1;
 	}
 
-	public static Command getShootAmpCommand() {
-		return turret.applyRequest(() -> indexFromIntake, () -> shooterAmp)
-				.until(() -> turret.getState().noteLoaded)
-				.andThen(turret.applyRequest(() -> aimForAmp, () -> shooterAmp));
+	public static Command getShootSpeakerCommand() {
+		return getShootCommand(aimForSpeaker, shooterSpeaker);
 	}
 
-	public static Command getShootSpeakerCommand() {
-		return turret.applyRequest(() -> indexFromIntake, () -> shooterSpeaker)
-				.until(() -> turret.getState().noteLoaded)
-				.andThen(turret.applyRequest(() -> aimForSpeaker, () -> shooterSpeaker));
+	private static Command getShootCommand(TurretRequest aimForRequest, ShooterRequest shooterRequest) {
+		return Commands.either(
+				turret.applyRequest(() -> indexFromIntake, () -> shooterRequest),
+				turret.applyRequest(() -> aimForRequest, () -> shooterRequest),
+				() -> !turret.getState().noteLoaded || !isValidShootPosition());
 	}
 
 	public static boolean isValidShootPosition() {
@@ -267,7 +258,7 @@ public class RobotContainer {
 				: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX();
 		if (!behindAllianceLine)
 			return false;
-		return !isUnderStage();
+		return !isRobotUnderStage();
 	}
 
 	public static Translation2d STAGE_BOUNDARY_1 = FIELD_DIMENSIONS.CENTER_OF_FIELD
@@ -277,26 +268,13 @@ public class RobotContainer {
 	public static Translation2d STAGE_BOUNDARY_2 = BETWEEN_BOUNDARY_2_AND_3.plus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES);
 	public static Translation2d STAGE_BOUNDARY_3 = BETWEEN_BOUNDARY_2_AND_3.minus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES);
 
-	private static boolean isUnderStage() {
+	public static boolean isRobotUnderStage() {
 		var current = drivetrain.getState().Pose.getTranslation();
 		var curretFlippedForBlue = current.getX() > FIELD_DIMENSIONS.CENTER_OF_FIELD.getX()
 				? new Translation2d(FIELD_DIMENSIONS.LENGTH - current.getX(), current.getY())
 				: current;
-		return isPointInTriangle(curretFlippedForBlue, STAGE_BOUNDARY_1, STAGE_BOUNDARY_2, STAGE_BOUNDARY_3);
-	}
-
-	private static boolean isPointInTriangle(Translation2d pt, Translation2d v1, Translation2d v2, Translation2d v3) {
-		boolean b1, b2, b3;
-
-		b1 = sign(pt, v1, v2) < 0.0f;
-		b2 = sign(pt, v2, v3) < 0.0f;
-		b3 = sign(pt, v3, v1) < 0.0f;
-
-		return ((b1 == b2) && (b2 == b3));
-	}
-
-	private static double sign(Translation2d p1, Translation2d p2, Translation2d p3) {
-		return (p1.getX() - p3.getX()) * (p2.getY() - p3.getY()) - (p2.getX() - p3.getX()) * (p1.getY() - p3.getY());
+		return PositionUtils.isPointInTriangle(curretFlippedForBlue, STAGE_BOUNDARY_1, STAGE_BOUNDARY_2,
+				STAGE_BOUNDARY_3);
 	}
 
 	/**

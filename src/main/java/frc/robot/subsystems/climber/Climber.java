@@ -21,8 +21,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.helpers.shooting.GoalFinalEquation;
-import frc.robot.helpers.shooting.ShootWhileMovingSolver;
+import frc.robot.utils.shooting.GoalFinalEquation;
+import frc.robot.utils.shooting.ShootWhileMovingSolver;
 
 public class Climber extends SubsystemBase {
     TalonFX climberMotor;

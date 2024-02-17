@@ -4,20 +4,18 @@
 
 package frc.robot.commands;
 
-import java.sql.Driver;
 import java.util.LinkedList;
 
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import frc.robot.RobotContainer;
 import frc.robot.Constants.Drive.AUTO;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.commands.AutoPosition.AutoPositionType;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.turret.Turret;
 import swerve.CommandSwerveDrivetrain;
 
@@ -26,10 +24,12 @@ public final class Autos {
   public static Command getDynamicAutonomous(Turret turret, CommandSwerveDrivetrain drivetrain,
       AutoPositionList positions) {
     return Commands.runOnce(() -> drivetrain.seedFieldRelative(drivetrain.getState().Pose))
-        .andThen(RobotContainer.getShootSpeakerCommand())
-        .andThen(Commands
-            .repeatingSequence(Commands.deferredProxy(() -> followPathToNextPositionCommand(drivetrain, positions)))
-            .until(() -> positions.size() == 0));
+        .andThen(Commands.parallel(
+            RobotContainer.getShootSpeakerCommand(), // TODO add logic to switch between shoot speaker and shoot steal
+            // TODO add intake command during auto
+            Commands
+                .repeatingSequence(Commands.deferredProxy(() -> followPathToNextPositionCommand(drivetrain, positions)))
+                .until(() -> positions.size() == 0)));
   }
 
   /**

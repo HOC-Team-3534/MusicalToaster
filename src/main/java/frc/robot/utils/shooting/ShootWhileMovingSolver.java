@@ -1,4 +1,4 @@
-package frc.robot.helpers.shooting;
+package frc.robot.utils.shooting;
 
 import java.util.ArrayList;
 import java.util.function.Function;
@@ -9,16 +9,14 @@ public class ShootWhileMovingSolver {
 	int iterations;
 	long startedAt, completedAt;
 
-	final GoalFinalEquation goalFinalEquation;
 	final Function<Translation2d, Double> timeOfFlightEquation;
 
-	public ShootWhileMovingSolver(GoalFinalEquation goalFinalEquation,
-			Function<Translation2d, Double> timeOfFlightEquation) {
-		this.goalFinalEquation = goalFinalEquation;
+	public ShootWhileMovingSolver(Function<Translation2d, Double> timeOfFlightEquation) {
 		this.timeOfFlightEquation = timeOfFlightEquation;
 	}
 
-	public SolverSolution findSolution(double maxError, double maxIterations, double maxTimeOfFlight) {
+	public SolverSolution findSolution(GoalFinalEquation goalFinalEquation, double maxError, double maxIterations,
+			double maxTimeOfFlight) {
 		startedAt = System.currentTimeMillis();
 		iterations = 0;
 
@@ -53,7 +51,7 @@ public class ShootWhileMovingSolver {
 		return latestSolution;
 	}
 
-	public ArrayList<SolverSolution> getTable(double maxTimeOfFlight) {
+	public ArrayList<SolverSolution> getTable(GoalFinalEquation goalFinalEquation, double maxTimeOfFlight) {
 		ArrayList<SolverSolution> solutions = new ArrayList<>();
 		for (double i = 0; i < maxTimeOfFlight; i += (maxTimeOfFlight) / 16.0) {
 			SolverSolution currentSolution = new SolverSolution(i, goalFinalEquation.getGoalFinal(i), goalFinalEquation,
