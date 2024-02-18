@@ -8,7 +8,6 @@ import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -65,7 +64,6 @@ public class RobotContainer {
 			.withDeadband(TunerConstants.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
 			.withMaxSpeed(TunerConstants.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
-	private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 	private final static Telemetry logger = new Telemetry(TunerConstants.kSpeedAt12VoltsMps);
 
 	private final static Intake intake = new Intake();
@@ -76,27 +74,21 @@ public class RobotContainer {
 	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
 	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
 			.withRollerOutput(0.25)
-			.withRotateTolerance(Rotation2d.fromDegrees(1))
 			.withTilt(Rotation2d.fromDegrees(-35))
 			.withIntakeState(() -> intake.getState());// TODO Validate this
 	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
 			.withRollerOutput(0.25)
-			.withRotateTolerance(Rotation2d.fromDegrees(1))
-			.withTiltTolerance(Rotation2d.fromDegrees(1))
 			.withTiltFunction((distance) -> new Rotation2d())
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find distance table
 	private final static AimWithRotation aimForAmp = new AimWithRotation()
 			.withRotation(() -> Rotation2d.fromDegrees(90))
 			.withRollerOutput(0.25)
-			.withRotateTolerance(Rotation2d.fromDegrees(1))
-			.withTiltTolerance(Rotation2d.fromDegrees(1))
 			.withTilt(Rotation2d.fromDegrees(10))
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
 			.withRollerPercent(0.25)
 			.withRotation(new Rotation2d())
-			.withTilt(Rotation2d.fromDegrees(35))
-			.withTolerance(Rotation2d.fromDegrees(1));
+			.withTilt(Rotation2d.fromDegrees(35));
 	private final static AimWithRotation aimForSteal = new AimWithRotation()
 			.withRotation(() -> {
 				var targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
@@ -105,8 +97,6 @@ public class RobotContainer {
 				return targetAzimuth.minus(drivetrain.getState().Pose.getRotation());
 			})
 			.withRollerOutput(0.25)
-			.withRotateTolerance(Rotation2d.fromDegrees(1))
-			.withTiltTolerance(Rotation2d.fromDegrees(1))
 			.withTilt(Rotation2d.fromDegrees(10))
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
 	private final static TestingTurret testingShooter = new TestingTurret();
@@ -146,7 +136,8 @@ public class RobotContainer {
 										-driverController.getRightX() * MaxAngularRate)
 								.withCreepEnabled(driverController.getRightTriggerAxis() > 0.15)));
 
-		intake.setDefaultCommand(intake.applyRequest(() -> stopIntake));
+		intake.setDefaultCommand(
+				intake.applyRequest(() -> isActivelyIndexingFromIntake() ? runIntake : stopIntake));
 
 		if (!EnabledDebugModes.testingTurret)
 			turret.setDefaultCommand(
@@ -195,6 +186,10 @@ public class RobotContainer {
 		return shootOrSteal;
 	}
 
+	public static boolean isActivelyIndexingFromIntake() {
+		return turret.getState().activelyIndexingFromIntake;
+	}
+
 	/**
 	 * Use this method to define your trigger->command mappings. Triggers can be
 	 * created via the
@@ -213,7 +208,7 @@ public class RobotContainer {
 		// reset the field-centric heading on left bumper press
 		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
 
-		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> runIntake));
+		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
 
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		TGR.ShootAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
@@ -243,8 +238,9 @@ public class RobotContainer {
 	}
 
 	public static boolean isNoteInRobot() {
-		for (boolean note : intake.getState().noteInPosition) {
-			if (note) {
+		var intakeState = intake.getState();
+		for (int i = 0; i < intakeState.seeingNote.length; i++) {
+			if (intakeState.getNoteInPosition(i)) {
 				return true;
 			}
 		}

@@ -19,10 +19,12 @@ public interface IntakeRequest {
 
         @Override
         public StatusCode apply(IntakeControlRequestParameters parameters, TalonSRX frontBack, TalonSRX leftRight) {
-            var inPosition = parameters.intakeState.noteInPosition;
-            var seeNote = parameters.intakeState.seeingNote;
-            var dontRunFrontBack = seeNote[1] || seeNote[3] || inPosition[1] || inPosition[3];
-            var dontRunLeftRight = seeNote[0] || seeNote[2] || inPosition[0] || inPosition[2];
+            var intake = parameters.intakeState;
+            var seeNote = intake.seeingNote;
+            var dontRunFrontBack = seeNote[1] || seeNote[3] || intake.getRawNoteInPositionNoDelay(1)
+                    || intake.getRawNoteInPositionNoDelay(3);
+            var dontRunLeftRight = seeNote[0] || seeNote[2] || intake.getRawNoteInPositionNoDelay(0)
+                    || intake.getRawNoteInPositionNoDelay(2);
 
             // TODO Automate extake on multiple notes
 

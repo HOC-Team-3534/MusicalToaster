@@ -11,8 +11,6 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RobotContainer;
 import frc.robot.subsystems.intake.Intake.IntakeState;
@@ -28,23 +26,26 @@ public interface TurretRequest {
 
     public class IndexFromIntake implements TurretRequest {
         private Supplier<IntakeState> intakeStateSupplier;
-        private Rotation2d tolerance;
+        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
         private Rotation2d tilt;
         private double rollerPercentOut;
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(1);
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
-            var noteInPosition = intakeStateSupplier.get().noteInPosition;
+            var intakeState = intakeStateSupplier.get();
             int index = -1;
             var currentAzimuth = parameters.turretState.azimuth;
+            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoop.getDegrees();
 
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
+            var tiltErrorDegrees = parameters.turretState.tiltClosedLoop.getDegrees();
 
-            for (int i = 0; i < noteInPosition.length; i++) {
-                if (noteInPosition[i]) {
+            for (int i = 0; i < intakeState.seeingNote.length; i++) {
+                if (intakeState.getNoteInPosition(i)) {
                     index = i;
                     break;
                 }
@@ -53,10 +54,13 @@ public interface TurretRequest {
             if (!parameters.turretState.noteLoaded && index != -1) {
                 targetAzimuth = Rotation2d.fromRotations(0.25 * index);
                 targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
-                if (Math.abs(rotateMotor.getClosedLoopError().getValueAsDouble()) <= tolerance.getRotations()
+                if (Math.abs(azimuthErrorDegrees) <= tolerance.getRotations()
                         && !RobotContainer.isRobotUnderStage()) {
                     outputTilt = tilt;
-                    rollerOn = true;
+                    if (tiltErrorDegrees <= tiltTolerance.getDegrees()) {
+                        parameters.turretState.activelyIndexingFromIntake = true;
+                        rollerOn = true;
+                    }
                 }
             }
 
@@ -85,11 +89,16 @@ public interface TurretRequest {
             this.rollerPercentOut = percentOut;
             return this;
         }
+
+        public IndexFromIntake withTiltTolerance(Rotation2d tiltTolerance) {
+            this.tiltTolerance = tiltTolerance;
+            return this;
+        }
     }
 
     public class AimForSpeaker implements TurretRequest {
-        private Rotation2d tolerance;
-        private Rotation2d tiltTolerance;
+        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(1);
         private double shooterTolerance;
         private double rollerPercentOut;
         private Supplier<SwerveDriveState> swerveDriveStateSupplier;
@@ -163,10 +172,10 @@ public interface TurretRequest {
 
     public class AimWithRotation implements TurretRequest {
         private Supplier<SwerveDriveState> swerveDriveStateSupplier;
-        private Rotation2d tolerance;
+        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
         private Rotation2d tilt;
         private double rollerPercentOut;
-        private Rotation2d tiltTolerance;
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(1);
         private double shooterTolerance;
         private Supplier<Rotation2d> rotationSupplier;
 
@@ -237,9 +246,9 @@ public interface TurretRequest {
     }
 
     public class CalibrateShooter implements TurretRequest {
-        private Rotation2d tolerance;
+        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
         private double rollerPercentOut;
-        private Rotation2d tiltTolerance;
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(1);
         private double shooterTolerance;
 
         public CalibrateShooter() {
@@ -330,9 +339,9 @@ public interface TurretRequest {
         private Rotation2d tilt;
         private Rotation2d rotation;
         private Supplier<Boolean> readyToShoot;
-        private Rotation2d tolerance;
+        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
         private double rollerPercentOut;
-        private Rotation2d tiltTolerance;
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(1);
         private double shooterTolerance;
 
         @Override

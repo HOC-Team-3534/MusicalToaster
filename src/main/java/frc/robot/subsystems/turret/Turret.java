@@ -192,6 +192,8 @@ public class Turret extends SubsystemBase {
 
         public double shooterMotorClosedLoop;
 
+        public boolean activelyIndexingFromIntake;
+
     }
 
     final TurretState m_cachedState = new TurretState();
@@ -280,6 +282,8 @@ public class Turret extends SubsystemBase {
                         e.printStackTrace();
                         m_cachedState.virtualGoalLocationDisplacement = null;
                     }
+
+                    m_cachedState.activelyIndexingFromIntake = false;
 
                     m_requestParameters.turretState = m_cachedState;
 

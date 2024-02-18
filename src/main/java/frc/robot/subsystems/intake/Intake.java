@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.intake.IntakeRequest.IntakeControlRequestParameters;
 
 public class Intake extends SubsystemBase {
@@ -21,6 +22,8 @@ public class Intake extends SubsystemBase {
     DigitalInput sensors[] = new DigitalInput[4];
 
     final double UpdateFrequency = 100.0;
+
+    final static double delayNoteInPositionSeconds = 0.25;
 
     ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
     protected IntakeRequest m_requestToApply = new IntakeRequest.Idle();
@@ -54,6 +57,12 @@ public class Intake extends SubsystemBase {
     }
 
     public class IntakeState {
+        public IntakeState() {
+            for (int i = 0; i < noteInPositionTimer.length; i++) {
+                noteInPositionTimer[i] = new Timer();
+            }
+        }
+
         public double frontBackCurrentDraw;
 
         public double leftRightCurrentDraw;
@@ -61,10 +70,19 @@ public class Intake extends SubsystemBase {
         // 0 is Front, 1 is Left, Back is 2, Right is 3
         public boolean seeingNote[] = new boolean[4];
 
-        public boolean noteInPosition[] = new boolean[4];
+        public int sensorRisingEdges[] = new int[4];
 
-        public int loopsWithoutNote[] = new int[4];
+        private boolean noteInPosition[] = new boolean[4];
 
+        private final Timer noteInPositionTimer[] = new Timer[4];
+
+        public boolean getRawNoteInPositionNoDelay(int i) {
+            return noteInPosition[i];
+        }
+
+        public boolean getNoteInPosition(int i) {
+            return noteInPosition[i] && noteInPositionTimer[i].hasElapsed(delayNoteInPositionSeconds);
+        }
     }
 
     final IntakeState m_cachedState = new IntakeState();
@@ -128,21 +146,23 @@ public class Intake extends SubsystemBase {
                     m_cachedState.frontBackCurrentDraw = frontBackMotor.getSupplyCurrent();
                     m_cachedState.leftRightCurrentDraw = leftRightMotor.getSupplyCurrent();
 
+                    var frontBackMotorOn = Math.abs(frontBackMotor.getMotorOutputPercent()) > 0.01;
+                    var leftRightMotorOn = Math.abs(leftRightMotor.getMotorOutputPercent()) > 0.01;
+
+                    boolean[] intakesOn = { frontBackMotorOn, leftRightMotorOn, frontBackMotorOn, leftRightMotorOn };
+
                     // TODO Feed seeing note and not in position off current
 
-                    for (int i = 0; 0 < sensors.length; i++) {
-                        m_cachedState.noteInPosition[i] = m_cachedState.noteInPosition[i]
-                                || (!m_cachedState.seeingNote[i] && sensors[i].get());
+                    for (int i = 0; i < sensors.length; i++) {
+                        if (!m_cachedState.seeingNote[i] && sensors[i].get()
+                                && (intakesOn[i] || RobotContainer.isActivelyIndexingFromIntake())) {
+                            m_cachedState.sensorRisingEdges[i]++;
+                            m_cachedState.noteInPositionTimer[i].reset();
+                        }
+
+                        m_cachedState.noteInPosition[i] = m_cachedState.sensorRisingEdges[i] % 2 > 0;
 
                         m_cachedState.seeingNote[i] = sensors[i].get();
-                        if (sensors[i].get()) {
-                            m_cachedState.loopsWithoutNote[i] = 0;
-                        } else {
-                            m_cachedState.loopsWithoutNote[i]++;
-                        }
-                        if (m_cachedState.loopsWithoutNote[i] >= 5) {
-                            m_cachedState.noteInPosition[i] = false;
-                        }
                     }
 
                     m_requestParameters.intakeState = m_cachedState;
