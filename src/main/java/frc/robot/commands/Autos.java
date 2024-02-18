@@ -6,9 +6,13 @@ package frc.robot.commands;
 
 import java.util.LinkedList;
 
+import com.pathplanner.lib.commands.PathfindingCommand;
+import com.pathplanner.lib.path.PathPlannerPath;
+
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -22,20 +26,32 @@ import swerve.CommandSwerveDrivetrain;
 
 public final class Autos {
 
+  static Timer timer = new Timer();
+
   public static Command getDynamicAutonomous(Turret turret, CommandSwerveDrivetrain drivetrain,
       AutoPositionList positions) {
-    return Commands.runOnce(() -> drivetrain.seedFieldRelative(drivetrain.getState().Pose))
-        .andThen(Commands.deadline(
-            Commands
-                .repeatingSequence(Commands.deferredProxy(() -> followPathToNextPositionCommand(drivetrain, positions)))
-                .until(() -> positions.size() == 0))
-            .andThen(Commands.waitSeconds(2.0)),
-            RobotContainer.getShootCommand(() -> {
-              if (prevAutoPosition == null)
-                return ShooterType.Speaker;
-              return prevAutoPosition.getShootOrStealNote();
-            }),
-            RobotContainer.getIntakeAutonomouslyCommand());
+    return Commands
+        .runOnce(() -> drivetrain.seedFieldRelative(drivetrain.getState().Pose))
+        .andThen(
+            Commands.deadline(
+                Commands.deferredProxy(
+                    () -> {
+                      timer.reset();
+                      return followPathToNextPositionCommand(drivetrain, positions)
+                          .until(() -> timer.get() > 0.25
+                              && !RobotContainer.isNoteInRobot()
+                              && currentTargetAutoPosition.isSkippable()
+                              && currentTargetAutoPosition.getType().equals(AutoPositionType.Shoot));
+                    })
+                    .repeatedly()
+                    .until(() -> positions.size() == 0)
+                    .andThen(Commands.waitSeconds(2.0)),
+                RobotContainer.getShootCommand(() -> {
+                  if (prevAutoPosition == null)
+                    return ShooterType.Speaker;
+                  return prevAutoPosition.getShootOrStealNote();
+                }),
+                RobotContainer.getIntakeAutonomouslyCommand()));
   }
 
   public static AutoPosition currentTargetAutoPosition, prevAutoPosition;
@@ -122,26 +138,15 @@ public final class Autos {
     RedNote10,
     RedNote11;
 
-    ShooterType shootOrStealNote;
-
-    public AutoPosition getNotePosition() {
-      return new AutoPosition(Autos.getNotePosition(this.ordinal() + 1), AutoPositionType.Note);
+    public AutoPosition getNotePosition(ShooterType shootOrStealNote) {
+      return new AutoPosition(Autos.getNotePosition(this.ordinal() + 1), AutoPositionType.Note, shootOrStealNote);
     }
 
-    public AutoPosition getShootPostion() {
+    public AutoPosition getShootPostion(ShooterType shootOrStealNote) {
       var position = Autos.getShootPosition(this.ordinal() + 1);
       if (position != null)
-        return new AutoPosition(position, AutoPositionType.Shoot);
+        return new AutoPosition(position, AutoPositionType.Shoot, shootOrStealNote);
       return null;
-    }
-
-    public ShooterType getShootOrStealNote() {
-      return this.shootOrStealNote;
-    }
-
-    public AutoNotes withShootOrStealNote(ShooterType shootOrStealNote) {
-      this.shootOrStealNote = shootOrStealNote;
-      return this;
     }
 
   }

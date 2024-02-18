@@ -6,18 +6,13 @@ import frc.robot.RobotContainer.ShooterType;
 public class AutoPosition {
     final Translation2d position;
     final AutoPositionType type;
-    ShooterType shootOrStealNote = ShooterType.Speaker;
+    final ShooterType shootOrStealNote;
     boolean skippable = true;
 
     public AutoPosition(Translation2d position, AutoPositionType type, ShooterType shootOrStealNote) {
         this.position = position;
         this.type = type;
         this.shootOrStealNote = shootOrStealNote;
-    }
-
-    public AutoPosition(Translation2d position, AutoPositionType type) {
-        this.position = position;
-        this.type = type;
     }
 
     public Translation2d getPosition() {

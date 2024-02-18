@@ -11,13 +11,13 @@ public class AutoPositionList extends LinkedList<AutoPosition> {
 
     static final double SHIFT_FOR_3_AND_11_FOR_PROPER_DIRECTION = Units.inchesToMeters(30);
 
-    public boolean add(Autos.AutoNotes note) {
+    public boolean add(Autos.AutoNotes note, ShooterType shootOrStealNote) {
         var isNote3 = note == Autos.AutoNotes.BlueNote3;
         var isNote11 = note == Autos.AutoNotes.RedNote11;
 
-        var n = note.getNotePosition();
-        var s = note.getShootPostion();
-        var steal = note.getShootOrStealNote().equals(ShooterType.Steal);
+        var n = note.getNotePosition(shootOrStealNote);
+        var s = note.getShootPostion(shootOrStealNote);
+        var steal = shootOrStealNote.equals(ShooterType.Steal);
 
         /**
          * Add a shoot point before note 3 and note 11

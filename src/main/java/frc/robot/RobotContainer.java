@@ -20,26 +20,22 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.commands.AutoPosition;
+import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
-import frc.robot.commands.AutoPosition.AutoPositionType;
-import frc.robot.commands.Autos.ShootOrStealNote;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
-import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.Turret;
-import frc.robot.subsystems.turret.TurretRequest;
-import frc.robot.subsystems.turret.TurretRequest.AimWithRotation;
 import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
+import frc.robot.subsystems.turret.TurretRequest.AimWithRotation;
 import frc.robot.subsystems.turret.TurretRequest.CalibrateShooter;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
 import frc.robot.subsystems.turret.TurretRequest.ShootFromSubwoofer;
@@ -343,7 +339,7 @@ public class RobotContainer {
 			var note = noteHiearchyChoosers[i].getSelected();
 			var shootOrSteal = shootOrStealChoosers[i].getSelected();
 			if (note != null)
-				positions.add(note.withShootOrStealNote(shootOrSteal));
+				positions.add(note, shootOrSteal);
 		}
 		if (positions.isEmpty()) {
 			var current = drivetrain.getState().Pose.getTranslation();
