@@ -71,7 +71,7 @@ public class Turret extends SubsystemBase {
         slot0Rotate.kS = 0.6733;
 
         FeedbackConfigs fdbRotate = cfgRotate.Feedback;
-        fdbRotate.SensorToMechanismRatio = 200;
+        fdbRotate.SensorToMechanismRatio = 125;
 
         StatusCode statusRotate = StatusCode.StatusCodeNotInitialized;
 

@@ -24,6 +24,9 @@ public interface TurretRequest {
     public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
             TalonSRX rollerMotor);
 
+    public static final double lowerLimitDegrees = -240;
+    public static final double upperLimitDegrees = 240;
+
     public class IndexFromIntake implements TurretRequest {
         private Supplier<IntakeState> intakeStateSupplier;
         private Rotation2d tolerance = Rotation2d.fromDegrees(1);
@@ -53,7 +56,8 @@ public interface TurretRequest {
 
             if (!parameters.turretState.noteLoaded && index != -1) {
                 targetAzimuth = Rotation2d.fromRotations(0.25 * index);
-                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
+                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
+                        upperLimitDegrees);
                 if (Math.abs(azimuthErrorDegrees) <= tolerance.getRotations()
                         && !RobotContainer.isRobotUnderStage()) {
                     outputTilt = tilt;
@@ -123,7 +127,8 @@ public interface TurretRequest {
                 var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
                 var distanceToGoal = virtualGoalLocationDisplacement.getNorm();
                 targetAzimuth = rotationToGoal.minus(robotOrientation);
-                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
+                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
+                        upperLimitDegrees);
                 if (Math.abs(azimuthErrorDegrees) <= tolerance.getDegrees()) {
                     outputTilt = tiltFunction.apply(distanceToGoal);
                     if (tiltErrorDegrees <= tiltTolerance.getDegrees() && shooterError <= shooterTolerance)
@@ -194,7 +199,8 @@ public interface TurretRequest {
 
             if (parameters.turretState.noteLoaded) {
                 targetAzimuth = rotationSupplier.get().minus(robotOrientation);
-                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, -350, 350);
+                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
+                        upperLimitDegrees);
                 if (Math.abs(azimuthErrorDegrees) <= tolerance.getDegrees()) {
                     outputTilt = tilt;
                     if (tiltErrorDegrees <= tiltTolerance.getDegrees() && shooterError <= shooterTolerance)
