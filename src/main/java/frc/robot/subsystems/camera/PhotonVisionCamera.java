@@ -12,7 +12,6 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class PhotonVisionCamera extends SubsystemBase {
@@ -23,17 +22,8 @@ public class PhotonVisionCamera extends SubsystemBase {
             new Rotation3d(0, Units.degreesToRadians(3), 0));
 
     public PhotonVisionCamera() {
-        aprilTagFieldLayout = AprilTagFields.k2023ChargedUp.loadAprilTagLayoutField();
-        switch (DriverStation.getAlliance().get()) {
-            case Blue:
-                aprilTagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
-                break;
-            case Red:
-                aprilTagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kRedAllianceWallRightSide);
-                break;
-            default:
-                break;
-        }
+        aprilTagFieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
+        aprilTagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
     }
 
     public void updateOurPose(Consumer<Pose3d> updatePose) {
@@ -46,9 +36,4 @@ public class PhotonVisionCamera extends SubsystemBase {
             updatePose.accept(robotPose);
         }
     }
-
-    // TODO write code to get the desired end position for DTM to Grid Pose
-    // public Pose3d getGridPose(){
-
-    // }
 }
