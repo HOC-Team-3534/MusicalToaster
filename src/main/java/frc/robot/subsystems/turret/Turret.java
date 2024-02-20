@@ -4,6 +4,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
+import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.Utils;
@@ -44,6 +45,7 @@ public class Turret extends SubsystemBase {
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
+    final Supplier<Rotation2d> m_bottomEncoderRotationSupplier;
 
     public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedsSupplier) {
         super();
@@ -143,6 +145,13 @@ public class Turret extends SubsystemBase {
 
         tiltMotor.setPosition(0);
         rotateMotor.setPosition(0);
+
+        rollerMotor.configFactoryDefault();
+        rollerMotor.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder);
+        rollerMotor.setSelectedSensorPosition(0);
+        rollerMotor.setSensorPhase(false);
+        m_bottomEncoderRotationSupplier = () -> Rotation2d
+                .fromRotations(rollerMotor.getSelectedSensorPosition() / 4096.0);
 
         var goalPosition = DriverStation.getAlliance().get().equals(Alliance.Blue)
                 ? new Translation2d(Units.inchesToMeters(9), Units.inchesToMeters(218.64))
@@ -253,6 +262,8 @@ public class Turret extends SubsystemBase {
                     currentTime = Utils.getCurrentTimeSeconds();
 
                     m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
+
+                    rotateMotor.setPosition(m_bottomEncoderRotationSupplier.get().getRotations());
 
                     m_cachedState.azimuth = Rotation2d.fromRotations(rotateMotor.getPosition().getValueAsDouble());
 
