@@ -6,6 +6,8 @@ package frc.robot;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
+import javax.sound.sampled.Control;
+
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 
@@ -28,6 +30,8 @@ import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.climber.Climber;
+import frc.robot.subsystems.climber.ClimberRequest.ControlClimber;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
@@ -65,6 +69,10 @@ public class RobotContainer {
 			.withMaxSpeed(TunerConstants.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 	private final static Telemetry logger = new Telemetry(TunerConstants.kSpeedAt12VoltsMps);
+
+	private final static Climber climber = new Climber();
+	private final static ControlClimber climberUp = new ControlClimber().withVoltage(0.5).withClimberReversed(false);
+	private final static ControlClimber climberDown = new ControlClimber().withVoltage(0.5).withClimberReversed(true);
 
 	private final static Intake intake = new Intake();
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
@@ -214,6 +222,9 @@ public class RobotContainer {
 		TGR.ShootAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
 		TGR.ShootFromSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
+		TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
+		TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
+
 		TGR.TestingRotationPositive.tgr()
 				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0.05).withPercentTilt(0),
 						() -> shooterOff));
@@ -358,6 +369,8 @@ public class RobotContainer {
 		ShootAmp(driverController.b().and(() -> !EnabledDebugModes.testingTurret)),
 		PrepareShootForSubwoofer(operatorController.a().and(() -> !EnabledDebugModes.testingTurret)),
 		ShootFromSubwoofer(operatorController.rightTrigger().and(() -> !EnabledDebugModes.testingTurret)),
+		ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
+		ClimbDown(operatorController.b().and(() -> !EnabledDebugModes.testingClimber)),
 		CalibrateShooter(driverController.b()
 				.and(() -> !EnabledDebugModes.testingTurret && EnabledDebugModes.calibratingTurret)),
 		TestingRotationPositive(driverController.rightTrigger(0.15).and(() -> EnabledDebugModes.testingTurret)),
