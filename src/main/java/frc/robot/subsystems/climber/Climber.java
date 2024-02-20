@@ -2,6 +2,7 @@ package frc.robot.subsystems.climber;
 
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.Utils;
@@ -15,7 +16,10 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.climber.ClimberRequest.ControlClimberRequestParameters;
+import frc.robot.subsystems.intake.IntakeRequest;
 
 public class Climber extends SubsystemBase {
     TalonFX climberMotor;
@@ -24,6 +28,7 @@ public class Climber extends SubsystemBase {
 
     ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
     protected ClimberRequest m_requestToApply = new ClimberRequest.Idle();
+    protected ControlClimberRequestParameters m_requestParameters = new ControlClimberRequestParameters();
 
     public Climber() {
         climberMotor = new TalonFX(0);
@@ -58,6 +63,21 @@ public class Climber extends SubsystemBase {
             System.out.println("Could not configure device. Error: " + statusClimber.toString());
 
         climberMotor.setPosition(0);
+    }
+
+    public Command applyRequest(
+            Supplier<ClimberRequest> requestSupplier) {
+        return run(() -> this.setControl(requestSupplier.get()));
+    }
+
+    private void setControl(ClimberRequest request) {
+        try {
+            m_stateLock.writeLock().lock();
+
+            m_requestToApply = request;
+        } finally {
+            m_stateLock.writeLock().unlock();
+        }
     }
 
     @Override
@@ -127,10 +147,9 @@ public class Climber extends SubsystemBase {
 
                     m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
 
-                    // m_requestParameters.turretState = m_cachedState;
+                    // m_requestParameters.climberState = m_cachedState;
 
-                    // m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor,
-                    // rollerMotor);
+                    m_requestToApply.apply(m_requestParameters, climberMotor);
                     // m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor);
                 } finally {
                     m_stateLock.writeLock().unlock();
