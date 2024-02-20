@@ -64,7 +64,6 @@ public class RobotContainer {
 			.withDeadband(TunerConstants.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
 			.withMaxSpeed(TunerConstants.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
-	private final static Telemetry logger = new Telemetry(TunerConstants.kSpeedAt12VoltsMps);
 
 	private final static Intake intake = new Intake();
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
@@ -146,8 +145,6 @@ public class RobotContainer {
 		if (Utils.isSimulation()) {
 			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
 		}
-
-		drivetrain.registerTelemetry(logger::telemeterize);
 
 		// Show Status of Subsystems on Dashboard
 		for (int i = 0; i < 5; i++) {
