@@ -49,11 +49,11 @@ public class Turret extends SubsystemBase {
 
     public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedsSupplier) {
         super();
-        rightShooterMotor = new TalonFX(0);
-        leftShooterMotor = new TalonFX(0);
-        rotateMotor = new TalonFX(0);
-        tiltMotor = new TalonFX(0);
-        rollerMotor = new TalonSRX(0);
+        rightShooterMotor = new TalonFX(17);
+        leftShooterMotor = new TalonFX(16);
+        rotateMotor = new TalonFX(14);
+        tiltMotor = new TalonFX(15);
+        rollerMotor = new TalonSRX(18);
         sensor = new DigitalInput(4);
 
         /*

@@ -30,9 +30,9 @@ public class Intake extends SubsystemBase {
     protected IntakeControlRequestParameters m_requestParameters = new IntakeControlRequestParameters();
 
     public Intake() {
-        frontBackMotor = new TalonSRX(0);
-        leftRightMotor = new TalonSRX(0);
-        for (int i = 0; 0 < sensors.length; i++) {
+        frontBackMotor = new TalonSRX(19);
+        leftRightMotor = new TalonSRX(20);
+        for (int i = 0; i < sensors.length; i++) {
             sensors[i] = new DigitalInput(i);
         }
     }

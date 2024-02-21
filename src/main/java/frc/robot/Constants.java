@@ -19,7 +19,7 @@ import edu.wpi.first.math.util.Units;
  * wherever the constants are needed, to reduce verbosity.
  */
 public final class Constants {
-  public static RobotType ROBOTTYPE = RobotType.TBOT;
+  public static RobotType ROBOTTYPE = RobotType.PBOT;
   public static double LOOP_PERIOD_MILLIS = 20;
 
   public enum RobotType {

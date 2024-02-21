@@ -31,7 +31,7 @@ public class Climber extends SubsystemBase {
     protected ControlClimberRequestParameters m_requestParameters = new ControlClimberRequestParameters();
 
     public Climber() {
-        climberMotor = new TalonFX(0);
+        climberMotor = new TalonFX(21);
 
         TalonFXConfiguration cfgClimber = new TalonFXConfiguration();
 

@@ -3,6 +3,7 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot;
 
+import java.lang.reflect.Array;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
@@ -25,11 +26,13 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
+import frc.robot.Constants.RobotType;
 import frc.robot.commands.AutoPosition;
 import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
-import frc.robot.generated.TunerConstants;
+import frc.robot.generated.TunerConstantsPBOT;
+import frc.robot.generated.TunerConstantsTBOT;
 import frc.robot.subsystems.climber.Climber;
 import frc.robot.subsystems.climber.ClimberRequest.ControlClimber;
 import frc.robot.subsystems.intake.Intake;
@@ -63,10 +66,12 @@ public class RobotContainer {
 	static SlewRateLimiter slewRateLimiterX = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
-	private final static CommandSwerveDrivetrain drivetrain = TunerConstants.DriveTrain;
+	private final static CommandSwerveDrivetrain drivetrain = Constants.ROBOTTYPE.equals(RobotType.TBOT)
+			? TunerConstantsTBOT.DriveTrain
+			: TunerConstantsPBOT.DriveTrain;
 	private final static FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
-			.withDeadband(TunerConstants.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
-			.withMaxSpeed(TunerConstants.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
+			.withDeadband(TunerConstantsTBOT.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
+			.withMaxSpeed(TunerConstantsTBOT.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
 	private final static Climber climber = new Climber();
@@ -114,8 +119,8 @@ public class RobotContainer {
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(500);
 	private final CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
-	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers;
-	private static SendableChooser<ShooterType>[] shootOrStealChoosers;
+	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
+	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
 
 	/**
 	 * The container for the robot. Contains subsystems, OI devices, and
@@ -132,23 +137,24 @@ public class RobotContainer {
 						() -> drive
 								.withVelocityX(
 										// Drive forward with negative Y (forward)
-										-driverController.getLeftY() * TunerConstants.kSpeedAt12VoltsMps
+										-driverController.getLeftY() * TunerConstantsTBOT.kSpeedAt12VoltsMps
 												* getCoordinateSystemInversionDriving())
 								.withVelocityY(
 										// Drive left with negative X (left)
-										-driverController.getLeftX() * TunerConstants.kSpeedAt12VoltsMps
+										-driverController.getLeftX() * TunerConstantsTBOT.kSpeedAt12VoltsMps
 												* getCoordinateSystemInversionDriving())
 								.withRotationalRate(
 										// Drive counterclockwise with negative X (left)
 										-driverController.getRightX() * MaxAngularRate)
 								.withCreepEnabled(driverController.getRightTriggerAxis() > 0.15)));
 
-		intake.setDefaultCommand(
-				intake.applyRequest(() -> isActivelyIndexingFromIntake() ? runIntake : stopIntake));
+		// intake.setDefaultCommand(
+		// intake.applyRequest(() -> isActivelyIndexingFromIntake() ? runIntake :
+		// stopIntake));
 
-		if (!EnabledDebugModes.testingTurret)
-			turret.setDefaultCommand(
-					turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
+		// if (!EnabledDebugModes.testingTurret)
+		// turret.setDefaultCommand(
+		// turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
 
 		if (Utils.isSimulation()) {
 			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
@@ -213,27 +219,33 @@ public class RobotContainer {
 		// reset the field-centric heading on left bumper press
 		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
 
-		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
+		// TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ?
+		// stopIntake : runIntake));
 
-		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
-		TGR.ShootAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
-		TGR.ShootFromSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
+		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
+		// TGR.ShootAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
+		// TGR.ShootFromSubwoofer.tgr().whileTrue(getShootCommand(() ->
+		// ShooterType.Subwoofer));
 
-		TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
-		TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
+		// TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
+		// TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
 
-		TGR.TestingRotationPositive.tgr()
-				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0.05).withPercentTilt(0),
-						() -> shooterOff));
-		TGR.TestingRotationNegative.tgr()
-				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(-0.05).withPercentTilt(0),
-						() -> shooterOff));
-		TGR.TestingTiltPositive.tgr()
-				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(0.05),
-						() -> shooterOff));
-		TGR.TestingTiltNegative.tgr()
-				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(-0.05),
-						() -> shooterOff));
+		// TGR.TestingRotationPositive.tgr()
+		// .whileTrue(turret.applyRequest(() ->
+		// testingShooter.withPercentRotate(0.05).withPercentTilt(0),
+		// () -> shooterOff));
+		// TGR.TestingRotationNegative.tgr()
+		// .whileTrue(turret.applyRequest(() ->
+		// testingShooter.withPercentRotate(-0.05).withPercentTilt(0),
+		// () -> shooterOff));
+		// TGR.TestingTiltPositive.tgr()
+		// .whileTrue(turret.applyRequest(() ->
+		// testingShooter.withPercentRotate(0).withPercentTilt(0.05),
+		// () -> shooterOff));
+		// TGR.TestingTiltNegative.tgr()
+		// .whileTrue(turret.applyRequest(() ->
+		// testingShooter.withPercentRotate(0).withPercentTilt(-0.05),
+		// () -> shooterOff));
 
 	}
 

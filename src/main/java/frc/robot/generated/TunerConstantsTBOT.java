@@ -15,7 +15,7 @@ import edu.wpi.first.math.util.Units;
 import frc.robot.Constants.Drive.Known;
 import swerve.CommandSwerveDrivetrain;
 
-public class TunerConstants {
+public class TunerConstantsTBOT {
         // Both sets of gains need to be tuned to your individual robot.
 
         // The steer motor uses any SwerveModule.SteerRequestType control request with
