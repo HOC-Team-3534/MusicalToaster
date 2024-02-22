@@ -84,8 +84,8 @@ public class RobotContainer {
 	private final static ControlClimber climberDown = new ControlClimber().withVoltage(0.5).withClimberReversed(true);
 
 	private final static Intake intake = new Intake();
-	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(0.5);
-	private final ControlIntake runExtake = new ControlIntake().withIntakePercent(0.5).withIntakeReversed(true);
+	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
+	private final static ControlIntake runExtake = new ControlIntake().withIntakePercent(1.0).withIntakeReversed(true);
 	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
 
 	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
@@ -151,11 +151,10 @@ public class RobotContainer {
 								.withRotationalRate(
 										// Drive counterclockwise with negative X (left)
 										-driverController.getRightX() * MaxAngularRate)
-								.withCreepEnabled(driverController.getRightTriggerAxis() > 0.15)));
+								.withCreepEnabled(TGR.Creep.bool())));
 
-		// intake.setDefaultCommand(
-		// intake.applyRequest(() -> isActivelyIndexingFromIntake() ? runIntake :
-		// stopIntake));
+		intake.setDefaultCommand(
+				intake.applyRequest(() -> isActivelyIndexingFromIntake() ? runIntake : stopIntake));
 
 		// if (!EnabledDebugModes.testingTurret)
 		// turret.setDefaultCommand(
@@ -224,8 +223,9 @@ public class RobotContainer {
 		// reset the field-centric heading on left bumper press
 		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
 
-		// TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ?
-		// stopIntake : runIntake));
+		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
+
+		TGR.Extake.tgr().whileTrue(intake.applyRequest(() -> runExtake));
 
 		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		// TGR.ShootAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));

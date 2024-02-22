@@ -23,7 +23,9 @@ public class Intake extends SubsystemBase {
 
     final double UpdateFrequency = 100.0;
 
-    final static double delayNoteInPositionSeconds = 0.25;
+    final static double delayNoteInPositionSeconds = 0.5;
+
+    private IntakeThread intakeThread;
 
     final IntakeTelemetry intakeTelemetry = new IntakeTelemetry();
 
@@ -34,9 +36,14 @@ public class Intake extends SubsystemBase {
     public Intake() {
         frontBackMotor = new TalonSRX(19);
         leftRightMotor = new TalonSRX(20);
+        leftRightMotor.setInverted(true);
+        frontBackMotor.setInverted(true);
         for (int i = 0; i < sensors.length; i++) {
             sensors[i] = new DigitalInput(i);
         }
+
+        intakeThread = new IntakeThread();
+        intakeThread.start();
     }
 
     public Command applyRequest(Supplier<IntakeRequest> requestSupplier) {
@@ -62,6 +69,7 @@ public class Intake extends SubsystemBase {
         public IntakeState() {
             for (int i = 0; i < noteInPositionTimer.length; i++) {
                 noteInPositionTimer[i] = new Timer();
+                noteInPositionTimer[i].start();
             }
         }
 
@@ -138,7 +146,7 @@ public class Intake extends SubsystemBase {
             while (m_running) {
                 Timer.delay(1.0 / UpdateFrequency);
                 try {
-                    m_stateLock.readLock().lock();
+                    m_stateLock.writeLock().lock();
 
                     lastTime = currentTime;
                     currentTime = Utils.getCurrentTimeSeconds();
@@ -156,15 +164,15 @@ public class Intake extends SubsystemBase {
                     // TODO Feed seeing note and not in position off current
 
                     for (int i = 0; i < sensors.length; i++) {
-                        if (!m_cachedState.seeingNote[i] && sensors[i].get()
+                        if (!m_cachedState.seeingNote[i] && !sensors[i].get()
                                 && (intakesOn[i] || RobotContainer.isActivelyIndexingFromIntake())) {
                             m_cachedState.sensorRisingEdges[i]++;
-                            m_cachedState.noteInPositionTimer[i].reset();
+                            m_cachedState.noteInPositionTimer[i].restart();
                         }
 
                         m_cachedState.noteInPosition[i] = m_cachedState.sensorRisingEdges[i] % 2 > 0;
 
-                        m_cachedState.seeingNote[i] = sensors[i].get();
+                        m_cachedState.seeingNote[i] = !sensors[i].get();
                     }
 
                     intakeTelemetry.telemeterize(m_cachedState);
