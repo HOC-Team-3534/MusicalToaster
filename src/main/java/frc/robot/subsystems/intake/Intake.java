@@ -25,6 +25,8 @@ public class Intake extends SubsystemBase {
 
     final static double delayNoteInPositionSeconds = 0.25;
 
+    final IntakeTelemetry intakeTelemetry = new IntakeTelemetry();
+
     ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
     protected IntakeRequest m_requestToApply = new IntakeRequest.Idle();
     protected IntakeControlRequestParameters m_requestParameters = new IntakeControlRequestParameters();
@@ -164,6 +166,8 @@ public class Intake extends SubsystemBase {
 
                         m_cachedState.seeingNote[i] = sensors[i].get();
                     }
+
+                    intakeTelemetry.telemeterize(m_cachedState);
 
                     m_requestParameters.intakeState = m_cachedState;
 

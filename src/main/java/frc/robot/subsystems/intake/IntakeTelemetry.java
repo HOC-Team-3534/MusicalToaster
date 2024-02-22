@@ -1,47 +1,42 @@
 package frc.robot.subsystems.intake;
 
-import com.ctre.phoenix6.Utils;
-
 import edu.wpi.first.networktables.BooleanPublisher;
-import edu.wpi.first.networktables.DoublePublisher;
-import edu.wpi.first.networktables.IntegerPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import frc.robot.subsystems.intake.Intake.IntakeState;
 
 public class IntakeTelemetry {
 
-    private final NetworkTableInstance inst = NetworkTableInstance.getDefault();
+        private final NetworkTableInstance inst = NetworkTableInstance.getDefault();
+        private final IntakeTable[] intakes = new IntakeTable[4];
 
-    private final NetworkTable[] intakes;
-    private final BooleanPublisher intakeHasNote;
-    private final BooleanPublisher intakeNoteLoaded;
-    private final IntegerPublisher risingEdges;
-    private final DoublePublisher intakeCurrentDraw;
+        class IntakeTable {
+                final NetworkTable table;
+                final BooleanPublisher seeingNote, noteInPosition;
+                final String name;
 
-    public IntakeTelemetry() {
-        for (int i = 0; i < 4; i++) {
+                public IntakeTable(int side) {
+                        this.name = "Intake " + side;
+                        this.table = inst.getTable(this.name);
+                        this.seeingNote = this.table.getBooleanTopic("Seeing Note").publish();
+                        this.noteInPosition = this.table.getBooleanTopic("Note In Position").publish();
+                }
 
+                public void telemeterize(boolean seeingNote, boolean noteInPosition) {
+                        this.seeingNote.set(seeingNote);
+                        this.noteInPosition.set(noteInPosition);
+                }
         }
-    }
 
-    private final NetworkTable frontIntakeTable = inst.getTable("Front Intake");
-    private final BooleanPublisher frontIntakeHasNote = frontIntakeTable.getBooleanTopic("Front Intake Has Note")
-            .publish();
-    private final BooleanPublisher frontIntakeNoteLoaded = frontIntakeTable.getBooleanTopic("Front Intake Note Loaded")
-            .publish();
-    private final IntegerPublisher frontIntakeRisingEdges = frontIntakeTable
-            .getIntegerTopic("Front Intake Rising Edges")
-            .publish();
-    private final IntegerPublisher frontIntakeDraw = frontIntakeTable
-            .getIntegerTopic("Front Intake Current Draw")
-            .publish();
+        public IntakeTelemetry() {
+                for (int i = 0; i < intakes.length; i++) {
+                        intakes[i] = new IntakeTable(i);
+                }
+        }
 
-    private double lastTime = Utils.getCurrentTimeSeconds();
-
-    public void telemeterize(IntakeState state) {
-        double currentTime = Utils.getCurrentTimeSeconds();
-        double diffTime = currentTime - lastTime;
-        lastTime = currentTime;
-    }
+        public void telemeterize(IntakeState state) {
+                for (int i = 0; i < intakes.length; i++) {
+                        intakes[i].telemeterize(state.seeingNote[i], state.getNoteInPosition(i));
+                }
+        }
 }
