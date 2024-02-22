@@ -28,7 +28,7 @@ public class TunerConstantsPBOT {
         // output type specified by SwerveModuleConstants.DriveMotorClosedLoopOutput
         private static final Slot0Configs driveGains = new Slot0Configs()
                         .withKP(3).withKI(0).withKD(0)
-                        .withKS(0.13).withKV(1.16).withKA(0.00715);
+                        .withKS(0.1866).withKV(2.35554).withKA(0.02379);
 
         // The closed-loop output type to use for the steer motors;
         // This affects the PID/FF gains for the steer motors
@@ -49,12 +49,12 @@ public class TunerConstantsPBOT {
 
         private static final double kDriveGearRatio = 6.746031746031747;
         private static final double kSteerGearRatio = 12.8;
-        private static final double kWheelRadiusInches = 3.9 / 2;
+        private static final double kWheelRadiusInches = 3.9 / 2.0;
 
         // Theoretical free speed (m/s) at 12v applied output;
         // This needs to be tuned to your individual robot
         public static final double kSpeedAt12VoltsMps = Known.MAX_DRIVE_MOTOR_RPM / 60.0
-                        / kDriveGearRatio * kWheelRadiusInches * 2 * Math.PI;
+                        / kDriveGearRatio * Units.inchesToMeters(kWheelRadiusInches) * 2 * Math.PI;
 
         private static final boolean kSteerMotorReversed = false;
         private static final boolean kInvertLeftSide = false;

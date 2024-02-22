@@ -60,18 +60,23 @@ public class RobotContainer {
 	// The robot's subsystems and commands are defined here...
 	// The driver station connected controllers are defined here...
 	private static double MaxAngularRate = 4 * Math.PI;
+	private static boolean isTBOT = Constants.ROBOTTYPE.equals(RobotType.TBOT);
+	private static boolean isPBOT = Constants.ROBOTTYPE.equals(RobotType.PBOT);
+	public static double kSpeedAt12VoltsMps = isTBOT
+			? TunerConstantsTBOT.kSpeedAt12VoltsMps
+			: TunerConstantsPBOT.kSpeedAt12VoltsMps;
 
 	private static final CommandXboxController driverController = new CommandXboxController(0);
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
 	static SlewRateLimiter slewRateLimiterX = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
-	private final static CommandSwerveDrivetrain drivetrain = Constants.ROBOTTYPE.equals(RobotType.TBOT)
+	private final static CommandSwerveDrivetrain drivetrain = isTBOT
 			? TunerConstantsTBOT.DriveTrain
 			: TunerConstantsPBOT.DriveTrain;
 	private final static FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
-			.withDeadband(TunerConstantsTBOT.kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
-			.withMaxSpeed(TunerConstantsTBOT.kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
+			.withDeadband(kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
+			.withMaxSpeed(kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
 	private final static Climber climber = new Climber();
@@ -137,11 +142,11 @@ public class RobotContainer {
 						() -> drive
 								.withVelocityX(
 										// Drive forward with negative Y (forward)
-										-driverController.getLeftY() * TunerConstantsTBOT.kSpeedAt12VoltsMps
+										-driverController.getLeftY() * kSpeedAt12VoltsMps
 												* getCoordinateSystemInversionDriving())
 								.withVelocityY(
 										// Drive left with negative X (left)
-										-driverController.getLeftX() * TunerConstantsTBOT.kSpeedAt12VoltsMps
+										-driverController.getLeftX() * kSpeedAt12VoltsMps
 												* getCoordinateSystemInversionDriving())
 								.withRotationalRate(
 										// Drive counterclockwise with negative X (left)
