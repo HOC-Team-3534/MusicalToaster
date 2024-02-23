@@ -3,11 +3,8 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot;
 
-import java.lang.reflect.Array;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
-
-import javax.sound.sampled.Control;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
@@ -124,7 +121,7 @@ public class RobotContainer {
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(1000);// TODO Find these valuess
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(6200);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(500);
-	private final CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
+	private final static CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
@@ -236,19 +233,33 @@ public class RobotContainer {
 
 		// TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
 		// TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
+		// var testingOnFalse = turret.applyRequest(
+		// () ->
+		// testingShooter.withPercentRotate(0).withPercentTilt(0).withRollerOutput(0.0),
+		// () -> shooterOff);
 
-		TGR.TestingRotationPositive.tgr()
-				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0.05).withPercentTilt(0),
-						() -> shooterOff));
-		TGR.TestingRotationNegative.tgr()
-				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(-0.05).withPercentTilt(0),
-						() -> shooterOff));
-		TGR.TestingTiltPositive.tgr()
-				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(0.05),
-						() -> shooterOff));
-		TGR.TestingTiltNegative.tgr()
-				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(-0.05),
-						() -> shooterOff));
+		// TGR.TestingRotationPositive.tgr()
+		// .whileTrue(turret.applyRequest(() ->
+		// testingShooter.withPercentRotate(0.05).withPercentTilt(0),
+		// () -> shooterOff))
+		// .onFalse(testingOnFalse);
+		// TGR.TestingRotationNegative.tgr()
+		// .whileTrue(turret.applyRequest(() ->
+		// testingShooter.withPercentRotate(-0.05).withPercentTilt(0),
+		// () -> shooterOff))
+		// .onFalse(testingOnFalse);
+		// TGR.TestingTiltPositive.tgr()
+		// .whileTrue(turret.applyRequest(() ->
+		// testingShooter.withPercentRotate(0).withPercentTilt(0.05),
+		// () -> shooterOff))
+		// .onFalse(testingOnFalse);
+		// TGR.TestingTiltNegative.tgr()
+		// .whileTrue(turret.applyRequest(
+		// () -> testingShooter.withPercentRotate(0).withPercentTilt(-0.15),
+		// () -> shooterOff))
+		// .onFalse(testingOnFalse);
+		// TGR.CalibrateShooter.tgr()
+		// .whileTrue(turret.applyRequest(() -> calibrateShooter, () -> shooterOff));
 
 	}
 

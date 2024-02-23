@@ -400,6 +400,7 @@ public interface TurretRequest {
     public class TestingTurret implements TurretRequest {
         private double inputPercentTilt;
         private double inputPercentRotation;
+        private double rollerPercent;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
@@ -407,7 +408,7 @@ public interface TurretRequest {
 
             rotateMotor.set(inputPercentRotation);
             tiltMotor.set(inputPercentTilt);
-            rollerMotor.set(ControlMode.PercentOutput, 0);
+            rollerMotor.set(ControlMode.PercentOutput, rollerPercent);
             return StatusCode.OK;
         }
 
@@ -418,6 +419,11 @@ public interface TurretRequest {
 
         public TestingTurret withPercentRotate(double inputPercentRotation) {
             this.inputPercentRotation = inputPercentRotation;
+            return this;
+        }
+
+        public TestingTurret withRollerOutput(double rollerOuput) {
+            this.rollerPercent = rollerOuput;
             return this;
         }
 

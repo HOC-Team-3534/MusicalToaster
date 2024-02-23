@@ -28,7 +28,6 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.intake.Intake.IntakeThread;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.sensors.ProximitySensorInput;

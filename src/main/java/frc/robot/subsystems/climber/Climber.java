@@ -19,7 +19,6 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.climber.ClimberRequest.ControlClimberRequestParameters;
-import frc.robot.subsystems.intake.IntakeRequest;
 
 public class Climber extends SubsystemBase {
     TalonFX climberMotor;
