@@ -9,12 +9,11 @@ import com.ctre.phoenix6.Utils;
 
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
-import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.RobotContainer;
 import frc.robot.subsystems.intake.IntakeRequest.IntakeControlRequestParameters;
+import frc.robot.utils.sensors.ProximitySensorInput;
 
 public class Intake extends SubsystemBase {
 
@@ -109,7 +108,7 @@ public class Intake extends SubsystemBase {
             return noteInPosition[i];
         }
 
-        public boolean getNoteInPosition(int i) {
+        public boolean isNoteInPosition(int i) {
             return noteInPosition[i] && noteInPositionTimer[i].hasElapsed(delayNoteInPositionSeconds);
         }
     }

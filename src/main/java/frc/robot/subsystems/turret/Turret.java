@@ -2,6 +2,7 @@ package frc.robot.subsystems.turret;
 
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
@@ -22,7 +23,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -30,6 +30,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
+import frc.robot.utils.sensors.ProximitySensorInput;
 import frc.robot.utils.shooting.QuadraticEquation;
 
 public class Turret extends SubsystemBase {
@@ -37,9 +38,12 @@ public class Turret extends SubsystemBase {
 
     TalonFX rightShooterMotor, leftShooterMotor, rotateMotor, tiltMotor;
     TalonSRX rollerMotor;
-    DigitalInput sensor;
+    ProximitySensorInput sensor;
 
     private final double UpdateFrequency = 150.0;
+
+    final static double delayNoteLoadedSeconds = 0.1;
+    final static double delayNoteUnloadedSeconds = 0.1;
 
     ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
@@ -54,7 +58,7 @@ public class Turret extends SubsystemBase {
         rotateMotor = new TalonFX(14);
         tiltMotor = new TalonFX(15);
         rollerMotor = new TalonSRX(18);
-        sensor = new DigitalInput(4);
+        sensor = new ProximitySensorInput(4);
 
         /*
          * 
@@ -75,8 +79,6 @@ public class Turret extends SubsystemBase {
         FeedbackConfigs fdbRotate = cfgRotate.Feedback;
         fdbRotate.SensorToMechanismRatio = 125;
 
-        StatusCode statusRotate = StatusCode.StatusCodeNotInitialized;
-
         /*
          * 
          */
@@ -96,7 +98,6 @@ public class Turret extends SubsystemBase {
         FeedbackConfigs fdbTilt = cfgRotate.Feedback;
         fdbTilt.SensorToMechanismRatio = 300;
 
-        StatusCode statusTilt = StatusCode.StatusCodeNotInitialized;
         /* 
          * 
         */
@@ -115,29 +116,22 @@ public class Turret extends SubsystemBase {
         var shooterCurrentConfig = cfgShooterMotor.CurrentLimits;
         shooterCurrentConfig.SupplyCurrentLimit = 30;
 
-        StatusCode statusShooterL = StatusCode.StatusCodeNotInitialized;
-        StatusCode statusShooterR = StatusCode.StatusCodeNotInitialized;
+        BiConsumer<TalonFX, TalonFXConfiguration> configureMotor = (talon, config) -> {
+            StatusCode status = StatusCode.StatusCodeNotInitialized;
+            for (int i = 0; i < 5; i++) {
+                status = talon.getConfigurator().apply(config);
+                if (status.isOK())
+                    break;
+            }
+            if (!status.isOK()) {
+                System.out.println("Could not configure device. Error: " + status.toString());
+            }
+        };
 
-        for (int i = 0; i < 5; i++) {
-            statusRotate = rotateMotor.getConfigurator().apply(cfgRotate);
-            statusTilt = tiltMotor.getConfigurator().apply(cfgTilt);
-            statusShooterL = leftShooterMotor.getConfigurator().apply(cfgShooterMotor);
-            statusShooterR = rightShooterMotor.getConfigurator().apply(cfgShooterMotor);
-            if (statusRotate.isOK())
-                break;
-        }
-        if (!statusRotate.isOK()) {
-            System.out.println("Could not configure device. Error: " + statusRotate.toString());
-        }
-        if (!statusTilt.isOK()) {
-            System.out.println("Could not configure device. Error: " + statusTilt.toString());
-        }
-        if (!statusShooterL.isOK()) {
-            System.out.println("Could not configure device. Error: " + statusShooterL.toString());
-        }
-        if (!statusShooterR.isOK()) {
-            System.out.println("Could not configure device. Error: " + statusShooterR.toString());
-        }
+        configureMotor.accept(rotateMotor, cfgRotate);
+        configureMotor.accept(tiltMotor, cfgTilt);
+        configureMotor.accept(leftShooterMotor, cfgShooterMotor);
+        configureMotor.accept(rightShooterMotor, cfgShooterMotor);
 
         leftShooterMotor.setControl(new Follower(0, true));// TODO Set master ID to right shooter
         // TODO Configuration of gear ratio and set them, add analog sensor for position
@@ -189,19 +183,27 @@ public class Turret extends SubsystemBase {
 
         public Rotation2d elevation;
 
-        public boolean noteLoaded;
+        private boolean noteLoaded;
 
-        public int loopsWithoutNote;
+        private Timer noteLoadedTimer = new Timer();
+
+        private Timer noteUnloadedTimer = new Timer();
 
         public Translation2d virtualGoalLocationDisplacement;
 
-        public Rotation2d rotateClosedLoop;
+        public Rotation2d rotateClosedLoopError;
 
-        public Rotation2d tiltClosedLoop;
+        public Rotation2d tiltClosedLoopError;
 
-        public double shooterMotorClosedLoop;
+        public double shooterMotorClosedLoopError;
 
         public boolean activelyIndexingFromIntake;
+
+        public boolean currentlyShooting;
+
+        public boolean isNoteLoaded() {
+            return noteLoaded && noteLoadedTimer.hasElapsed(delayNoteLoadedSeconds);
+        }
 
     }
 
@@ -256,7 +258,7 @@ public class Turret extends SubsystemBase {
             while (m_running) {
                 Timer.delay(1.0 / UpdateFrequency);
                 try {
-                    m_stateLock.readLock().lock();
+                    m_stateLock.writeLock().lock();
 
                     lastTime = currentTime;
                     currentTime = Utils.getCurrentTimeSeconds();
@@ -269,22 +271,29 @@ public class Turret extends SubsystemBase {
 
                     m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
 
-                    m_cachedState.noteLoaded = sensor.get() || m_cachedState.noteLoaded;
+                    var rollerOn = Math.abs(rollerMotor.getMotorOutputPercent()) > 0.01;
 
-                    m_cachedState.rotateClosedLoop = Rotation2d
+                    if (!m_cachedState.noteLoaded && sensor.get() && rollerOn && !m_cachedState.currentlyShooting) {
+                        m_cachedState.noteLoaded = true;
+                        m_cachedState.noteLoadedTimer.restart();
+                        m_cachedState.noteUnloadedTimer.stop();
+                    }
+
+                    if (m_cachedState.currentlyShooting && rollerOn) {
+                        m_cachedState.noteUnloadedTimer.restart();
+                    }
+
+                    if (m_cachedState.noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds))
+                        m_cachedState.noteLoaded = false;
+
+                    m_cachedState.rotateClosedLoopError = Rotation2d
                             .fromRotations(rotateMotor.getClosedLoopError().getValueAsDouble());
 
-                    m_cachedState.tiltClosedLoop = Rotation2d
+                    m_cachedState.tiltClosedLoopError = Rotation2d
                             .fromRotations(tiltMotor.getClosedLoopError().getValueAsDouble());
 
-                    m_cachedState.shooterMotorClosedLoop = rightShooterMotor.getClosedLoopError().getValueAsDouble();
-
-                    if (sensor.get())
-                        m_cachedState.loopsWithoutNote = 0;
-                    else
-                        m_cachedState.loopsWithoutNote++;
-                    if (m_cachedState.loopsWithoutNote >= 5)
-                        m_cachedState.noteLoaded = false;
+                    m_cachedState.shooterMotorClosedLoopError = rightShooterMotor.getClosedLoopError()
+                            .getValueAsDouble();
 
                     try {
                         m_cachedState.virtualGoalLocationDisplacement = ShootingUtils
@@ -295,6 +304,8 @@ public class Turret extends SubsystemBase {
                     }
 
                     m_cachedState.activelyIndexingFromIntake = false;
+
+                    m_cachedState.currentlyShooting = false;
 
                     m_requestParameters.turretState = m_cachedState;
 

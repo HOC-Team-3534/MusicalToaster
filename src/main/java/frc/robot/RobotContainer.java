@@ -265,11 +265,11 @@ public class RobotContainer {
 	public static boolean isNoteInRobot() {
 		var intakeState = intake.getState();
 		for (int i = 0; i < intakeState.seeingNote.length; i++) {
-			if (intakeState.getNoteInPosition(i)) {
+			if (intakeState.isNoteInPosition(i)) {
 				return true;
 			}
 		}
-		return turret.getState().noteLoaded;
+		return turret.getState().isNoteLoaded();
 	}
 
 	public static int getCoordinateSystemInversionDriving() {
@@ -284,7 +284,7 @@ public class RobotContainer {
 	public static Command getShootCommand(Supplier<ShooterType> shooterTypeSupplier) {
 		return turret.applyRequest(() -> {
 			var type = shooterTypeSupplier.get();
-			if (!turret.getState().noteLoaded
+			if (!turret.getState().isNoteLoaded()
 					|| (type.equals(ShooterType.Speaker) && !isValidShootPosition()))
 				return indexFromIntake;
 			switch (type) {

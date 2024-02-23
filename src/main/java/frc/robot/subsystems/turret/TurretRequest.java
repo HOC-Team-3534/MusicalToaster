@@ -40,21 +40,21 @@ public interface TurretRequest {
             var intakeState = intakeStateSupplier.get();
             int index = -1;
             var currentAzimuth = parameters.turretState.azimuth;
-            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoop.getDegrees();
+            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoopError.getDegrees();
 
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
-            var tiltErrorDegrees = parameters.turretState.tiltClosedLoop.getDegrees();
+            var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
 
             for (int i = 0; i < intakeState.seeingNote.length; i++) {
-                if (intakeState.getNoteInPosition(i)) {
+                if (intakeState.isNoteInPosition(i)) {
                     index = i;
                     break;
                 }
             }
 
-            if (!parameters.turretState.noteLoaded && index != -1) {
+            if (!parameters.turretState.isNoteLoaded() && index != -1) {
                 targetAzimuth = Rotation2d.fromRotations(0.25 * index);
                 targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
                         upperLimitDegrees);
@@ -117,11 +117,11 @@ public interface TurretRequest {
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
-            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoop.getDegrees();
-            var tiltErrorDegrees = parameters.turretState.tiltClosedLoop.getDegrees();
-            var shooterError = parameters.turretState.shooterMotorClosedLoop;
+            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoopError.getDegrees();
+            var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
+            var shooterError = parameters.turretState.shooterMotorClosedLoopError;
 
-            if (parameters.turretState.noteLoaded) {
+            if (parameters.turretState.isNoteLoaded()) {
                 var robotOrientation = swerveDriveStateSupplier.get().Pose.getRotation();
                 var virtualGoalLocationDisplacement = parameters.turretState.virtualGoalLocationDisplacement;
                 var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
@@ -131,8 +131,10 @@ public interface TurretRequest {
                         upperLimitDegrees);
                 if (Math.abs(azimuthErrorDegrees) <= tolerance.getDegrees()) {
                     outputTilt = tiltFunction.apply(distanceToGoal);
-                    if (tiltErrorDegrees <= tiltTolerance.getDegrees() && shooterError <= shooterTolerance)
+                    if (tiltErrorDegrees <= tiltTolerance.getDegrees() && shooterError <= shooterTolerance) {
                         rollerOn = true;
+                        parameters.turretState.currentlyShooting = true;
+                    }
                 }
             }
 
@@ -193,18 +195,20 @@ public interface TurretRequest {
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
             var robotOrientation = swerveDriveStateSupplier.get().Pose.getRotation();
-            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoop.getDegrees();
-            var tiltErrorDegrees = parameters.turretState.tiltClosedLoop.getDegrees();
-            var shooterError = parameters.turretState.shooterMotorClosedLoop;
+            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoopError.getDegrees();
+            var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
+            var shooterError = parameters.turretState.shooterMotorClosedLoopError;
 
-            if (parameters.turretState.noteLoaded) {
+            if (parameters.turretState.isNoteLoaded()) {
                 targetAzimuth = rotationSupplier.get().minus(robotOrientation);
                 targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
                         upperLimitDegrees);
                 if (Math.abs(azimuthErrorDegrees) <= tolerance.getDegrees()) {
                     outputTilt = tilt;
-                    if (tiltErrorDegrees <= tiltTolerance.getDegrees() && shooterError <= shooterTolerance)
+                    if (tiltErrorDegrees <= tiltTolerance.getDegrees() && shooterError <= shooterTolerance) {
                         rollerOn = true;
+                        parameters.turretState.currentlyShooting = true;
+                    }
                 }
             }
 
@@ -265,22 +269,24 @@ public interface TurretRequest {
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
             var currentAzimuth = parameters.turretState.azimuth;
-            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoop.getDegrees();
-            var tiltErrorDegrees = parameters.turretState.tiltClosedLoop.getDegrees();
-            var shooterError = parameters.turretState.shooterMotorClosedLoop;
+            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoopError.getDegrees();
+            var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
+            var shooterError = parameters.turretState.shooterMotorClosedLoopError;
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
 
-            if (parameters.turretState.noteLoaded) {
+            if (parameters.turretState.isNoteLoaded()) {
                 targetAzimuth = new Rotation2d();
                 if (Math.abs(azimuthErrorDegrees) <= tolerance.getDegrees()) {
                     var checkTilt = Rotation2d.fromDegrees(SmartDashboard.getNumber("Tilt Degrees", 0));
                     if (checkTilt.getDegrees() < -50 || checkTilt.getDegrees() > 50)
                         outputTilt = checkTilt;
                     if (Math.abs(tiltErrorDegrees) <= tiltTolerance.getDegrees()
-                            && Math.abs(shooterError) <= shooterTolerance)
+                            && Math.abs(shooterError) <= shooterTolerance) {
                         rollerOn = true;
+                        parameters.turretState.currentlyShooting = true;
+                    }
 
                 }
             }
@@ -353,17 +359,19 @@ public interface TurretRequest {
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
-            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoop.getDegrees();
-            var tiltErrorDegrees = parameters.turretState.tiltClosedLoop.getDegrees();
-            var shooterError = parameters.turretState.shooterMotorClosedLoop;
+            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoopError.getDegrees();
+            var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
+            var shooterError = parameters.turretState.shooterMotorClosedLoopError;
             var rollerOn = false;
             var outputTilt = new Rotation2d();
 
             if (Math.abs(azimuthErrorDegrees) <= tolerance.getRotations()) {
                 outputTilt = tilt;
                 if (Math.abs(tiltErrorDegrees) <= tiltTolerance.getDegrees()
-                        && Math.abs(shooterError) <= shooterTolerance && readyToShoot.get())
+                        && Math.abs(shooterError) <= shooterTolerance && readyToShoot.get()) {
                     rollerOn = true;
+                    parameters.turretState.currentlyShooting = true;
+                }
             }
 
             rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);

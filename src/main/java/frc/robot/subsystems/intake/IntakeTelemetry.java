@@ -41,7 +41,7 @@ public class IntakeTelemetry {
 
         public void telemeterize(IntakeState state) {
                 for (int i = 0; i < intakes.length; i++) {
-                        intakes[i].telemeterize(state.seeingNote[i], state.getNoteInPosition(i),
+                        intakes[i].telemeterize(state.seeingNote[i], state.isNoteInPosition(i),
                                         state.intakeDirection[i]);
                 }
         }
