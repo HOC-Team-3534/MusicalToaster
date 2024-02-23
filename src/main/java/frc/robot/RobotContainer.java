@@ -237,22 +237,18 @@ public class RobotContainer {
 		// TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
 		// TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
 
-		// TGR.TestingRotationPositive.tgr()
-		// .whileTrue(turret.applyRequest(() ->
-		// testingShooter.withPercentRotate(0.05).withPercentTilt(0),
-		// () -> shooterOff));
-		// TGR.TestingRotationNegative.tgr()
-		// .whileTrue(turret.applyRequest(() ->
-		// testingShooter.withPercentRotate(-0.05).withPercentTilt(0),
-		// () -> shooterOff));
-		// TGR.TestingTiltPositive.tgr()
-		// .whileTrue(turret.applyRequest(() ->
-		// testingShooter.withPercentRotate(0).withPercentTilt(0.05),
-		// () -> shooterOff));
-		// TGR.TestingTiltNegative.tgr()
-		// .whileTrue(turret.applyRequest(() ->
-		// testingShooter.withPercentRotate(0).withPercentTilt(-0.05),
-		// () -> shooterOff));
+		TGR.TestingRotationPositive.tgr()
+				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0.05).withPercentTilt(0),
+						() -> shooterOff));
+		TGR.TestingRotationNegative.tgr()
+				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(-0.05).withPercentTilt(0),
+						() -> shooterOff));
+		TGR.TestingTiltPositive.tgr()
+				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(0.05),
+						() -> shooterOff));
+		TGR.TestingTiltNegative.tgr()
+				.whileTrue(turret.applyRequest(() -> testingShooter.withPercentRotate(0).withPercentTilt(-0.05),
+						() -> shooterOff));
 
 	}
 
@@ -378,8 +374,8 @@ public class RobotContainer {
 	public enum TGR {
 		Creep(driverController.leftBumper()),
 		ResetFieldRelative(driverController.start()), // TODO should we having this?
-		Intake(driverController.rightTrigger(0.15)),
-		Extake(driverController.rightBumper()),
+		Intake(driverController.rightTrigger(0.15).and(() -> !EnabledDebugModes.testingTurret)),
+		Extake(driverController.rightBumper().and(() -> !EnabledDebugModes.testingTurret)),
 		ShootSpeaker(driverController.x().and(() -> !EnabledDebugModes.testingTurret)),
 		PrepareScoreAmp(driverController.b().and(() -> !EnabledDebugModes.testingTurret)),
 		DeployInAmp(driverController.y()),

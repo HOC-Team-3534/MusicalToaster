@@ -28,6 +28,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.intake.Intake.IntakeThread;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.sensors.ProximitySensorInput;
@@ -42,6 +43,8 @@ public class Turret extends SubsystemBase {
 
     private final double UpdateFrequency = 150.0;
 
+    private final TurretTelemetry turretTelemetry = new TurretTelemetry();
+
     final static double delayNoteLoadedSeconds = 0.1;
     final static double delayNoteUnloadedSeconds = 0.1;
 
@@ -50,6 +53,8 @@ public class Turret extends SubsystemBase {
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
     final Supplier<Rotation2d> m_bottomEncoderRotationSupplier;
+
+    private TurretThread turretThread;
 
     public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedsSupplier) {
         super();
@@ -155,6 +160,8 @@ public class Turret extends SubsystemBase {
         ShootingUtils.configureShootWhileMoving(() -> goalPosition, chassisSpeedsSupplier,
                 () -> swerveDriveStateSupplier.get().Pose.getTranslation(),
                 (vector) -> timeOfFlightEquation.get(vector.getNorm()));
+        turretThread = new TurretThread();
+        turretThread.start();
     }
 
     @Override
@@ -308,6 +315,8 @@ public class Turret extends SubsystemBase {
                     m_cachedState.currentlyShooting = false;
 
                     m_requestParameters.turretState = m_cachedState;
+
+                    turretTelemetry.Telemetrize(m_cachedState);
 
                     m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
                     m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor);

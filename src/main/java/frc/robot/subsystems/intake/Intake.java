@@ -22,7 +22,7 @@ public class Intake extends SubsystemBase {
 
     final double UpdateFrequency = 100.0;
 
-    final static double delayNoteInPositionSeconds = 0.5;
+    final static double delayNoteInPositionSeconds = 0.3;
     final static double noteNotSeenSeconds = 0.5;
 
     private IntakeThread intakeThread;
