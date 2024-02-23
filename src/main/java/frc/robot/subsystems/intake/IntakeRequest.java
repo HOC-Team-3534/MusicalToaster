@@ -30,6 +30,7 @@ public interface IntakeRequest {
 
             var frontBackPercentOut = reversed ? intakePercent * -1 : dontRunFrontBack ? 0 : intakePercent;
             var leftRightPercentOut = reversed ? intakePercent * -1 : dontRunLeftRight ? 0 : intakePercent;
+
             frontBack.set(ControlMode.PercentOutput, frontBackPercentOut);
             leftRight.set(ControlMode.PercentOutput, leftRightPercentOut);
 

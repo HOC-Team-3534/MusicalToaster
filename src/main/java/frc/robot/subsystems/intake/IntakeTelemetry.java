@@ -3,6 +3,8 @@ package frc.robot.subsystems.intake;
 import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StringPublisher;
+import frc.robot.subsystems.intake.Intake.IntakeDirection;
 import frc.robot.subsystems.intake.Intake.IntakeState;
 
 public class IntakeTelemetry {
@@ -13,6 +15,7 @@ public class IntakeTelemetry {
         class IntakeTable {
                 final NetworkTable table;
                 final BooleanPublisher seeingNote, noteInPosition;
+                final StringPublisher intakeDirection;
                 final String name;
 
                 public IntakeTable(int side) {
@@ -20,11 +23,13 @@ public class IntakeTelemetry {
                         this.table = inst.getTable(this.name);
                         this.seeingNote = this.table.getBooleanTopic("Seeing Note").publish();
                         this.noteInPosition = this.table.getBooleanTopic("Note In Position").publish();
+                        this.intakeDirection = this.table.getStringTopic("Intake Direction").publish();
                 }
 
-                public void telemeterize(boolean seeingNote, boolean noteInPosition) {
+                public void telemeterize(boolean seeingNote, boolean noteInPosition, IntakeDirection intakeDirection) {
                         this.seeingNote.set(seeingNote);
                         this.noteInPosition.set(noteInPosition);
+                        this.intakeDirection.set(intakeDirection.name());
                 }
         }
 
@@ -36,7 +41,8 @@ public class IntakeTelemetry {
 
         public void telemeterize(IntakeState state) {
                 for (int i = 0; i < intakes.length; i++) {
-                        intakes[i].telemeterize(state.seeingNote[i], state.getNoteInPosition(i));
+                        intakes[i].telemeterize(state.seeingNote[i], state.getNoteInPosition(i),
+                                        state.intakeDirection[i]);
                 }
         }
 }

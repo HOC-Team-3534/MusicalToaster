@@ -19,11 +19,12 @@ import frc.robot.subsystems.intake.IntakeRequest.IntakeControlRequestParameters;
 public class Intake extends SubsystemBase {
 
     TalonSRX frontBackMotor, leftRightMotor;
-    DigitalInput sensors[] = new DigitalInput[4];
+    ProximitySensorInput sensors[] = new ProximitySensorInput[4];
 
     final double UpdateFrequency = 100.0;
 
     final static double delayNoteInPositionSeconds = 0.5;
+    final static double noteNotSeenSeconds = 0.5;
 
     private IntakeThread intakeThread;
 
@@ -39,11 +40,26 @@ public class Intake extends SubsystemBase {
         leftRightMotor.setInverted(true);
         frontBackMotor.setInverted(true);
         for (int i = 0; i < sensors.length; i++) {
-            sensors[i] = new DigitalInput(i);
+            sensors[i] = new ProximitySensorInput(i);
         }
 
         intakeThread = new IntakeThread();
         intakeThread.start();
+    }
+
+    public enum IntakeDirection {
+        Off, In, Out;
+
+        public static double threshold = 0.01;
+
+        public static IntakeDirection getDirection(double percentOutput) {
+            if (percentOutput > threshold)
+                return In;
+            else if (percentOutput < -threshold)
+                return Out;
+            else
+                return Off;
+        }
     }
 
     public Command applyRequest(Supplier<IntakeRequest> requestSupplier) {
@@ -70,21 +86,24 @@ public class Intake extends SubsystemBase {
             for (int i = 0; i < noteInPositionTimer.length; i++) {
                 noteInPositionTimer[i] = new Timer();
                 noteInPositionTimer[i].start();
+                noteNotSeenTimer[i] = new Timer();
+                noteNotSeenTimer[i].start();
+            }
+            for (int i = 0; i < intakeDirection.length; i++) {
+                intakeDirection[i] = IntakeDirection.Off;
             }
         }
-
-        public double frontBackCurrentDraw;
-
-        public double leftRightCurrentDraw;
 
         // 0 is Front, 1 is Left, Back is 2, Right is 3
         public boolean seeingNote[] = new boolean[4];
 
-        public int sensorRisingEdges[] = new int[4];
-
         private boolean noteInPosition[] = new boolean[4];
 
+        public IntakeDirection intakeDirection[] = new IntakeDirection[4];
+
         private final Timer noteInPositionTimer[] = new Timer[4];
+
+        private final Timer noteNotSeenTimer[] = new Timer[4];
 
         public boolean getRawNoteInPositionNoDelay(int i) {
             return noteInPosition[i];
@@ -153,26 +172,39 @@ public class Intake extends SubsystemBase {
 
                     m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
 
-                    m_cachedState.frontBackCurrentDraw = frontBackMotor.getSupplyCurrent();
-                    m_cachedState.leftRightCurrentDraw = leftRightMotor.getSupplyCurrent();
+                    var fbPerc = frontBackMotor.getMotorOutputPercent();
+                    var lrPerc = leftRightMotor.getMotorOutputPercent();
+                    double percs[] = { fbPerc, lrPerc, fbPerc, lrPerc };
 
-                    var frontBackMotorOn = Math.abs(frontBackMotor.getMotorOutputPercent()) > 0.01;
-                    var leftRightMotorOn = Math.abs(leftRightMotor.getMotorOutputPercent()) > 0.01;
-
-                    boolean[] intakesOn = { frontBackMotorOn, leftRightMotorOn, frontBackMotorOn, leftRightMotorOn };
-
-                    // TODO Feed seeing note and not in position off current
+                    for (int i = 0; i < percs.length; i++) {
+                        m_cachedState.intakeDirection[i] = IntakeDirection.getDirection(percs[i]);
+                    }
 
                     for (int i = 0; i < sensors.length; i++) {
-                        if (!m_cachedState.seeingNote[i] && !sensors[i].get()
-                                && (intakesOn[i] || RobotContainer.isActivelyIndexingFromIntake())) {
-                            m_cachedState.sensorRisingEdges[i]++;
+                        /*
+                         * If the note is not already marked in position
+                         * and the note is seen while the motor is running in
+                         * set note in position to true and reset the delay timer
+                         */
+                        if (!m_cachedState.noteInPosition[i]
+                                && sensors[i].get()
+                                && m_cachedState.intakeDirection[i].equals(IntakeDirection.In)) {
+                            m_cachedState.noteInPosition[i] = true;
                             m_cachedState.noteInPositionTimer[i].restart();
                         }
 
-                        m_cachedState.noteInPosition[i] = m_cachedState.sensorRisingEdges[i] % 2 > 0;
+                        // If you see the note, reset timer that resets noteInPosition.
+                        if (sensors[i].get())
+                            m_cachedState.noteNotSeenTimer[i].restart();
 
-                        m_cachedState.seeingNote[i] = !sensors[i].get();
+                        /*
+                         * If note not seen for duration, reset noteInPosition.
+                         * This assumes the note can be seen in its resting position in the intake
+                         */
+                        if (m_cachedState.noteNotSeenTimer[i].hasElapsed(noteNotSeenSeconds))
+                            m_cachedState.noteInPosition[i] = false;
+
+                        m_cachedState.seeingNote[i] = sensors[i].get();
                     }
 
                     intakeTelemetry.telemeterize(m_cachedState);
