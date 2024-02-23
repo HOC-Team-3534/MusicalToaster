@@ -255,6 +255,83 @@ public interface TurretRequest {
         }
     }
 
+    public class ScoreAmp implements TurretRequest {
+        private Supplier<SwerveDriveState> swerveDriveStateSupplier;
+        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
+        private Rotation2d tilt;
+        private double rollerPercentOut;
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(1);
+        private Supplier<Rotation2d> rotationSupplier;
+        private Supplier<Boolean> deployTriggerSupplier;
+
+        @Override
+        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+                TalonSRX rollerMotor) {
+
+            var currentAzimuth = parameters.turretState.azimuth;
+            var rollerOn = false;
+            var outputTilt = new Rotation2d();
+            var targetAzimuth = currentAzimuth;
+            var robotOrientation = swerveDriveStateSupplier.get().Pose.getRotation();
+            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoopError.getDegrees();
+            var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
+
+            if (parameters.turretState.isNoteLoaded()) {
+                targetAzimuth = rotationSupplier.get().minus(robotOrientation);
+                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
+                        upperLimitDegrees);
+                if (Math.abs(azimuthErrorDegrees) <= tolerance.getDegrees()) {
+                    outputTilt = tilt;
+                    if (tiltErrorDegrees <= tiltTolerance.getDegrees() && deployTriggerSupplier.get()) {
+                        rollerOn = true;
+                        parameters.turretState.currentlyShooting = true;
+                    }
+                }
+            }
+
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);
+            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
+            tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
+
+            return StatusCode.OK;
+        }
+
+        public ScoreAmp withSwerveDriveState(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
+            this.swerveDriveStateSupplier = swerveDriveStateSupplier;
+            return this;
+        }
+
+        public ScoreAmp withRotateTolerance(Rotation2d tolerance) {
+            this.tolerance = tolerance;
+            return this;
+        }
+
+        public ScoreAmp withTiltTolerance(Rotation2d tiltTolerance) {
+            this.tiltTolerance = tiltTolerance;
+            return this;
+        }
+
+        public ScoreAmp withTilt(Rotation2d tilt) {
+            this.tilt = tilt;
+            return this;
+        }
+
+        public ScoreAmp withRollerOutput(double percentOut) {
+            this.rollerPercentOut = percentOut;
+            return this;
+        }
+
+        public ScoreAmp withRotation(Supplier<Rotation2d> rotationSupplier) {
+            this.rotationSupplier = rotationSupplier;
+            return this;
+        }
+
+        public ScoreAmp withDeployTrigger(Supplier<Boolean> deployTriggerSupplier) {
+            this.deployTriggerSupplier = deployTriggerSupplier;
+            return this;
+        }
+    }
+
     public class CalibrateShooter implements TurretRequest {
         private Rotation2d tolerance = Rotation2d.fromDegrees(1);
         private double rollerPercentOut;

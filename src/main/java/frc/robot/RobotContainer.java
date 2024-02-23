@@ -44,6 +44,7 @@ import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
 import frc.robot.subsystems.turret.TurretRequest.AimWithRotation;
 import frc.robot.subsystems.turret.TurretRequest.CalibrateShooter;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
+import frc.robot.subsystems.turret.TurretRequest.ScoreAmp;
 import frc.robot.subsystems.turret.TurretRequest.ShootFromSubwoofer;
 import frc.robot.subsystems.turret.TurretRequest.TestingTurret;
 import frc.robot.utils.PositionUtils;
@@ -97,11 +98,12 @@ public class RobotContainer {
 			.withRollerOutput(0.25)
 			.withTiltFunction((distance) -> new Rotation2d())
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find distance table
-	private final static AimWithRotation aimForAmp = new AimWithRotation()
-			.withRotation(() -> Rotation2d.fromDegrees(90))
-			.withRollerOutput(0.25)
-			.withTilt(Rotation2d.fromDegrees(10))
-			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
+	private final static ScoreAmp scoreAmp = new ScoreAmp()
+			.withRotation(() -> Rotation2d.fromDegrees(270))
+			.withRollerOutput(-0.6)
+			.withTilt(Rotation2d.fromDegrees(-30))
+			.withSwerveDriveState(() -> drivetrain.getState())
+			.withDeployTrigger(() -> TGR.DeployInAmp.bool());// TODO Find the actualy tilt for aiming for amp
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
 			.withRollerPercent(0.25)
 			.withRotation(new Rotation2d())
@@ -228,7 +230,7 @@ public class RobotContainer {
 		TGR.Extake.tgr().whileTrue(intake.applyRequest(() -> runExtake));
 
 		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
-		// TGR.ShootAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
+		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
 		// TGR.ShootFromSubwoofer.tgr().whileTrue(getShootCommand(() ->
 		// ShooterType.Subwoofer));
 
@@ -289,7 +291,7 @@ public class RobotContainer {
 				return indexFromIntake;
 			switch (type) {
 				case Amp:
-					return aimForAmp;
+					return scoreAmp;
 				case Speaker:
 					return aimForSpeaker;
 				case Subwoofer:
@@ -375,16 +377,20 @@ public class RobotContainer {
 
 	public enum TGR {
 		Creep(driverController.leftBumper()),
-		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled)),
-		ResetFieldRelative(driverController.start()),
+		ResetFieldRelative(driverController.start()), // TODO should we having this?
 		Intake(driverController.rightTrigger(0.15)),
 		Extake(driverController.rightBumper()),
 		ShootSpeaker(driverController.x().and(() -> !EnabledDebugModes.testingTurret)),
-		ShootAmp(driverController.b().and(() -> !EnabledDebugModes.testingTurret)),
+		PrepareScoreAmp(driverController.b().and(() -> !EnabledDebugModes.testingTurret)),
+		DeployInAmp(driverController.y()),
 		PrepareShootForSubwoofer(operatorController.a().and(() -> !EnabledDebugModes.testingTurret)),
 		ShootFromSubwoofer(operatorController.rightTrigger().and(() -> !EnabledDebugModes.testingTurret)),
 		ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
 		ClimbDown(operatorController.b().and(() -> !EnabledDebugModes.testingClimber)),
+
+		// Below are debugging actions
+
+		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled)),
 		CalibrateShooter(driverController.b()
 				.and(() -> !EnabledDebugModes.testingTurret && EnabledDebugModes.calibratingTurret)),
 		TestingRotationPositive(driverController.rightTrigger(0.15).and(() -> EnabledDebugModes.testingTurret)),
