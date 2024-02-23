@@ -48,7 +48,7 @@ public interface TurretRequest {
             var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
 
             for (int i = 0; i < intakeState.seeingNote.length; i++) {
-                if (intakeState.isNoteInPosition(i)) {
+                if (intakeState.noteInPosition[i]) {
                     index = i;
                     break;
                 }

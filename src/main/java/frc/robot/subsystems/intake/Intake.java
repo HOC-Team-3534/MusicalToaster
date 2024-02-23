@@ -23,7 +23,7 @@ public class Intake extends SubsystemBase {
     final double UpdateFrequency = 100.0;
 
     final static double delayNoteInPositionSeconds = 0.3;
-    final static double noteNotSeenSeconds = 0.5;
+    final static double noteNotSeenSeconds = 1.0;
 
     private IntakeThread intakeThread;
 
@@ -82,9 +82,7 @@ public class Intake extends SubsystemBase {
 
     public class IntakeState {
         public IntakeState() {
-            for (int i = 0; i < noteInPositionTimer.length; i++) {
-                noteInPositionTimer[i] = new Timer();
-                noteInPositionTimer[i].start();
+            for (int i = 0; i < noteNotSeenTimer.length; i++) {
                 noteNotSeenTimer[i] = new Timer();
                 noteNotSeenTimer[i].start();
             }
@@ -96,21 +94,13 @@ public class Intake extends SubsystemBase {
         // 0 is Front, 1 is Left, Back is 2, Right is 3
         public boolean seeingNote[] = new boolean[4];
 
-        private boolean noteInPosition[] = new boolean[4];
+        public boolean noteInPosition[] = new boolean[4];
+
+        public int risingEdgeCounter[] = new int[4];
 
         public IntakeDirection intakeDirection[] = new IntakeDirection[4];
 
-        private final Timer noteInPositionTimer[] = new Timer[4];
-
         private final Timer noteNotSeenTimer[] = new Timer[4];
-
-        public boolean getRawNoteInPositionNoDelay(int i) {
-            return noteInPosition[i];
-        }
-
-        public boolean isNoteInPosition(int i) {
-            return noteInPosition[i] && noteInPositionTimer[i].hasElapsed(delayNoteInPositionSeconds);
-        }
     }
 
     final IntakeState m_cachedState = new IntakeState();
@@ -185,11 +175,14 @@ public class Intake extends SubsystemBase {
                          * and the note is seen while the motor is running in
                          * set note in position to true and reset the delay timer
                          */
-                        if (!m_cachedState.noteInPosition[i]
-                                && sensors[i].get()
-                                && m_cachedState.intakeDirection[i].equals(IntakeDirection.In)) {
+                        if (!m_cachedState.seeingNote[i]
+                                && sensors[i].get()) {
+                            m_cachedState.risingEdgeCounter[i]++;
+                        }
+
+                        if (m_cachedState.risingEdgeCounter[i] >= 2) {
                             m_cachedState.noteInPosition[i] = true;
-                            m_cachedState.noteInPositionTimer[i].restart();
+                            m_cachedState.risingEdgeCounter[i] = 0;
                         }
 
                         // If you see the note, reset timer that resets noteInPosition.

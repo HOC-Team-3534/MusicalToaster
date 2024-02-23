@@ -274,7 +274,7 @@ public class RobotContainer {
 	public static boolean isNoteInRobot() {
 		var intakeState = intake.getState();
 		for (int i = 0; i < intakeState.seeingNote.length; i++) {
-			if (intakeState.isNoteInPosition(i)) {
+			if (intakeState.noteInPosition[i]) {
 				return true;
 			}
 		}
