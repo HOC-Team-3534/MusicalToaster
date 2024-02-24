@@ -9,14 +9,12 @@ import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.Utils;
-import com.ctre.phoenix6.configs.FeedbackConfigs;
-import com.ctre.phoenix6.configs.MotionMagicConfigs;
-import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -51,12 +49,14 @@ public class Turret extends SubsystemBase {
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
-    final Supplier<Rotation2d> m_bottomEncoderRotationSupplier;
 
     private TurretThread turretThread;
 
     public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedsSupplier) {
         super();
+        /*
+         * Device instantiation
+         */
         rightShooterMotor = new TalonFX(17);
         leftShooterMotor = new TalonFX(16);
         rotateMotor = new TalonFX(14);
@@ -65,61 +65,53 @@ public class Turret extends SubsystemBase {
         sensor = new ProximitySensorInput(4);
 
         /*
-         * 
+         * Rotate Motor Configuration
          */
         TalonFXConfiguration cfgRotate = new TalonFXConfiguration();
 
-        MotionMagicConfigs mmRotate = cfgRotate.MotionMagic;
-        mmRotate.MotionMagicCruiseVelocity = .5;
-        mmRotate.MotionMagicAcceleration = 5;
-        mmRotate.MotionMagicJerk = 30;
+        cfgRotate.MotionMagic.MotionMagicCruiseVelocity = 0.1;
+        cfgRotate.MotionMagic.MotionMagicAcceleration = 2;
+        cfgRotate.MotionMagic.MotionMagicJerk = 20;
 
-        Slot0Configs slot0Rotate = cfgRotate.Slot0;
-        slot0Rotate.kP = 100;
-        slot0Rotate.kI = 0;
-        slot0Rotate.kV = 8.7184;// TODO Tune these values
-        slot0Rotate.kS = 0.6733;
+        cfgRotate.Slot0.kP = 15;
+        cfgRotate.Slot0.kV = 13.29;// TODO Tune these values
+        cfgRotate.Slot0.kS = 0.1763;
 
-        FeedbackConfigs fdbRotate = cfgRotate.Feedback;
-        fdbRotate.SensorToMechanismRatio = 125;
+        cfgRotate.Feedback.SensorToMechanismRatio = 125;
 
         /*
-         * 
+         * Tilt Motor Configuration
          */
         TalonFXConfiguration cfgTilt = new TalonFXConfiguration();
 
-        MotionMagicConfigs mmTilt = cfgTilt.MotionMagic;
-        mmTilt.MotionMagicCruiseVelocity = .15;
-        mmTilt.MotionMagicAcceleration = 2.5;
-        mmTilt.MotionMagicJerk = 30;
+        cfgTilt.MotionMagic.MotionMagicCruiseVelocity = 0.3;
+        cfgTilt.MotionMagic.MotionMagicAcceleration = 2.5;
+        cfgTilt.MotionMagic.MotionMagicJerk = 30;
 
-        Slot0Configs slot0Tilt = cfgTilt.Slot0;
-        slot0Tilt.kP = 100;
-        slot0Tilt.kI = 0;
-        slot0Tilt.kV = 8.7184;// TODO Tune these values
-        slot0Tilt.kS = 0.6733;
+        cfgTilt.Slot0.kP = 10;
+        cfgTilt.Slot0.kV = 32.55;// TODO Tune these values
+        cfgTilt.Slot0.kS = 0.13;
 
-        FeedbackConfigs fdbTilt = cfgRotate.Feedback;
-        fdbTilt.SensorToMechanismRatio = 300;
+        cfgTilt.Feedback.SensorToMechanismRatio = 300;
 
-        /* 
-         * 
-        */
+        /*
+         * Shooter Motor Configuration
+         */
 
-        TalonFXConfiguration cfgShooterMotor = new TalonFXConfiguration();
+        TalonFXConfiguration cfgShooter = new TalonFXConfiguration();
 
-        Slot0Configs slot0ShooterMotor = cfgShooterMotor.Slot0;
-        slot0ShooterMotor.kP = 10;
-        slot0ShooterMotor.kI = 0;
-        slot0ShooterMotor.kV = 0;
-        slot0ShooterMotor.kS = 0;
+        cfgShooter.Slot0.kP = 10;
+        cfgShooter.Slot0.kI = 0;
+        cfgShooter.Slot0.kV = 0;
+        cfgShooter.Slot0.kS = 0;
 
-        FeedbackConfigs velocityConfigsShooterMotor = cfgShooterMotor.Feedback;
-        velocityConfigsShooterMotor.SensorToMechanismRatio = 1;
+        cfgShooter.Feedback.SensorToMechanismRatio = 1;
 
-        var shooterCurrentConfig = cfgShooterMotor.CurrentLimits;
-        shooterCurrentConfig.SupplyCurrentLimit = 30;
+        cfgShooter.CurrentLimits.SupplyCurrentLimit = 30;
 
+        /*
+         * Function for configuring motor
+         */
         BiConsumer<TalonFX, TalonFXConfiguration> configureMotor = (talon, config) -> {
             StatusCode status = StatusCode.StatusCodeNotInitialized;
             for (int i = 0; i < 5; i++) {
@@ -132,24 +124,26 @@ public class Turret extends SubsystemBase {
             }
         };
 
+        /*
+         * Apply configurations to motor using above configureMotor BiConsumer
+         */
         configureMotor.accept(rotateMotor, cfgRotate);
         configureMotor.accept(tiltMotor, cfgTilt);
-        configureMotor.accept(leftShooterMotor, cfgShooterMotor);
-        configureMotor.accept(rightShooterMotor, cfgShooterMotor);
+        configureMotor.accept(leftShooterMotor, cfgShooter);
+        configureMotor.accept(rightShooterMotor, cfgShooter);
 
-        leftShooterMotor.setControl(new Follower(17, true));// TODO Set master ID to right shooter
-        // TODO Configuration of gear ratio and set them, add analog sensor for position
-        // on motor,
+        leftShooterMotor.setControl(new Follower(17, true));
 
-        tiltMotor.setPosition(0);
+        rotateMotor.setInverted(true);
         rotateMotor.setPosition(0);
+
+        tiltMotor.setInverted(true);
+        tiltMotor.setPosition(0);
 
         rollerMotor.configFactoryDefault();
         rollerMotor.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder);
         rollerMotor.setSelectedSensorPosition(0);
-        rollerMotor.setSensorPhase(false);
-        m_bottomEncoderRotationSupplier = () -> Rotation2d
-                .fromRotations(rollerMotor.getSelectedSensorPosition() / 4096.0);
+        rollerMotor.setSensorPhase(true);
 
         var goalPosition = DriverStation.getAlliance().get().equals(Alliance.Blue)
                 ? new Translation2d(Units.inchesToMeters(9), Units.inchesToMeters(218.64))
@@ -187,7 +181,13 @@ public class Turret extends SubsystemBase {
     public class TurretState {
         public Rotation2d azimuth;
 
+        public double rawAzimuthEncoderCounts;
+
+        public Rotation2d azimuthFromMotor;
+
         public Rotation2d elevation;
+
+        public double rawElevationRotations;
 
         private boolean noteLoaded;
 
@@ -271,9 +271,16 @@ public class Turret extends SubsystemBase {
 
                     m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
 
-                    rotateMotor.setPosition(m_bottomEncoderRotationSupplier.get().getRotations());
+                    m_cachedState.rawAzimuthEncoderCounts = rollerMotor.getSelectedSensorPosition();
 
-                    m_cachedState.azimuth = Rotation2d.fromRotations(rotateMotor.getPosition().getValueAsDouble());
+                    m_cachedState.azimuth = Rotation2d.fromRotations(m_cachedState.rawAzimuthEncoderCounts / 1440.0);
+
+                    rotateMotor.setPosition(m_cachedState.azimuth.getRotations());
+
+                    m_cachedState.azimuthFromMotor = Rotation2d
+                            .fromRotations(rotateMotor.getPosition().getValueAsDouble());
+
+                    m_cachedState.rawElevationRotations = tiltMotor.getPosition().getValueAsDouble();
 
                     m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
 
@@ -315,7 +322,7 @@ public class Turret extends SubsystemBase {
 
                     m_requestParameters.turretState = m_cachedState;
 
-                    turretTelemetry.Telemetrize(m_cachedState);
+                    turretTelemetry.telemetrize(m_cachedState);
 
                     m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
                     m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor);

@@ -158,9 +158,9 @@ public class RobotContainer {
 		intake.setDefaultCommand(
 				intake.applyRequest(() -> isActivelyIndexingFromIntake() ? runIntake : stopIntake));
 
-		// if (!EnabledDebugModes.testingTurret)
-		// turret.setDefaultCommand(
-		// turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
+		if (!EnabledDebugModes.testingTurret)
+			turret.setDefaultCommand(
+					turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
 
 		var idle = new TurretRequest.Idle();
 
