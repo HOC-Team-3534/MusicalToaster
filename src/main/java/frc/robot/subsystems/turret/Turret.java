@@ -26,6 +26,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.sensors.ProximitySensorInput;
@@ -73,7 +74,7 @@ public class Turret extends SubsystemBase {
         cfgRotate.MotionMagic.MotionMagicAcceleration = 2;
         cfgRotate.MotionMagic.MotionMagicJerk = 20;
 
-        cfgRotate.Slot0.kP = 15;
+        cfgRotate.Slot0.kP = 5;
         cfgRotate.Slot0.kV = 13.29;// TODO Tune these values
         cfgRotate.Slot0.kS = 0.1763;
 
@@ -84,7 +85,7 @@ public class Turret extends SubsystemBase {
          */
         TalonFXConfiguration cfgTilt = new TalonFXConfiguration();
 
-        cfgTilt.MotionMagic.MotionMagicCruiseVelocity = 0.3;
+        cfgTilt.MotionMagic.MotionMagicCruiseVelocity = 0.03;
         cfgTilt.MotionMagic.MotionMagicAcceleration = 2.5;
         cfgTilt.MotionMagic.MotionMagicJerk = 30;
 
@@ -102,8 +103,9 @@ public class Turret extends SubsystemBase {
 
         cfgShooter.Slot0.kP = 10;
         cfgShooter.Slot0.kI = 0;
-        cfgShooter.Slot0.kV = 0;
-        cfgShooter.Slot0.kS = 0;
+        cfgShooter.Slot0.kA = 0.0115;
+        cfgShooter.Slot0.kV = 0.0230234;
+        cfgShooter.Slot0.kS = 1.5289;
 
         cfgShooter.Feedback.SensorToMechanismRatio = 1;
 
@@ -132,6 +134,7 @@ public class Turret extends SubsystemBase {
         configureMotor.accept(leftShooterMotor, cfgShooter);
         configureMotor.accept(rightShooterMotor, cfgShooter);
 
+        rightShooterMotor.setInverted(true);
         leftShooterMotor.setControl(new Follower(17, true));
 
         rotateMotor.setInverted(true);
@@ -202,8 +205,6 @@ public class Turret extends SubsystemBase {
         public Rotation2d tiltClosedLoopError;
 
         public double shooterMotorClosedLoopError;
-
-        public boolean activelyIndexingFromIntake;
 
         public boolean currentlyShooting;
 
@@ -300,10 +301,12 @@ public class Turret extends SubsystemBase {
                         m_cachedState.noteLoaded = false;
 
                     m_cachedState.rotateClosedLoopError = Rotation2d
-                            .fromRotations(rotateMotor.getClosedLoopError().getValueAsDouble());
+                            .fromRotations(rotateMotor.getClosedLoopReference().getValueAsDouble()
+                                    - rotateMotor.getPosition().getValueAsDouble());
 
                     m_cachedState.tiltClosedLoopError = Rotation2d
-                            .fromRotations(tiltMotor.getClosedLoopError().getValueAsDouble());
+                            .fromRotations(tiltMotor.getClosedLoopReference().getValueAsDouble()
+                                    - tiltMotor.getPosition().getValueAsDouble());
 
                     m_cachedState.shooterMotorClosedLoopError = rightShooterMotor.getClosedLoopError()
                             .getValueAsDouble();
@@ -316,7 +319,9 @@ public class Turret extends SubsystemBase {
                         m_cachedState.virtualGoalLocationDisplacement = null;
                     }
 
-                    m_cachedState.activelyIndexingFromIntake = false;
+                    RobotContainer.setActivelyGrabbing(false);
+
+                    RobotContainer.setNoteLoaded(m_cachedState.isNoteLoaded());
 
                     m_cachedState.currentlyShooting = false;
 
@@ -330,16 +335,6 @@ public class Turret extends SubsystemBase {
                     m_stateLock.writeLock().unlock();
                 }
             }
-        }
-    }
-
-    public TurretState getState() {
-        try {
-            m_stateLock.readLock().lock();
-
-            return m_cachedState;
-        } finally {
-            m_stateLock.readLock().unlock();
         }
     }
 }

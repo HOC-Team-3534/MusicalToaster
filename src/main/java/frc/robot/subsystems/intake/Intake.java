@@ -12,8 +12,9 @@ import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Robot;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.intake.IntakeRequest.IntakeControlRequestParameters;
-import frc.robot.subsystems.turret.Turret.TurretState;
 import frc.robot.utils.sensors.ProximitySensorInput;
 
 public class Intake extends SubsystemBase {
@@ -34,9 +35,8 @@ public class Intake extends SubsystemBase {
     protected IntakeControlRequestParameters m_requestParameters = new IntakeControlRequestParameters();
 
     private final Supplier<Boolean> resetNoteSupplier;
-    private final Supplier<TurretState> turretStateSupplier;
 
-    public Intake(Supplier<Boolean> resetNoteSupplier, Supplier<TurretState> turretStateSupplier) {
+    public Intake(Supplier<Boolean> resetNoteSupplier) {
         frontBackMotor = new TalonSRX(19);
         leftRightMotor = new TalonSRX(20);
         leftRightMotor.setInverted(true);
@@ -48,7 +48,6 @@ public class Intake extends SubsystemBase {
         intakeThread = new IntakeThread();
         intakeThread.start();
         this.resetNoteSupplier = resetNoteSupplier;
-        this.turretStateSupplier = turretStateSupplier;
     }
 
     public enum IntakeDirection {
@@ -98,9 +97,6 @@ public class Intake extends SubsystemBase {
         public boolean noteInPosition[] = new boolean[4];
 
         public IntakeDirection intakeDirection[] = new IntakeDirection[4];
-
-        public int grabNoteIndex = -1;
-
     }
 
     final IntakeState m_cachedState = new IntakeState();
@@ -187,18 +183,20 @@ public class Intake extends SubsystemBase {
                             m_cachedState.noteInPosition[i] = false;
                         }
                     }
-                    m_cachedState.grabNoteIndex = -1;
+                    var grabNoteIndex = -1;
                     for (int i = 0; i < m_cachedState.noteInPosition.length; i++) {
                         if (m_cachedState.noteInPosition[i]) {
-                            m_cachedState.grabNoteIndex = i;
+                            grabNoteIndex = i;
                             break;
                         }
                     }
 
-                    var noteLoaded = turretStateSupplier.get().isNoteLoaded();
+                    RobotContainer.setGrabNoteIndex(grabNoteIndex);
 
-                    if (!prevNoteLoaded && noteLoaded && m_cachedState.grabNoteIndex != -1) {
-                        m_cachedState.noteInPosition[m_cachedState.grabNoteIndex] = false;
+                    var noteLoaded = RobotContainer.getRobotState().noteLoaded;
+
+                    if (!prevNoteLoaded && noteLoaded && grabNoteIndex != -1) {
+                        m_cachedState.noteInPosition[grabNoteIndex] = false;
                     }
 
                     prevNoteLoaded = noteLoaded;
@@ -214,16 +212,6 @@ public class Intake extends SubsystemBase {
                     m_stateLock.writeLock().unlock();
                 }
             }
-        }
-    }
-
-    public IntakeState getState() {
-        try {
-            m_stateLock.readLock().lock();
-
-            return m_cachedState;
-        } finally {
-            m_stateLock.readLock().unlock();
         }
     }
 

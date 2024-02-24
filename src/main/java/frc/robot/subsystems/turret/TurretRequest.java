@@ -1,5 +1,7 @@
 package frc.robot.subsystems.turret;
 
+import static frc.robot.subsystems.turret.TurretRequest.calculateTargetAzimuth;
+
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -28,33 +30,33 @@ public interface TurretRequest {
     public static final double upperLimitDegrees = 240;
 
     public class IndexFromIntake implements TurretRequest {
-        private Supplier<IntakeState> intakeStateSupplier;
         private Rotation2d tolerance = Rotation2d.fromDegrees(1);
         private Rotation2d tilt;
         private double rollerPercentOut;
-        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(1);
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
-            var intakeState = intakeStateSupplier.get();
-            int index = intakeState.grabNoteIndex;
+            ;
+            int index = RobotContainer.getRobotState().grabNoteIndex;
             var currentAzimuth = parameters.turretState.azimuth;
-            var azimuthErrorDegrees = parameters.turretState.rotateClosedLoopError.getDegrees();
+            var currentElevation = parameters.turretState.elevation;
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
-            var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
 
             if (!parameters.turretState.isNoteLoaded() && index != -1) {
-                targetAzimuth = Rotation2d.fromRotations(0.25 * index);
+                targetAzimuth = Rotation2d.fromRotations(0.25 * (index + 2));
                 targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
                         upperLimitDegrees);
-                if (Math.abs(azimuthErrorDegrees) <= tolerance.getRotations()
+                var rotateError = targetAzimuth.minus(currentAzimuth);
+                if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()
                         && !RobotContainer.isRobotUnderStage()) {
                     outputTilt = tilt;
-                    if (tiltErrorDegrees <= tiltTolerance.getDegrees()) {
-                        parameters.turretState.activelyIndexingFromIntake = true;
+                    var tiltError = outputTilt.minus(currentElevation);
+                    if (Math.abs(tiltError.getDegrees()) <= tiltTolerance.getDegrees()) {
+                        RobotContainer.setActivelyGrabbing(true);
                         rollerOn = true;
                     }
                 }
@@ -64,11 +66,6 @@ public interface TurretRequest {
             rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
             tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
             return StatusCode.OK;
-        }
-
-        public IndexFromIntake withIntakeState(Supplier<IntakeState> intakeStateSupplier) {
-            this.intakeStateSupplier = intakeStateSupplier;
-            return this;
         }
 
         public IndexFromIntake withRotateTolerance(Rotation2d tolerance) {
@@ -528,13 +525,15 @@ public interface TurretRequest {
         double difference = b - a;
         double shiftInCurrentAngle = Math.abs(difference) < 180 ? difference
                 : difference < 0 ? difference + 360 : difference - 360;
-        while (shiftInCurrentAngle > upperLimitDegrees) {
-            shiftInCurrentAngle -= 360;
+
+        double outputTarget = a + shiftInCurrentAngle;
+        while (outputTarget > upperLimitDegrees) {
+            outputTarget -= 360;
         }
-        while (shiftInCurrentAngle < lowerLimitDegrees) {
-            shiftInCurrentAngle += 360;
+        while (outputTarget < lowerLimitDegrees) {
+            outputTarget += 360;
         }
-        return Rotation2d.fromDegrees(shiftInCurrentAngle);
+        return Rotation2d.fromDegrees(outputTarget);
 
     }
 

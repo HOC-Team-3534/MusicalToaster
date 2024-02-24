@@ -4,6 +4,8 @@
 package frc.robot;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
@@ -86,14 +88,13 @@ public class RobotContainer {
 
 	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
 
-	private final static Intake intake = new Intake(() -> TGR.ResetAllNotePostions.bool(), () -> turret.getState());
+	private final static Intake intake = new Intake(() -> TGR.ResetAllNotePostions.bool());
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
 	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
 
 	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
-			.withRollerOutput(0.25)
-			.withTilt(Rotation2d.fromDegrees(-35))
-			.withIntakeState(() -> intake.getState());// TODO Validate this
+			.withRollerOutput(-0.5)
+			.withTilt(Rotation2d.fromDegrees(40));
 	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
 			.withRollerOutput(0.25)
 			.withTiltFunction((distance) -> new Rotation2d())
@@ -105,7 +106,7 @@ public class RobotContainer {
 			.withSwerveDriveState(() -> drivetrain.getState())
 			.withDeployTrigger(() -> TGR.DeployInAmp.bool());// TODO Find the actualy tilt for aiming for amp
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
-			.withRollerPercent(0.25)
+			.withRollerPercent(-1.0)
 			.withRotation(new Rotation2d())
 			.withTilt(Rotation2d.fromDegrees(35));
 	private final static AimWithRotation aimForSteal = new AimWithRotation()
@@ -128,6 +129,9 @@ public class RobotContainer {
 
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
+
+	private static ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
+	private static RobotState m_robotState = new RobotState();
 
 	/**
 	 * The container for the robot. Contains subsystems, OI devices, and
@@ -162,9 +166,9 @@ public class RobotContainer {
 			turret.setDefaultCommand(
 					turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
 
-		var idle = new TurretRequest.Idle();
+		// var idle = new TurretRequest.Idle();
 
-		turret.setDefaultCommand(turret.applyRequest(() -> idle, () -> shooterOff));
+		// turret.setDefaultCommand(turret.applyRequest(() -> idle, () -> shooterOff));
 
 		if (Utils.isSimulation()) {
 			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
@@ -208,7 +212,47 @@ public class RobotContainer {
 	}
 
 	public static boolean isActivelyIndexingFromIntake() {
-		return turret.getState().activelyIndexingFromIntake;
+		return getRobotState().activelyGrabbing;
+	}
+
+	public static RobotState getRobotState() {
+		try {
+			m_stateLock.readLock().lock();
+
+			return m_robotState;
+		} finally {
+			m_stateLock.readLock().unlock();
+		}
+	}
+
+	public static void setActivelyGrabbing(boolean activelyGrabbing) {
+		try {
+			m_stateLock.writeLock().lock();
+
+			m_robotState.activelyGrabbing = activelyGrabbing;
+		} finally {
+			m_stateLock.writeLock().unlock();
+		}
+	}
+
+	public static void setNoteLoaded(boolean noteLoaded) {
+		try {
+			m_stateLock.writeLock().lock();
+
+			m_robotState.noteLoaded = noteLoaded;
+		} finally {
+			m_stateLock.writeLock().unlock();
+		}
+	}
+
+	public static void setGrabNoteIndex(int grabNoteIndex) {
+		try {
+			m_stateLock.writeLock().lock();
+
+			m_robotState.grabNoteIndex = grabNoteIndex;
+		} finally {
+			m_stateLock.writeLock().unlock();
+		}
 	}
 
 	/**
@@ -233,7 +277,7 @@ public class RobotContainer {
 
 		var justRoller = new TurretRequest.JustRoller();
 
-		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(-0.2);
+		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(0.2);
 
 		TGR.ShootManually.tgr().whileTrue(turret.applyRequest(() -> justRoller, () -> shooterAmpPercentage));
 
@@ -283,13 +327,8 @@ public class RobotContainer {
 	}
 
 	public static boolean isNoteInRobot() {
-		var intakeState = intake.getState();
-		for (int i = 0; i < intakeState.seeingNote.length; i++) {
-			if (intakeState.noteInPosition[i]) {
-				return true;
-			}
-		}
-		return turret.getState().isNoteLoaded();
+		var intakeHasNote = getRobotState().grabNoteIndex != -1;
+		return intakeHasNote || getRobotState().noteLoaded;
 	}
 
 	public static int getCoordinateSystemInversionDriving() {
@@ -304,7 +343,7 @@ public class RobotContainer {
 	public static Command getShootCommand(Supplier<ShooterType> shooterTypeSupplier) {
 		return turret.applyRequest(() -> {
 			var type = shooterTypeSupplier.get();
-			if (!turret.getState().isNoteLoaded()
+			if (!getRobotState().noteLoaded
 					|| (type.equals(ShooterType.Speaker) && !isValidShootPosition()))
 				return indexFromIntake;
 			switch (type) {
