@@ -122,9 +122,9 @@ public class RobotContainer {
 	private final static TestingTurret testingShooter = new TestingTurret();
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
-	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(1000);// TODO Find these valuess
-	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(6200);// TODO Find these
-	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(500);
+	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
+	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
+	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 	private final static CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
