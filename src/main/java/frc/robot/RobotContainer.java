@@ -90,10 +90,11 @@ public class RobotContainer {
 
 	private final static Intake intake = new Intake(() -> TGR.ResetAllNotePostions.bool());
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
+	private final static ControlIntake runExtake = new ControlIntake().withIntakePercent(-1.0);
 	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
 
 	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
-			.withRollerOutput(-0.5)
+			.withRollerOutput(-1.0)
 			.withTilt(Rotation2d.fromDegrees(40));
 	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
 			.withRollerOutput(0.25)
@@ -108,7 +109,7 @@ public class RobotContainer {
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
 			.withRollerPercent(-1.0)
 			.withRotation(new Rotation2d())
-			.withTilt(Rotation2d.fromDegrees(35));
+			.withTilt(Rotation2d.fromDegrees(40)).withShooterTolerance(5.0);
 	private final static AimWithRotation aimForSteal = new AimWithRotation()
 			.withRotation(() -> {
 				var targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
@@ -274,6 +275,7 @@ public class RobotContainer {
 		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
 
 		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
+		TGR.Extake.tgr().whileTrue(intake.applyRequest(() -> runExtake));
 
 		var justRoller = new TurretRequest.JustRoller();
 
@@ -283,8 +285,7 @@ public class RobotContainer {
 
 		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
-		// TGR.ShootFromSubwoofer.tgr().whileTrue(getShootCommand(() ->
-		// ShooterType.Subwoofer));
+		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
 		// TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
 		// TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
@@ -352,7 +353,7 @@ public class RobotContainer {
 				case Speaker:
 					return aimForSpeaker;
 				case Subwoofer:
-					return shootFromSubwoofer.withReadyToShoot(() -> TGR.PrepareShootForSubwoofer.tgr().getAsBoolean());
+					return shootFromSubwoofer.withReadyToShoot(() -> TGR.ShootFromSubwoofer.tgr().getAsBoolean());
 				case Steal:
 					return aimForSteal;
 				default:
@@ -437,6 +438,7 @@ public class RobotContainer {
 		ResetFieldRelative(driverController.start()), // TODO should we having this?
 		Intake(driverController.rightTrigger(0.15).and(() -> !EnabledDebugModes.testingTurret)),
 		ShootSpeaker(driverController.x().and(() -> !EnabledDebugModes.testingTurret)),
+		Extake(driverController.rightBumper().and(() -> EnabledDebugModes.testingTurret)),
 		PrepareScoreAmp(driverController.b().and(() -> !EnabledDebugModes.testingTurret)),
 		DeployInAmp(driverController.y()),
 		PrepareShootForSubwoofer(operatorController.x().and(() -> !EnabledDebugModes.testingTurret)),

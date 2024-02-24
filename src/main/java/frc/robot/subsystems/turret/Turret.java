@@ -43,7 +43,7 @@ public class Turret extends SubsystemBase {
 
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
-    final static double delayNoteLoadedSeconds = 0.1;
+    final static double delayNoteLoadedSeconds = 0.2;
     final static double delayNoteUnloadedSeconds = 0.1;
 
     ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
@@ -70,11 +70,11 @@ public class Turret extends SubsystemBase {
          */
         TalonFXConfiguration cfgRotate = new TalonFXConfiguration();
 
-        cfgRotate.MotionMagic.MotionMagicCruiseVelocity = 0.1;
-        cfgRotate.MotionMagic.MotionMagicAcceleration = 2;
+        cfgRotate.MotionMagic.MotionMagicCruiseVelocity = 0.5;
+        cfgRotate.MotionMagic.MotionMagicAcceleration = 0.25;
         cfgRotate.MotionMagic.MotionMagicJerk = 20;
 
-        cfgRotate.Slot0.kP = 5;
+        cfgRotate.Slot0.kP = 2;
         cfgRotate.Slot0.kV = 13.29;// TODO Tune these values
         cfgRotate.Slot0.kS = 0.1763;
 
@@ -101,7 +101,7 @@ public class Turret extends SubsystemBase {
 
         TalonFXConfiguration cfgShooter = new TalonFXConfiguration();
 
-        cfgShooter.Slot0.kP = 10;
+        cfgShooter.Slot0.kP = 5;
         cfgShooter.Slot0.kI = 0;
         cfgShooter.Slot0.kA = 0.0115;
         cfgShooter.Slot0.kV = 0.0230234;
@@ -297,8 +297,10 @@ public class Turret extends SubsystemBase {
                         m_cachedState.noteUnloadedTimer.restart();
                     }
 
-                    if (m_cachedState.noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds))
+                    if (m_cachedState.noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {
                         m_cachedState.noteLoaded = false;
+                        m_cachedState.noteUnloadedTimer.reset();
+                    }
 
                     m_cachedState.rotateClosedLoopError = Rotation2d
                             .fromRotations(rotateMotor.getClosedLoopReference().getValueAsDouble()
