@@ -38,21 +38,13 @@ public interface TurretRequest {
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
             var intakeState = intakeStateSupplier.get();
-            int index = -1;
+            int index = intakeState.grabNoteIndex;
             var currentAzimuth = parameters.turretState.azimuth;
             var azimuthErrorDegrees = parameters.turretState.rotateClosedLoopError.getDegrees();
-
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
             var tiltErrorDegrees = parameters.turretState.tiltClosedLoopError.getDegrees();
-
-            for (int i = 0; i < intakeState.seeingNote.length; i++) {
-                if (intakeState.noteInPosition[i]) {
-                    index = i;
-                    break;
-                }
-            }
 
             if (!parameters.turretState.isNoteLoaded() && index != -1) {
                 targetAzimuth = Rotation2d.fromRotations(0.25 * index);
@@ -504,6 +496,22 @@ public interface TurretRequest {
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
+            rotateMotor.set(0);
+            tiltMotor.set(0);
+            rollerMotor.set(ControlMode.PercentOutput, 0);
+            return StatusCode.OK;
+        }
+
+    }
+
+    public class JustRoller implements TurretRequest {
+
+        @Override
+        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+                TalonSRX rollerMotor) {
+            rotateMotor.set(0);
+            tiltMotor.set(0);
+            rollerMotor.set(ControlMode.PercentOutput, -1.0);
             return StatusCode.OK;
         }
 

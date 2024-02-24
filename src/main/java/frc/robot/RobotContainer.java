@@ -36,7 +36,10 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
+import frc.robot.subsystems.turret.ShooterRequest.Idle;
+import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.Turret;
+import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
 import frc.robot.subsystems.turret.TurretRequest.AimWithRotation;
 import frc.robot.subsystems.turret.TurretRequest.CalibrateShooter;
@@ -81,12 +84,12 @@ public class RobotContainer {
 	private final static ControlClimber climberUp = new ControlClimber().withVoltage(0.5).withClimberReversed(false);
 	private final static ControlClimber climberDown = new ControlClimber().withVoltage(0.5).withClimberReversed(true);
 
-	private final static Intake intake = new Intake();
+	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
+
+	private final static Intake intake = new Intake(() -> TGR.ResetAllNotePostions.bool(), () -> turret.getState());
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
-	private final static ControlIntake runExtake = new ControlIntake().withIntakePercent(1.0).withIntakeReversed(true);
 	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
 
-	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
 	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
 			.withRollerOutput(0.25)
 			.withTilt(Rotation2d.fromDegrees(-35))
@@ -117,7 +120,7 @@ public class RobotContainer {
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
 	private final static TestingTurret testingShooter = new TestingTurret();
 
-	private final static ControlShooter shooterOff = new ControlShooter().withVelocity(0);
+	private final static Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(1000);// TODO Find these valuess
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(6200);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(500);
@@ -158,6 +161,10 @@ public class RobotContainer {
 		// if (!EnabledDebugModes.testingTurret)
 		// turret.setDefaultCommand(
 		// turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
+
+		var idle = new TurretRequest.Idle();
+
+		turret.setDefaultCommand(turret.applyRequest(() -> idle, () -> shooterOff));
 
 		if (Utils.isSimulation()) {
 			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
@@ -224,7 +231,11 @@ public class RobotContainer {
 
 		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
 
-		TGR.Extake.tgr().whileTrue(intake.applyRequest(() -> runExtake));
+		var justRoller = new TurretRequest.JustRoller();
+
+		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(-0.2);
+
+		TGR.ShootManually.tgr().whileTrue(turret.applyRequest(() -> justRoller, () -> shooterAmpPercentage));
 
 		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
@@ -386,14 +397,16 @@ public class RobotContainer {
 		Creep(driverController.leftBumper()),
 		ResetFieldRelative(driverController.start()), // TODO should we having this?
 		Intake(driverController.rightTrigger(0.15).and(() -> !EnabledDebugModes.testingTurret)),
-		Extake(driverController.rightBumper().and(() -> !EnabledDebugModes.testingTurret)),
 		ShootSpeaker(driverController.x().and(() -> !EnabledDebugModes.testingTurret)),
 		PrepareScoreAmp(driverController.b().and(() -> !EnabledDebugModes.testingTurret)),
 		DeployInAmp(driverController.y()),
-		PrepareShootForSubwoofer(operatorController.a().and(() -> !EnabledDebugModes.testingTurret)),
+		PrepareShootForSubwoofer(operatorController.x().and(() -> !EnabledDebugModes.testingTurret)),
 		ShootFromSubwoofer(operatorController.rightTrigger().and(() -> !EnabledDebugModes.testingTurret)),
 		ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
 		ClimbDown(operatorController.b().and(() -> !EnabledDebugModes.testingClimber)),
+		ResetAllNotePostions(operatorController.back()),
+
+		ShootManually(operatorController.leftTrigger(0.15)),
 
 		// Below are debugging actions
 

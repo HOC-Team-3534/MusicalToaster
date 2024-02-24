@@ -137,7 +137,7 @@ public class Turret extends SubsystemBase {
         configureMotor.accept(leftShooterMotor, cfgShooterMotor);
         configureMotor.accept(rightShooterMotor, cfgShooterMotor);
 
-        leftShooterMotor.setControl(new Follower(0, true));// TODO Set master ID to right shooter
+        leftShooterMotor.setControl(new Follower(17, true));// TODO Set master ID to right shooter
         // TODO Configuration of gear ratio and set them, add analog sensor for position
         // on motor,
 
