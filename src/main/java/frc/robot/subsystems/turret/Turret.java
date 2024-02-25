@@ -14,7 +14,6 @@ import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -44,7 +43,7 @@ public class Turret extends SubsystemBase {
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
     final static double delayNoteLoadedSeconds = 0.2;
-    final static double delayNoteUnloadedSeconds = 0.1;
+    final static double delayNoteUnloadedSeconds = 0.3;
 
     ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
@@ -70,11 +69,11 @@ public class Turret extends SubsystemBase {
          */
         TalonFXConfiguration cfgRotate = new TalonFXConfiguration();
 
-        cfgRotate.MotionMagic.MotionMagicCruiseVelocity = 0.5;
-        cfgRotate.MotionMagic.MotionMagicAcceleration = 0.25;
+        cfgRotate.MotionMagic.MotionMagicCruiseVelocity = 0.75;
+        cfgRotate.MotionMagic.MotionMagicAcceleration = 0.15;
         cfgRotate.MotionMagic.MotionMagicJerk = 20;
 
-        cfgRotate.Slot0.kP = 2;
+        cfgRotate.Slot0.kP = 5;
         cfgRotate.Slot0.kV = 13.29;// TODO Tune these values
         cfgRotate.Slot0.kS = 0.1763;
 
@@ -85,9 +84,9 @@ public class Turret extends SubsystemBase {
          */
         TalonFXConfiguration cfgTilt = new TalonFXConfiguration();
 
-        cfgTilt.MotionMagic.MotionMagicCruiseVelocity = 0.03;
-        cfgTilt.MotionMagic.MotionMagicAcceleration = 2.5;
-        cfgTilt.MotionMagic.MotionMagicJerk = 30;
+        cfgTilt.MotionMagic.MotionMagicCruiseVelocity = 0.5;
+        cfgTilt.MotionMagic.MotionMagicAcceleration = 0.2;
+        cfgTilt.MotionMagic.MotionMagicJerk = 10;
 
         cfgTilt.Slot0.kP = 10;
         cfgTilt.Slot0.kV = 32.55;// TODO Tune these values

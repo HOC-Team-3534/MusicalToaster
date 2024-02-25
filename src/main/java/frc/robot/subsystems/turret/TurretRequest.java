@@ -27,7 +27,7 @@ public interface TurretRequest {
     public static final double upperLimitDegrees = 240;
 
     public class IndexFromIntake implements TurretRequest {
-        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
+        private Rotation2d tolerance = Rotation2d.fromDegrees(3);
         private Rotation2d tilt;
         private double rollerPercentOut;
         private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
@@ -426,7 +426,7 @@ public interface TurretRequest {
         private Rotation2d tilt;
         private Rotation2d rotation;
         private Supplier<Boolean> readyToShoot;
-        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
+        private Rotation2d tolerance = Rotation2d.fromDegrees(3);
         private double rollerPercentOut;
         private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
         private double shooterTolerance;

@@ -109,7 +109,7 @@ public class RobotContainer {
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
 			.withRollerPercent(-1.0)
 			.withRotation(new Rotation2d())
-			.withTilt(Rotation2d.fromDegrees(40)).withShooterTolerance(5.0);
+			.withTilt(Rotation2d.fromDegrees(43)).withShooterTolerance(5.0);
 	private final static AimWithRotation aimForSteal = new AimWithRotation()
 			.withRotation(() -> {
 				var targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
@@ -124,6 +124,7 @@ public class RobotContainer {
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
+	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(70);// TODO Find these
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 	private final static CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
@@ -370,7 +371,7 @@ public class RobotContainer {
 				case Steal:
 					return shooterSteal;
 				case Subwoofer:
-					return shooterSpeaker;
+					return shootSubwoofer;
 				default:
 					return shooterSpeaker;
 
