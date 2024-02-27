@@ -41,6 +41,7 @@ import frc.robot.subsystems.turret.ShooterRequest.Idle;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest.*;
+import frc.robot.utils.ControllerUtils;
 import swerve.CommandSwerveDrivetrain;
 
 /**
@@ -444,9 +445,11 @@ public class RobotContainer {
 	}
 
 	public enum AXS {
-		Drive_ForwardBackward(() -> slewRateLimiterX.calculate(-modifyAxis(driverController.getLeftY()))),
-		Drive_LeftRight(() -> slewRateLimiterY.calculate(-modifyAxis(driverController.getLeftX()))),
-		Drive_Rotation(() -> slewRateLimiterRotation.calculate(-modifyAxis(driverController.getRightX())));
+		Drive_ForwardBackward(
+				() -> slewRateLimiterX.calculate(-ControllerUtils.modifyAxis(driverController.getLeftY()))),
+		Drive_LeftRight(() -> slewRateLimiterY.calculate(-ControllerUtils.modifyAxis(driverController.getLeftX()))),
+		Drive_Rotation(
+				() -> slewRateLimiterRotation.calculate(-ControllerUtils.modifyAxis(driverController.getRightX())));
 
 		Callable<Double> callable;
 
@@ -461,25 +464,5 @@ public class RobotContainer {
 				return 0.0;
 			}
 		}
-	}
-
-	private static double deadband(double value, double deadband) {
-		if (Math.abs(value) > deadband) {
-			if (value > 0.0) {
-				return (value - deadband) / (1.0 - deadband);
-			} else {
-				return (value + deadband) / (1.0 - deadband);
-			}
-		} else {
-			return 0;
-		}
-	}
-
-	private static double modifyAxis(double value) {
-		// Deadband
-		value = deadband(value, 0.1);
-		// Square the axis
-		value = Math.copySign(value * value, value);
-		return value;
 	}
 }
