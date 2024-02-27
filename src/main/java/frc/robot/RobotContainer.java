@@ -146,6 +146,12 @@ public class RobotContainer {
 	private static ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
 	private static RobotState m_robotState = new RobotState();
 
+	public static class RobotState {
+		public int grabNoteIndex = -1;
+		public boolean activelyGrabbing;
+		public boolean noteLoaded;
+	}
+
 	/**
 	 * The container for the robot. Contains subsystems, OI devices, and
 	 * commands.
