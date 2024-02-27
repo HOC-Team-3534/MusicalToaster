@@ -113,9 +113,5 @@ public final class Constants {
   public static final class EnabledDebugModes {
     public static final boolean CharacterizeEnabled = false;
     public static final boolean updatePoseWithVisionEnabled = false;
-    public static final boolean testingTurret = false;
-    public static final boolean calibratingTurret = false;
-    public static final boolean isCalibratingOrTesting = calibratingTurret || testingTurret;
-    public static final boolean testingClimber = false;
   }
 }

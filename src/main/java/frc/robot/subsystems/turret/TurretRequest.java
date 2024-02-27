@@ -14,6 +14,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RobotContainer;
 import frc.robot.subsystems.turret.Turret.TurretState;
+import frc.robot.utils.TurretUtils;
 
 public interface TurretRequest {
     public class TurretControlRequestParameters {
@@ -45,11 +46,11 @@ public interface TurretRequest {
 
             if (!parameters.turretState.isNoteLoaded() && index != -1) {
                 targetAzimuth = Rotation2d.fromRotations(0.25 * (index + 2));
-                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
+                targetAzimuth = TurretUtils.calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
                         upperLimitDegrees);
                 var rotateError = targetAzimuth.minus(currentAzimuth);
                 if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()
-                        && !RobotContainer.isRobotUnderStage()) {
+                        && !RobotContainer.isTiltForcedFlat()) {
                     outputTilt = tilt;
                     var tiltError = outputTilt.minus(currentElevation);
                     if (Math.abs(tiltError.getDegrees()) <= tiltTolerance.getDegrees()) {
@@ -112,7 +113,7 @@ public interface TurretRequest {
                 var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
                 var distanceToGoal = virtualGoalLocationDisplacement.getNorm();
                 targetAzimuth = rotationToGoal.minus(robotOrientation);
-                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
+                targetAzimuth = TurretUtils.calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
                         upperLimitDegrees);
                 var rotateError = targetAzimuth.minus(currentAzimuth);
                 if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()) {
@@ -188,7 +189,7 @@ public interface TurretRequest {
 
             if (parameters.turretState.isNoteLoaded()) {
                 targetAzimuth = rotationSupplier.get().minus(robotOrientation);
-                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
+                targetAzimuth = TurretUtils.calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
                         upperLimitDegrees);
                 var rotateError = targetAzimuth.minus(currentAzimuth);
                 if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()) {
@@ -267,7 +268,7 @@ public interface TurretRequest {
 
             if (parameters.turretState.isNoteLoaded()) {
                 targetAzimuth = rotationSupplier.get().minus(robotOrientation);
-                targetAzimuth = calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
+                targetAzimuth = TurretUtils.calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
                         upperLimitDegrees);
                 var azimuthError = targetAzimuth.minus(currentAzimuth);
                 if (Math.abs(azimuthError.getDegrees()) <= tolerance.getDegrees()) {
@@ -389,58 +390,6 @@ public interface TurretRequest {
 
     }
 
-    // public class GetRidOfNote implements TurretRequest {
-    // private double rollerTurn;
-
-    // @Override
-    // public StatusCode apply(TurretControlRequestParameters parameters, TalonFX
-    // rotateMotor, TalonFX tiltMotor,
-    // TalonSRX rollerMotor) {
-    // rotateMotor.set(0);
-    // tiltMotor.set(0);
-    // rollerMotor.set(ControlMode.PercentOutput, rollerTurn);
-    // return StatusCode.OK;
-
-    // }
-
-    // public GetRidOfNote withRoller(double rollerTurn) {
-    // this.rollerTurn = rollerTurn;
-    // return this;
-    // }
-    // }
-
-    public class TestingTurret implements TurretRequest {
-        private double inputPercentTilt;
-        private double inputPercentRotation;
-        private double rollerPercent;
-
-        @Override
-        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
-                TalonSRX rollerMotor) {
-
-            rotateMotor.set(inputPercentRotation);
-            tiltMotor.set(inputPercentTilt);
-            rollerMotor.set(ControlMode.PercentOutput, rollerPercent);
-            return StatusCode.OK;
-        }
-
-        public TestingTurret withPercentTilt(double inputPercentTilt) {
-            this.inputPercentTilt = inputPercentTilt;
-            return this;
-        }
-
-        public TestingTurret withPercentRotate(double inputPercentRotation) {
-            this.inputPercentRotation = inputPercentRotation;
-            return this;
-        }
-
-        public TestingTurret withRollerOutput(double rollerOuput) {
-            this.rollerPercent = rollerOuput;
-            return this;
-        }
-
-    }
-
     public class ShootFromSubwoofer implements TurretRequest {
 
         private Rotation2d tilt;
@@ -538,28 +487,4 @@ public interface TurretRequest {
         }
 
     }
-
-    public static Rotation2d calculateTargetAzimuth(Rotation2d target, Rotation2d current, double lowerLimitDegrees,
-            double upperLimitDegrees) {
-        double a = current.getDegrees();
-        double b = target.getDegrees();
-        a %= 360;
-        a += a < 0 ? 360 : 0;
-        b %= 360;
-        b += b < 0 ? 360 : 0;
-        double difference = b - a;
-        double shiftInCurrentAngle = Math.abs(difference) < 180 ? difference
-                : difference < 0 ? difference + 360 : difference - 360;
-
-        double outputTarget = a + shiftInCurrentAngle;
-        while (outputTarget > upperLimitDegrees) {
-            outputTarget -= 360;
-        }
-        while (outputTarget < lowerLimitDegrees) {
-            outputTarget += 360;
-        }
-        return Rotation2d.fromDegrees(outputTarget);
-
-    }
-
 }

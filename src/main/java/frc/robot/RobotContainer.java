@@ -8,13 +8,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
-import org.photonvision.PhotonCamera;
-
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
-import com.pathplanner.lib.commands.PathPlannerAuto;
-
-import edu.wpi.first.hal.simulation.DriverStationDataJNI;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -32,14 +27,12 @@ import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.Constants.RobotType;
 import frc.robot.commands.AutoPosition;
-import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
+import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.generated.TunerConstantsPBOT;
 import frc.robot.generated.TunerConstantsTBOT;
 import frc.robot.subsystems.camera.PhotonVisionCamera;
-import frc.robot.subsystems.climber.Climber;
-import frc.robot.subsystems.climber.ClimberRequest.ControlClimber;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
@@ -47,15 +40,7 @@ import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.Turret;
-import frc.robot.subsystems.turret.TurretRequest;
-import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
-import frc.robot.subsystems.turret.TurretRequest.AimWithRotation;
-import frc.robot.subsystems.turret.TurretRequest.CalibrateShooter;
-import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
-import frc.robot.subsystems.turret.TurretRequest.ScoreAmp;
-import frc.robot.subsystems.turret.TurretRequest.ShootFromSubwoofer;
-import frc.robot.subsystems.turret.TurretRequest.TestingTurret;
-import frc.robot.utils.PositionUtils;
+import frc.robot.subsystems.turret.TurretRequest.*;
 import swerve.CommandSwerveDrivetrain;
 
 /**
@@ -129,14 +114,12 @@ public class RobotContainer {
 			.withRollerOutput(0.25)
 			.withTilt(Rotation2d.fromDegrees(10))
 			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
-	private final static TestingTurret testingShooter = new TestingTurret();
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
 	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(70);// TODO Find these
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
-	private final static CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
 	private static PhotonVisionCamera photonVision;
 
@@ -185,11 +168,13 @@ public class RobotContainer {
 								.withCreepEnabled(TGR.Creep.bool())));
 
 		intake.setDefaultCommand(
-				intake.applyRequest(() -> isActivelyIndexingFromIntake() ? runIntake : stopIntake));
+				intake.applyRequest(
+						() -> isActivelyIndexingFromIntake()
+								? runIntake
+								: stopIntake));
 
-		if (!EnabledDebugModes.testingTurret)
-			turret.setDefaultCommand(
-					turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
+		turret.setDefaultCommand(
+				turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
 
 		// var idle = new TurretRequest.Idle();
 
@@ -301,7 +286,7 @@ public class RobotContainer {
 		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
 		TGR.Extake.tgr().whileTrue(intake.applyRequest(() -> runExtake));
 
-		var justRoller = new TurretRequest.JustRoller();
+		var justRoller = new JustRoller();
 
 		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(0.2);
 
@@ -313,33 +298,6 @@ public class RobotContainer {
 
 		// TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
 		// TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
-		// var testingOnFalse = turret.applyRequest(
-		// () ->
-		// testingShooter.withPercentRotate(0).withPercentTilt(0).withRollerOutput(0.0),
-		// () -> shooterOff);
-
-		// TGR.TestingRotationPositive.tgr()
-		// .whileTrue(turret.applyRequest(() ->
-		// testingShooter.withPercentRotate(0.05).withPercentTilt(0),
-		// () -> shooterOff))
-		// .onFalse(testingOnFalse);
-		// TGR.TestingRotationNegative.tgr()
-		// .whileTrue(turret.applyRequest(() ->
-		// testingShooter.withPercentRotate(-0.05).withPercentTilt(0),
-		// () -> shooterOff))
-		// .onFalse(testingOnFalse);
-		// TGR.TestingTiltPositive.tgr()
-		// .whileTrue(turret.applyRequest(() ->
-		// testingShooter.withPercentRotate(0).withPercentTilt(0.05),
-		// () -> shooterOff))
-		// .onFalse(testingOnFalse);
-		// TGR.TestingTiltNegative.tgr()
-		// .whileTrue(turret.applyRequest(
-		// () -> testingShooter.withPercentRotate(0).withPercentTilt(-0.15),
-		// () -> shooterOff))
-		// .onFalse(testingOnFalse);
-		// TGR.CalibrateShooter.tgr()
-		// .whileTrue(turret.applyRequest(() -> calibrateShooter, () -> shooterOff));
 
 	}
 
@@ -352,8 +310,8 @@ public class RobotContainer {
 	}
 
 	public static boolean isNoteInRobot() {
-		var intakeHasNote = getRobotState().grabNoteIndex != -1;
-		return intakeHasNote || getRobotState().noteLoaded;
+		var state = getRobotState();
+		return state.grabNoteIndex != -1 || state.noteLoaded;
 	}
 
 	public static int getCoordinateSystemInversionDriving() {
@@ -410,29 +368,11 @@ public class RobotContainer {
 				: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX();
 		if (!behindAllianceLine)
 			return false;
-		return !isRobotUnderStage();
+		return !isTiltForcedFlat();
 	}
 
-	public static Translation2d STAGE_BOUNDARY_1 = FIELD_DIMENSIONS.CENTER_OF_FIELD
-			.minus(FIELD_DIMENSIONS.OFFSET_CENTER_TO_SIDE_ROW_OF_NOTES);
-	public static Translation2d BETWEEN_BOUNDARY_2_AND_3 = FIELD_DIMENSIONS.CENTER_OF_FIELD
-			.minus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER);
-	public static Translation2d STAGE_BOUNDARY_2 = BETWEEN_BOUNDARY_2_AND_3.plus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES);
-	public static Translation2d STAGE_BOUNDARY_3 = BETWEEN_BOUNDARY_2_AND_3.minus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES);
-
-	// public static boolean isRobotUnderStage() {
-	// var current = drivetrain.getState().Pose.getTranslation();
-	// var curretFlippedForBlue = current.getX() >
-	// FIELD_DIMENSIONS.CENTER_OF_FIELD.getX()
-	// ? new Translation2d(FIELD_DIMENSIONS.LENGTH - current.getX(), current.getY())
-	// : current;
-	// return PositionUtils.isPointInTriangle(curretFlippedForBlue,
-	// STAGE_BOUNDARY_1, STAGE_BOUNDARY_2,
-	// STAGE_BOUNDARY_3);
-	// }
-
-	public static boolean isRobotUnderStage() {
-		return false;
+	public static boolean isTiltForcedFlat() {
+		return TGR.ForceTiltFlat.bool();
 	}
 
 	static final Translation2d DriveStraightForwardLine = FIELD_DIMENSIONS.CENTER_OF_FIELD
@@ -444,70 +384,49 @@ public class RobotContainer {
 	 *
 	 * @return the command to run in autonomous
 	 */
-	// public static Command getAutonomousCommand() {
-	// AutoPositionList positions = new AutoPositionList();
-	// for (int i = 0; i < noteHiearchyChoosers.length && i <
-	// shootOrStealChoosers.length; i++) {
-	// var note = noteHiearchyChoosers[i].getSelected();
-	// var shootOrSteal = shootOrStealChoosers[i].getSelected();
-	// if (note != null)
-	// positions.add(note, shootOrSteal);
-	// }
-	// if (positions.isEmpty()) {
-	// var current = drivetrain.getState().Pose.getTranslation();
-	// var x = DriverStation.getAlliance().get().equals(Alliance.Blue) ?
-	// DriveStraightForwardLine.getX()
-	// : FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
-	// var driveAcrossLinePosition = new Translation2d(x, current.getY());
-	// positions.add(new AutoPosition(driveAcrossLinePosition,
-	// AutoPositionType.Shoot, ShooterType.Speaker)
-	// .withNotSkippable());
-	// }
-	// return Autos.getDynamicAutonomous(turret, drivetrain, positions);
-	// }
-
 	public static Command getAutonomousCommand() {
-		switch (DriverStation.getAlliance().get()) {
-			case Blue:
-				return Commands.run(() -> drivetrain.seedFieldRelative(new Pose2d()))
-						.andThen(() -> drivetrain.characterizeDrive(kSpeedAt12VoltsMps, MaxAngularRate));
-			case Red:
-				return Commands.run(() -> drivetrain.seedFieldRelative(new Pose2d(0, 0, Rotation2d.fromDegrees(180))))
-						.andThen(drivetrain.characterizeDrive(kSpeedAt12VoltsMps, MaxAngularRate));
-			default:
-				return Commands.none();
+		AutoPositionList positions = new AutoPositionList();
+		for (int i = 0; i < noteHiearchyChoosers.length && i < shootOrStealChoosers.length; i++) {
+			var note = noteHiearchyChoosers[i].getSelected();
+			var shootOrSteal = shootOrStealChoosers[i].getSelected();
+			if (note != null)
+				positions.add(note, shootOrSteal);
 		}
-
+		if (positions.isEmpty()) {
+			var current = drivetrain.getState().Pose.getTranslation();
+			var x = DriverStation.getAlliance().get().equals(Alliance.Blue) ? DriveStraightForwardLine.getX()
+					: FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
+			var driveAcrossLinePosition = new Translation2d(x, current.getY());
+			positions.add(new AutoPosition(driveAcrossLinePosition,
+					AutoPositionType.Shoot, ShooterType.Speaker)
+					.withNotSkippable());
+		}
+		return Autos.getDynamicAutonomous(turret, drivetrain, positions);
 	}
 
 	public enum TGR {
 		Creep(driverController.leftBumper()),
 		ResetFieldRelative(driverController.start()), // TODO should we having this?
-		Intake(driverController.rightTrigger(0.15).and(() -> !EnabledDebugModes.testingTurret)),
-		ShootSpeaker(driverController.x().and(() -> !EnabledDebugModes.testingTurret)),
-		Extake(driverController.rightBumper().and(() -> EnabledDebugModes.testingTurret)),
-		PrepareScoreAmp(driverController.b().and(() -> !EnabledDebugModes.testingTurret)),
+		Intake(driverController.rightTrigger(0.15)),
+		ShootSpeaker(driverController.x()),
+		Extake(driverController.rightBumper()),
+		PrepareScoreAmp(driverController.b()),
 		DeployInAmp(driverController.y()),
-		PrepareShootForSubwoofer(operatorController.x().and(() -> !EnabledDebugModes.testingTurret)),
-		ShootFromSubwoofer(operatorController.rightTrigger().and(() -> !EnabledDebugModes.testingTurret)),
+		PrepareShootForSubwoofer(operatorController.x()),
+		ShootFromSubwoofer(operatorController.rightTrigger()),
 		// ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
 		// ClimbDown(operatorController.b().and(() ->
 		// !EnabledDebugModes.testingClimber)),
 		ResetAllNotePostions(operatorController.back()),
 		SetNoteLoadedInTurret(operatorController.start()),
 		GetRidOfNote(operatorController.a()),
+		ForceTiltFlat(operatorController.rightBumper()),
 
 		ShootManually(operatorController.leftTrigger(0.15)),
 
 		// Below are debugging actions
 
-		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled)),
-		CalibrateShooter(driverController.b()
-				.and(() -> !EnabledDebugModes.testingTurret && EnabledDebugModes.calibratingTurret)),
-		TestingRotationPositive(driverController.rightTrigger(0.15).and(() -> EnabledDebugModes.testingTurret)),
-		TestingRotationNegative(driverController.leftTrigger(0.15).and(() -> EnabledDebugModes.testingTurret)),
-		TestingTiltPositive(driverController.rightBumper().and(() -> EnabledDebugModes.testingTurret)),
-		TestingTiltNegative(driverController.leftBumper().and(() -> EnabledDebugModes.testingTurret));
+		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled));
 
 		Trigger trigger;
 
