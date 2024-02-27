@@ -8,10 +8,13 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
+import org.photonvision.PhotonCamera;
+
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 
+import edu.wpi.first.hal.simulation.DriverStationDataJNI;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -34,6 +37,7 @@ import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
 import frc.robot.generated.TunerConstantsPBOT;
 import frc.robot.generated.TunerConstantsTBOT;
+import frc.robot.subsystems.camera.PhotonVisionCamera;
 import frc.robot.subsystems.climber.Climber;
 import frc.robot.subsystems.climber.ClimberRequest.ControlClimber;
 import frc.robot.subsystems.intake.Intake;
@@ -134,6 +138,8 @@ public class RobotContainer {
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 	private final static CalibrateShooter calibrateShooter = new CalibrateShooter().withRollerOutput(0.25);
 
+	private static PhotonVisionCamera photonVision;
+
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
 
@@ -147,6 +153,12 @@ public class RobotContainer {
 	public static void initialize() {
 		// Configure the trigger bindings
 		configureBindings();
+
+		photonVision = new PhotonVisionCamera(() -> drivetrain.getState().Pose,
+				(pose, timestamp) -> {
+					if (EnabledDebugModes.updatePoseWithVisionEnabled)
+						drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp);
+				});
 
 		// Set Default Commands for Subsystems
 		drivetrain.setDefaultCommand(

@@ -2,9 +2,13 @@ package frc.robot.subsystems.camera;
 
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.PhotonUtils;
 
 import com.ctre.phoenix6.Utils;
@@ -24,34 +28,48 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class PhotonVisionCamera extends SubsystemBase {
 
-    final double UpdateFrequency = 100.0;
+    final double UpdateFrequency = 50.0;
 
     ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
 
     PhotonCamera camera = new PhotonCamera("3534camera");
     AprilTagFieldLayout aprilTagFieldLayout;
-    final Transform3d cameraToRobot = new Transform3d(
+
+    final Transform3d robotToCamera = new Transform3d(
             new Translation3d(Units.inchesToMeters(-12.5), 0, Units.inchesToMeters(8)),
             new Rotation3d(0, Units.degreesToRadians(3), 0));
 
-    public PhotonVisionCamera() {
+    final PhotonPoseEstimator photonPoseEstimator;
+
+    Supplier<Pose2d> currentPose2dSupplier;
+    BiConsumer<Pose3d, Double> visionMeasureConsumer;
+
+    public PhotonVisionCamera(Supplier<Pose2d> currentPose2dSupplier,
+            BiConsumer<Pose3d, Double> visionMeasurementConsumer) {
         aprilTagFieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
         aprilTagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
+        this.currentPose2dSupplier = currentPose2dSupplier;
+        this.visionMeasureConsumer = visionMeasurementConsumer;
+        photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout,
+                PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera, robotToCamera);
+        photonPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
     }
 
-    public void updateOurPose(Consumer<Pose3d> updatePose) {
-        var result = camera.getLatestResult();
-        if (result.hasTargets()) {
-            var target = result.getBestTarget();
-            // Calculate robot's field relative pose
-            var robotPose = PhotonUtils.estimateFieldToRobotAprilTag(target.getBestCameraToTarget(),
-                    aprilTagFieldLayout.getTagPose(target.getFiducialId()).get(), cameraToRobot);
-            updatePose.accept(robotPose);
-        }
-    }
+    // public void updateOurPose(Consumer<Pose3d> updatePose) {
+    // var result = camera.getLatestResult();
+    // if (result.hasTargets()) {
+    // var target = result.getBestTarget();
+    // // Calculate robot's field relative pose
+    // var robotPose =
+    // PhotonUtils.estimateFieldToRobotAprilTag(target.getBestCameraToTarget(),
+    // aprilTagFieldLayout.getTagPose(target.getFiducialId()).get(), cameraToRobot);
+    // updatePose.accept(robotPose);
+    // }
+    // }
 
     public class CameraState {
-        public Pose3d robotToTarget;
+        public Transform3d robotToTarget;
+        public Pose3d robotFieldPose;
     }
 
     final CameraState m_cachedState = new CameraState();
@@ -109,6 +127,18 @@ public class PhotonVisionCamera extends SubsystemBase {
 
                     lastTime = currentTime;
                     currentTime = Utils.getCurrentTimeSeconds();
+
+                    photonPoseEstimator.setReferencePose(currentPose2dSupplier.get());
+                    var estimatedPose = photonPoseEstimator.update();
+
+                    if (estimatedPose.isPresent()) {
+                        var estimate = estimatedPose.get();
+                        var targetId = estimate.targetsUsed.get(0).getFiducialId();
+                        var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
+                        visionMeasureConsumer.accept(estimate.estimatedPose,
+                                estimate.timestampSeconds);
+                        m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
+                    }
 
                     m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
 
