@@ -3,13 +3,11 @@ package frc.robot.subsystems.camera;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
-import org.photonvision.PhotonUtils;
 
 import com.ctre.phoenix6.Utils;
 
@@ -34,6 +32,7 @@ public class PhotonVisionCamera extends SubsystemBase {
 
     PhotonCamera camera = new PhotonCamera("3534camera");
     AprilTagFieldLayout aprilTagFieldLayout;
+    private final PhotonVisionCameraTelemetry photonVisionCameraTelemetry = new PhotonVisionCameraTelemetry();
 
     final Transform3d robotToCamera = new Transform3d(
             new Translation3d(Units.inchesToMeters(-12.5), 0, Units.inchesToMeters(8)),
@@ -53,6 +52,7 @@ public class PhotonVisionCamera extends SubsystemBase {
         photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout,
                 PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera, robotToCamera);
         photonPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
+
     }
 
     // public void updateOurPose(Consumer<Pose3d> updatePose) {
@@ -70,6 +70,7 @@ public class PhotonVisionCamera extends SubsystemBase {
     public class CameraState {
         public Transform3d robotToTarget;
         public Pose3d robotFieldPose;
+        public long[] aprilTagsSeen;
     }
 
     final CameraState m_cachedState = new CameraState();
@@ -134,13 +135,19 @@ public class PhotonVisionCamera extends SubsystemBase {
                     if (estimatedPose.isPresent()) {
                         var estimate = estimatedPose.get();
                         var targetId = estimate.targetsUsed.get(0).getFiducialId();
+
                         var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
                         visionMeasureConsumer.accept(estimate.estimatedPose,
                                 estimate.timestampSeconds);
                         m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
+                        for (int i = 0; i < estimate.targetsUsed.size(); i++) {
+                            m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
+                        }
                     }
 
                     m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
+
+                    photonVisionCameraTelemetry.telemetrize(m_cachedState);
 
                 } finally {
                     m_stateLock.writeLock().unlock();
