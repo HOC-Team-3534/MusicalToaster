@@ -389,6 +389,26 @@ public interface TurretRequest {
 
     }
 
+    // public class GetRidOfNote implements TurretRequest {
+    // private double rollerTurn;
+
+    // @Override
+    // public StatusCode apply(TurretControlRequestParameters parameters, TalonFX
+    // rotateMotor, TalonFX tiltMotor,
+    // TalonSRX rollerMotor) {
+    // rotateMotor.set(0);
+    // tiltMotor.set(0);
+    // rollerMotor.set(ControlMode.PercentOutput, rollerTurn);
+    // return StatusCode.OK;
+
+    // }
+
+    // public GetRidOfNote withRoller(double rollerTurn) {
+    // this.rollerTurn = rollerTurn;
+    // return this;
+    // }
+    // }
+
     public class TestingTurret implements TurretRequest {
         private double inputPercentTilt;
         private double inputPercentRotation;
@@ -426,7 +446,7 @@ public interface TurretRequest {
         private Rotation2d tilt;
         private Rotation2d rotation;
         private Supplier<Boolean> readyToShoot;
-        private Rotation2d tolerance = Rotation2d.fromDegrees(3);
+        private Rotation2d tolerance = Rotation2d.fromDegrees(5);
         private double rollerPercentOut;
         private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
         private double shooterTolerance;

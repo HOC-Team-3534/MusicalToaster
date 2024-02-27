@@ -149,9 +149,11 @@ public class TunerConstantsTBOT {
                         4, new Translation2d(FrontLeft.LocationX, FrontLeft.LocationY).getNorm(),
                         new ReplanningConfig());
 
-        public static final CommandSwerveDrivetrain DriveTrain = new CommandSwerveDrivetrain(DrivetrainConstants,
-                        kAutonomousMaxSpeedMps,
-                        HoloConfig,
-                        FrontLeft,
-                        FrontRight, BackLeft, BackRight);
+        public static final CommandSwerveDrivetrain DriveTrain = null;
+
+        // new CommandSwerveDrivetrain(DrivetrainConstants,
+        // kAutonomousMaxSpeedMps,
+        // HoloConfig,
+        // FrontLeft,
+        // FrontRight, BackLeft, BackRight);
 }

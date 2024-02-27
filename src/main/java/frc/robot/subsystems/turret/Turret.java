@@ -52,7 +52,10 @@ public class Turret extends SubsystemBase {
 
     private TurretThread turretThread;
 
-    public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedsSupplier) {
+    private Supplier<Boolean> noteInRobot;
+
+    public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedsSupplier,
+            Supplier<Boolean> noteInRobot) {
         super();
         /*
          * Device instantiation
@@ -70,7 +73,7 @@ public class Turret extends SubsystemBase {
         TalonFXConfiguration cfgRotate = new TalonFXConfiguration();
 
         cfgRotate.MotionMagic.MotionMagicCruiseVelocity = 0.75;
-        cfgRotate.MotionMagic.MotionMagicAcceleration = 0.15;
+        cfgRotate.MotionMagic.MotionMagicAcceleration = 0.35;
         cfgRotate.MotionMagic.MotionMagicJerk = 20;
 
         cfgRotate.Slot0.kP = 5;
@@ -84,8 +87,8 @@ public class Turret extends SubsystemBase {
          */
         TalonFXConfiguration cfgTilt = new TalonFXConfiguration();
 
-        cfgTilt.MotionMagic.MotionMagicCruiseVelocity = 0.5;
-        cfgTilt.MotionMagic.MotionMagicAcceleration = 0.2;
+        cfgTilt.MotionMagic.MotionMagicCruiseVelocity = 0.85;
+        cfgTilt.MotionMagic.MotionMagicAcceleration = 1.0;
         cfgTilt.MotionMagic.MotionMagicJerk = 10;
 
         cfgTilt.Slot0.kP = 10;
@@ -155,6 +158,7 @@ public class Turret extends SubsystemBase {
         ShootingUtils.configureShootWhileMoving(() -> goalPosition, chassisSpeedsSupplier,
                 () -> swerveDriveStateSupplier.get().Pose.getTranslation(),
                 (vector) -> timeOfFlightEquation.get(vector.getNorm()));
+        this.noteInRobot = noteInRobot;
         turretThread = new TurretThread();
         turretThread.start();
     }
@@ -325,7 +329,9 @@ public class Turret extends SubsystemBase {
                     RobotContainer.setNoteLoaded(m_cachedState.isNoteLoaded());
 
                     m_cachedState.currentlyShooting = false;
-
+                    if (noteInRobot.get()) {
+                        m_cachedState.noteLoaded = true;
+                    }
                     m_requestParameters.turretState = m_cachedState;
 
                     turretTelemetry.telemetrize(m_cachedState);

@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -21,6 +22,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
@@ -82,11 +84,14 @@ public class RobotContainer {
 			.withMaxSpeed(kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-	private final static Climber climber = new Climber();
-	private final static ControlClimber climberUp = new ControlClimber().withVoltage(0.5).withClimberReversed(false);
-	private final static ControlClimber climberDown = new ControlClimber().withVoltage(0.5).withClimberReversed(true);
+	// private final static Climber climber = new Climber();
+	// private final static ControlClimber climberUp = new
+	// ControlClimber().withVoltage(0.5).withClimberReversed(false);
+	// private final static ControlClimber climberDown = new
+	// ControlClimber().withVoltage(0.5).withClimberReversed(true);
 
-	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds());
+	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds(),
+			() -> TGR.SetNoteLoadedInTurret.bool());
 
 	private final static Intake intake = new Intake(() -> TGR.ResetAllNotePostions.bool());
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
@@ -109,7 +114,7 @@ public class RobotContainer {
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
 			.withRollerPercent(-1.0)
 			.withRotation(new Rotation2d())
-			.withTilt(Rotation2d.fromDegrees(43)).withShooterTolerance(5.0);
+			.withTilt(Rotation2d.fromDegrees(48)).withShooterTolerance(5.0);
 	private final static AimWithRotation aimForSteal = new AimWithRotation()
 			.withRotation(() -> {
 				var targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
@@ -335,7 +340,7 @@ public class RobotContainer {
 
 	public static int getCoordinateSystemInversionDriving() {
 		var alliance = DriverStation.getAlliance();
-		return alliance.isPresent() && alliance.get() == Alliance.Red ? -1 : 1;
+		return alliance.isPresent() && alliance.get().equals(Alliance.Red) ? 1 : -1;
 	}
 
 	public enum ShooterType {
@@ -397,13 +402,19 @@ public class RobotContainer {
 	public static Translation2d STAGE_BOUNDARY_2 = BETWEEN_BOUNDARY_2_AND_3.plus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES);
 	public static Translation2d STAGE_BOUNDARY_3 = BETWEEN_BOUNDARY_2_AND_3.minus(FIELD_DIMENSIONS.OFFSET_CENTER_NOTES);
 
+	// public static boolean isRobotUnderStage() {
+	// var current = drivetrain.getState().Pose.getTranslation();
+	// var curretFlippedForBlue = current.getX() >
+	// FIELD_DIMENSIONS.CENTER_OF_FIELD.getX()
+	// ? new Translation2d(FIELD_DIMENSIONS.LENGTH - current.getX(), current.getY())
+	// : current;
+	// return PositionUtils.isPointInTriangle(curretFlippedForBlue,
+	// STAGE_BOUNDARY_1, STAGE_BOUNDARY_2,
+	// STAGE_BOUNDARY_3);
+	// }
+
 	public static boolean isRobotUnderStage() {
-		var current = drivetrain.getState().Pose.getTranslation();
-		var curretFlippedForBlue = current.getX() > FIELD_DIMENSIONS.CENTER_OF_FIELD.getX()
-				? new Translation2d(FIELD_DIMENSIONS.LENGTH - current.getX(), current.getY())
-				: current;
-		return PositionUtils.isPointInTriangle(curretFlippedForBlue, STAGE_BOUNDARY_1, STAGE_BOUNDARY_2,
-				STAGE_BOUNDARY_3);
+		return false;
 	}
 
 	static final Translation2d DriveStraightForwardLine = FIELD_DIMENSIONS.CENTER_OF_FIELD
@@ -415,23 +426,40 @@ public class RobotContainer {
 	 *
 	 * @return the command to run in autonomous
 	 */
+	// public static Command getAutonomousCommand() {
+	// AutoPositionList positions = new AutoPositionList();
+	// for (int i = 0; i < noteHiearchyChoosers.length && i <
+	// shootOrStealChoosers.length; i++) {
+	// var note = noteHiearchyChoosers[i].getSelected();
+	// var shootOrSteal = shootOrStealChoosers[i].getSelected();
+	// if (note != null)
+	// positions.add(note, shootOrSteal);
+	// }
+	// if (positions.isEmpty()) {
+	// var current = drivetrain.getState().Pose.getTranslation();
+	// var x = DriverStation.getAlliance().get().equals(Alliance.Blue) ?
+	// DriveStraightForwardLine.getX()
+	// : FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
+	// var driveAcrossLinePosition = new Translation2d(x, current.getY());
+	// positions.add(new AutoPosition(driveAcrossLinePosition,
+	// AutoPositionType.Shoot, ShooterType.Speaker)
+	// .withNotSkippable());
+	// }
+	// return Autos.getDynamicAutonomous(turret, drivetrain, positions);
+	// }
+
 	public static Command getAutonomousCommand() {
-		AutoPositionList positions = new AutoPositionList();
-		for (int i = 0; i < noteHiearchyChoosers.length && i < shootOrStealChoosers.length; i++) {
-			var note = noteHiearchyChoosers[i].getSelected();
-			var shootOrSteal = shootOrStealChoosers[i].getSelected();
-			if (note != null)
-				positions.add(note, shootOrSteal);
+		switch (DriverStation.getAlliance().get()) {
+			case Blue:
+				return Commands.run(() -> drivetrain.seedFieldRelative(new Pose2d()))
+						.andThen(() -> drivetrain.characterizeDrive(kSpeedAt12VoltsMps, MaxAngularRate));
+			case Red:
+				return Commands.run(() -> drivetrain.seedFieldRelative(new Pose2d(0, 0, Rotation2d.fromDegrees(180))))
+						.andThen(drivetrain.characterizeDrive(kSpeedAt12VoltsMps, MaxAngularRate));
+			default:
+				return Commands.none();
 		}
-		if (positions.isEmpty()) {
-			var current = drivetrain.getState().Pose.getTranslation();
-			var x = DriverStation.getAlliance().get().equals(Alliance.Blue) ? DriveStraightForwardLine.getX()
-					: FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
-			var driveAcrossLinePosition = new Translation2d(x, current.getY());
-			positions.add(new AutoPosition(driveAcrossLinePosition, AutoPositionType.Shoot, ShooterType.Speaker)
-					.withNotSkippable());
-		}
-		return Autos.getDynamicAutonomous(turret, drivetrain, positions);
+
 	}
 
 	public enum TGR {
@@ -444,9 +472,12 @@ public class RobotContainer {
 		DeployInAmp(driverController.y()),
 		PrepareShootForSubwoofer(operatorController.x().and(() -> !EnabledDebugModes.testingTurret)),
 		ShootFromSubwoofer(operatorController.rightTrigger().and(() -> !EnabledDebugModes.testingTurret)),
-		ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
-		ClimbDown(operatorController.b().and(() -> !EnabledDebugModes.testingClimber)),
+		// ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
+		// ClimbDown(operatorController.b().and(() ->
+		// !EnabledDebugModes.testingClimber)),
 		ResetAllNotePostions(operatorController.back()),
+		SetNoteLoadedInTurret(operatorController.start()),
+		GetRidOfNote(operatorController.a()),
 
 		ShootManually(operatorController.leftTrigger(0.15)),
 
