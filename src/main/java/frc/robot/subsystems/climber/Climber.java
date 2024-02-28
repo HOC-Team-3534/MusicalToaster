@@ -139,7 +139,7 @@ public class Climber extends SubsystemBase {
             while (m_running) {
                 Timer.delay(1.0 / UpdateFrequency);
                 try {
-                    m_stateLock.readLock().lock();
+                    m_stateLock.writeLock().lock();
 
                     lastTime = currentTime;
                     currentTime = Utils.getCurrentTimeSeconds();

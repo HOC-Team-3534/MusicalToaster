@@ -35,13 +35,15 @@ public class PhotonVisionCamera extends SubsystemBase {
     private final PhotonVisionCameraTelemetry photonVisionCameraTelemetry = new PhotonVisionCameraTelemetry();
 
     final Transform3d robotToCamera = new Transform3d(
-            new Translation3d(Units.inchesToMeters(-12.5), 0, Units.inchesToMeters(8)),
-            new Rotation3d(0, Units.degreesToRadians(3), 0));
+            new Translation3d(Units.inchesToMeters(0), 0, Units.inchesToMeters(0)),
+            new Rotation3d(0, Units.degreesToRadians(0), 0));
 
     final PhotonPoseEstimator photonPoseEstimator;
 
     Supplier<Pose2d> currentPose2dSupplier;
     BiConsumer<Pose3d, Double> visionMeasureConsumer;
+
+    private CameraThread m_thread;
 
     public PhotonVisionCamera(Supplier<Pose2d> currentPose2dSupplier,
             BiConsumer<Pose3d, Double> visionMeasurementConsumer) {
@@ -52,6 +54,8 @@ public class PhotonVisionCamera extends SubsystemBase {
         photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout,
                 PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera, robotToCamera);
         photonPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
+        m_thread = new CameraThread();
+        m_thread.start();
 
     }
 
@@ -70,7 +74,7 @@ public class PhotonVisionCamera extends SubsystemBase {
     public class CameraState {
         public Transform3d robotToTarget;
         public Pose3d robotFieldPose;
-        public long[] aprilTagsSeen;
+        public long[] aprilTagsSeen = new long[2];
     }
 
     final CameraState m_cachedState = new CameraState();
@@ -124,7 +128,8 @@ public class PhotonVisionCamera extends SubsystemBase {
             while (m_running) {
                 Timer.delay(1.0 / UpdateFrequency);
                 try {
-                    m_stateLock.readLock().lock();
+
+                    m_stateLock.writeLock().lock();
 
                     lastTime = currentTime;
                     currentTime = Utils.getCurrentTimeSeconds();
@@ -140,14 +145,13 @@ public class PhotonVisionCamera extends SubsystemBase {
                         visionMeasureConsumer.accept(estimate.estimatedPose,
                                 estimate.timestampSeconds);
                         m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
-                        for (int i = 0; i < estimate.targetsUsed.size(); i++) {
+                        for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
                             m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
                         }
+                        photonVisionCameraTelemetry.telemetrize(m_cachedState);
                     }
 
                     m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
-
-                    photonVisionCameraTelemetry.telemetrize(m_cachedState);
 
                 } finally {
                     m_stateLock.writeLock().unlock();
