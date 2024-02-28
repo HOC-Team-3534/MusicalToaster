@@ -8,6 +8,8 @@ import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
+import frc.robot.literals.RobotLiterals;
+import frc.robot.literals.SwerveDrivetrainLiterals;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide
@@ -19,58 +21,27 @@ import edu.wpi.first.math.util.Units;
  * wherever the constants are needed, to reduce verbosity.
  */
 public final class Constants {
-  public static RobotType ROBOTTYPE = RobotType.PBOT;
   public static double LOOP_PERIOD_MILLIS = 20;
 
-  public enum RobotType {
-    CBOT,
-    PBOT,
-    TBOT
-  }
+  private static SwerveDrivetrainLiterals TBOT_SWERVE_LITERALS = new SwerveDrivetrainLiterals()
+      .withAutonomousMaxSpeed(3.0)
+      .withDriveGains(0.13, 1.16, 0.00715)
+      .withEncoderOffsets(-0.763916015625, -0.36962890625, -0.357421875, -0.5673828125)
+      .withRobotDimensions(23.0, 23.0);
+
+  private static SwerveDrivetrainLiterals PBOT_SWERVE_LITERALS = new SwerveDrivetrainLiterals()
+      .withAutonomousMaxSpeed(3.0)
+      .withDriveGains(0.1866, 2.35554, 0.02379)
+      .withEncoderOffsets(0.00048828125, -0.481201171875, -0.2978515625, -0.37939453125)
+      .withRobotDimensions(21.5, 21.5);
+
+  private static RobotLiterals TBOT = new RobotLiterals(TBOT_SWERVE_LITERALS);
+
+  private static RobotLiterals PBOT = new RobotLiterals(PBOT_SWERVE_LITERALS);
+
+  public static RobotLiterals ROBOT = PBOT;
 
   public static final class Drive {
-    public static final class Known {
-      /**
-       * The left-to-right distance between the drivetrain wheels
-       * <p>
-       * Should be measured from center to center.
-       */
-      public final static double TRACKWIDTH_METERS = (Constants.ROBOTTYPE == RobotType.TBOT) ? 0.5842
-          : (Constants.ROBOTTYPE == RobotType.PBOT) ? 0.508 : 0.508;
-      /**
-       * The front-to-back distance between the drivetrain wheels.
-       * <p>
-       * Should be measured from center to center.
-       */
-      public final static double WHEELBASE_METERS = (Constants.ROBOTTYPE == RobotType.TBOT) ? 0.5842
-          : (Constants.ROBOTTYPE == RobotType.PBOT) ? 0.508 : 0.5207;
-      public static final double MAX_DRIVE_MOTOR_RPM = 6380.0; // Falcon500
-                                                               // max rpm
-    }
-
-    public static final class Calculated {
-      static final Translation2d FL_POS = new Translation2d(Drive.Known.TRACKWIDTH_METERS / 2.0,
-          Drive.Known.WHEELBASE_METERS / 2.0);
-      static final Translation2d FR_POS = new Translation2d(-FL_POS.getX(), FL_POS.getY());
-      public static final double WHEELBASE_RADIUS = FL_POS.getNorm();
-      public static final SwerveDriveKinematics KINEMATICS = new SwerveDriveKinematics(FL_POS, FR_POS,
-          FR_POS.unaryMinus(), FL_POS.unaryMinus());
-    }
-
-    public static final class Config {
-      public static final int PIGEON2_ID = 19;
-
-      public static final class DriveCharacterization {
-        public static final double QUASIASTIC_VOLTAGE = 1.0; // voltage
-                                                             // per
-                                                             // second
-                                                             // increase
-        public static final double QUASIASTIC_DURATION = 4.5; // duration
-                                                              // of
-                                                              // test
-                                                              // seconds
-      }
-    }
 
     public static final class ROBOT {
       public static final double QUIESCENT_CURRENT_DRAW_A = 2.0; // Misc

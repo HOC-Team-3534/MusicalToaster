@@ -20,18 +20,14 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
-import frc.robot.Constants.RobotType;
 import frc.robot.commands.AutoPosition;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
 import frc.robot.commands.AutoPosition.AutoPositionType;
-import frc.robot.generated.TunerConstantsPBOT;
-import frc.robot.generated.TunerConstantsTBOT;
 import frc.robot.subsystems.camera.PhotonVisionCamera;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
@@ -55,23 +51,16 @@ public class RobotContainer {
 	// The robot's subsystems and commands are defined here...
 	// The driver station connected controllers are defined here...
 	private static double MaxAngularRate = 4 * Math.PI;
-	private static boolean isTBOT = Constants.ROBOTTYPE.equals(RobotType.TBOT);
-	private static boolean isPBOT = Constants.ROBOTTYPE.equals(RobotType.PBOT);
-	public static double kSpeedAt12VoltsMps = isTBOT
-			? TunerConstantsTBOT.kSpeedAt12VoltsMps
-			: TunerConstantsPBOT.kSpeedAt12VoltsMps;
 
 	private static final CommandXboxController driverController = new CommandXboxController(0);
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
 	static SlewRateLimiter slewRateLimiterX = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
-	private final static CommandSwerveDrivetrain drivetrain = isTBOT
-			? TunerConstantsTBOT.DriveTrain
-			: TunerConstantsPBOT.DriveTrain;
+	private final static CommandSwerveDrivetrain drivetrain = Constants.ROBOT.getDrivetrain();
 	private final static FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
-			.withDeadband(kSpeedAt12VoltsMps * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
-			.withMaxSpeed(kSpeedAt12VoltsMps).withMaxAngularSpeed(MaxAngularRate)
+			.withDeadband(Constants.ROBOT.getMaxSpeedat12V() * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
+			.withMaxSpeed(Constants.ROBOT.getMaxSpeedat12V()).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
 	// private final static Climber climber = new Climber();
@@ -157,11 +146,11 @@ public class RobotContainer {
 						() -> drive
 								.withVelocityX(
 										// Drive forward with negative Y (forward)
-										-driverController.getLeftY() * kSpeedAt12VoltsMps
+										-driverController.getLeftY() * Constants.ROBOT.getMaxSpeedat12V()
 												* getCoordinateSystemInversionDriving())
 								.withVelocityY(
 										// Drive left with negative X (left)
-										-driverController.getLeftX() * kSpeedAt12VoltsMps
+										-driverController.getLeftX() * Constants.ROBOT.getMaxSpeedat12V()
 												* getCoordinateSystemInversionDriving())
 								.withRotationalRate(
 										// Drive counterclockwise with negative X (left)
