@@ -133,11 +133,11 @@ public class RobotContainer {
 		// Configure the trigger bindings
 		configureBindings();
 
-		// photonVision = new PhotonVisionCamera(() -> drivetrain.getState().Pose,
-		// (pose, timestamp) -> {
-		// if (EnabledDebugModes.updatePoseWithVisionEnabled)
-		// drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp);
-		// });
+		photonVision = new PhotonVisionCamera(() -> drivetrain.getState().Pose,
+				(pose, timestamp) -> {
+					if (EnabledDebugModes.updatePoseWithVisionEnabled)
+						drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp);
+				});
 
 		// Set Default Commands for Subsystems
 		drivetrain.setDefaultCommand(
@@ -306,7 +306,7 @@ public class RobotContainer {
 
 	public static int getCoordinateSystemInversionDriving() {
 		var alliance = DriverStation.getAlliance();
-		return alliance.isPresent() && alliance.get().equals(Alliance.Red) ? 1 : -1;
+		return alliance.isPresent() && alliance.get().equals(Alliance.Red) ? -1 : 1;
 	}
 
 	public enum ShooterType {

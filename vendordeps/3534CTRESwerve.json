@@ -1,7 +1,7 @@
 {
     "fileName": "3534CTRESwerve.json",
     "name": "3534CTRESwerve",
-    "version": "2024.2.1",
+    "version": "2024.2.2",
     "frcYear": 2024,
     "uuid": "1fcedb64-1708-4258-9f56-fc21dc0d7c78",
     "mavenUrls": [
@@ -12,7 +12,7 @@
         {
             "groupId": "com.github.HOC-Team-3534",
             "artifactId": "3534CTRESwerve",
-            "version": "2024.2.1"
+            "version": "2024.2.2"
         }
     ],
     "jniDependencies": [],
