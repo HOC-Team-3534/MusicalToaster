@@ -49,6 +49,11 @@ public class SwerveDrivetrainLiterals {
                 return this;
         }
 
+        public SwerveDrivetrainLiterals withWheelRadius(double radiusInches) {
+                this.kWheelRadiusInches = radiusInches;
+                return this;
+        }
+
         private Slot0Configs driveGains = new Slot0Configs()
                         .withKP(3).withKI(0).withKD(0);
 
