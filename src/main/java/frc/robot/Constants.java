@@ -6,7 +6,6 @@ package frc.robot;
 import com.pathplanner.lib.path.PathConstraints;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
 import frc.robot.literals.RobotLiterals;
 import frc.robot.literals.SwerveDrivetrainLiterals;
@@ -25,12 +24,14 @@ public final class Constants {
 
   private static SwerveDrivetrainLiterals TBOT_SWERVE_LITERALS = new SwerveDrivetrainLiterals()
       .withAutonomousMaxSpeed(3.0)
+      .withWheelRadius(3.9 / 2.0)
       .withDriveGains(0.13, 1.16, 0.00715)
       .withEncoderOffsets(-0.763916015625, -0.36962890625, -0.357421875, -0.5673828125)
       .withRobotDimensions(23.0, 23.0);
 
   private static SwerveDrivetrainLiterals PBOT_SWERVE_LITERALS = new SwerveDrivetrainLiterals()
       .withAutonomousMaxSpeed(3.0)
+      .withWheelRadius(3.9 / 2.0)
       .withDriveGains(0.1866, 2.35554, 0.02379)
       .withEncoderOffsets(0.00048828125, -0.481201171875, -0.2978515625, -0.37939453125)
       .withRobotDimensions(21.5, 21.5);
