@@ -397,7 +397,7 @@ public interface TurretRequest {
         private Supplier<Boolean> readyToShoot;
         private Rotation2d tolerance = Rotation2d.fromDegrees(5);
         private double rollerPercentOut;
-        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(5);
         private double shooterTolerance;
 
         @Override

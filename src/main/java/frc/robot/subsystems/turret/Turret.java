@@ -39,7 +39,7 @@ public class Turret extends SubsystemBase {
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
     final static double delayNoteLoadedSeconds = 0.2;
-    final static double delayNoteUnloadedSeconds = 0.3;
+    final static double delayNoteUnloadedSeconds = 1.0;
 
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
@@ -140,9 +140,10 @@ public class Turret extends SubsystemBase {
         cfgRotate.MotionMagic.MotionMagicAcceleration = 0.35;
         cfgRotate.MotionMagic.MotionMagicJerk = 20;
 
-        cfgRotate.Slot0.kP = 5;
+        cfgRotate.Slot0.kP = 240;
         cfgRotate.Slot0.kV = 13.29;// TODO Tune these values
         cfgRotate.Slot0.kS = 0.1763;
+        cfgRotate.Slot0.kD = 0.0;
 
         cfgRotate.Feedback.SensorToMechanismRatio = 125;
 
