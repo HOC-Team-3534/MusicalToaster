@@ -185,7 +185,7 @@ public class SwerveDrivetrainLiterals {
                 var FrontRight = createModuleConstants(
                                 ConstantCreator, ModuleCorner.FR, kFrontRightEncoderOffset, kInvertRightSide);
                 var BackLeft = createModuleConstants(
-                                ConstantCreator, ModuleCorner.BL, kBackLeftEncoderOffset, kInvertRightSide);
+                                ConstantCreator, ModuleCorner.BL, kBackLeftEncoderOffset, kInvertLeftSide);
                 var BackRight = createModuleConstants(
                                 ConstantCreator, ModuleCorner.BR, kBackRightEncoderOffset, kInvertRightSide);
 
