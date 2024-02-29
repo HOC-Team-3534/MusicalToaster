@@ -35,8 +35,8 @@ public class PhotonVisionCamera extends SubsystemBase {
     private final PhotonVisionCameraTelemetry photonVisionCameraTelemetry = new PhotonVisionCameraTelemetry();
 
     final Transform3d robotToCamera = new Transform3d(
-            new Translation3d(Units.inchesToMeters(0), 0, Units.inchesToMeters(0)),
-            new Rotation3d(0, Units.degreesToRadians(0), 0));
+            new Translation3d(Units.inchesToMeters(13.5), 0, Units.inchesToMeters(8.75)),
+            new Rotation3d(0, Units.degreesToRadians(-7), 0));
 
     final PhotonPoseEstimator photonPoseEstimator;
 

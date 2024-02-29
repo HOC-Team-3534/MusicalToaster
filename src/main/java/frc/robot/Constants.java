@@ -83,6 +83,6 @@ public final class Constants {
 
   public static final class EnabledDebugModes {
     public static final boolean CharacterizeEnabled = false;
-    public static final boolean updatePoseWithVisionEnabled = false;
+    public static final boolean updatePoseWithVisionEnabled = true;
   }
 }

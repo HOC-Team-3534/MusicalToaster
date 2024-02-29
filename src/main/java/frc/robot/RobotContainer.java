@@ -133,11 +133,11 @@ public class RobotContainer {
 		// Configure the trigger bindings
 		configureBindings();
 
-		photonVision = new PhotonVisionCamera(() -> drivetrain.getState().Pose,
-				(pose, timestamp) -> {
-					if (EnabledDebugModes.updatePoseWithVisionEnabled)
-						drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp);
-				});
+		// photonVision = new PhotonVisionCamera(() -> drivetrain.getState().Pose,
+		// (pose, timestamp) -> {
+		// if (EnabledDebugModes.updatePoseWithVisionEnabled)
+		// drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp);
+		// });
 
 		// Set Default Commands for Subsystems
 		drivetrain.setDefaultCommand(
