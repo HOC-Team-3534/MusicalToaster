@@ -282,8 +282,9 @@ public class RobotContainer {
 		var justRoller = new JustRoller();
 
 		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(0.2);
+		var shooterTestingVelocity = (new ShooterRequest.ControlShooter().withVelocity(50));
 
-		TGR.ShootManually.tgr().whileTrue(turret.applyRequest(() -> justRoller, () -> shooterAmpPercentage));
+		TGR.ShootManually.tgr().whileTrue(turret.applyRequest(() -> justRoller, () -> shooterTestingVelocity));
 
 		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));

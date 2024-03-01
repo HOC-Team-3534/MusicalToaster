@@ -8,6 +8,7 @@ import com.ctre.phoenix6.Utils;
 
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.filter.MedianFilter;
+import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.Timer;
 
 public abstract class SubsystemThread {
@@ -62,6 +63,7 @@ public abstract class SubsystemThread {
     }
 
     private void _run() {
+        Threads.setCurrentThreadPriority(true, 1);
         while (m_running) {
             Timer.delay(1.0 / updateFrequency);
             try {
