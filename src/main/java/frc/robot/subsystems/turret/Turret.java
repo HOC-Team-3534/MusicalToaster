@@ -90,8 +90,9 @@ public class Turret extends SubsystemBase {
                     .fromRotations(tiltMotor.getClosedLoopReference().getValueAsDouble()
                             - tiltMotor.getPosition().getValueAsDouble());
 
-            m_cachedState.shooterMotorClosedLoopError = rightShooterMotor.getClosedLoopError()
-                    .getValueAsDouble();
+            // m_cachedState.shooterMotorClosedLoopError =
+            // rightShooterMotor.getClosedLoopError()
+            // .getValueAsDouble();
 
             try {
                 m_cachedState.virtualGoalLocationDisplacement = ShootingUtils
@@ -114,7 +115,7 @@ public class Turret extends SubsystemBase {
             // turretTelemetry.telemetrize(m_cachedState);
 
             m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
-            m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor);
+            m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor, leftShooterMotor);
         }
 
     };
@@ -203,7 +204,7 @@ public class Turret extends SubsystemBase {
         configureMotor.accept(rightShooterMotor, cfgShooter);
 
         rightShooterMotor.setInverted(true);
-        leftShooterMotor.setControl(new Follower(17, true));
+        leftShooterMotor.setInverted(false);
 
         rotateMotor.setInverted(true);
         rotateMotor.setPosition(0);
