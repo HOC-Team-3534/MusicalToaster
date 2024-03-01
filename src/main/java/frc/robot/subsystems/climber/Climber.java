@@ -24,7 +24,7 @@ import frc.robot.subsystems.climber.ClimberRequest.ControlClimberRequestParamete
 public class Climber extends SubsystemBase {
     TalonFX climberMotor;
 
-    final double UpdateFrequency = 100.0;
+    final double UpdateFrequency = 50.0;
 
     private final SubsystemThread m_thread = new SubsystemThread(UpdateFrequency) {
 

@@ -15,7 +15,7 @@ public class Intake extends SubsystemBase {
     TalonSRX frontBackMotor, leftRightMotor;
     ProximitySensorInput sensors[] = new ProximitySensorInput[4];
 
-    final double UpdateFrequency = 100.0;
+    final double UpdateFrequency = 50.0;
 
     final static double delayNoteInPositionSeconds = 0.3;
 
@@ -68,7 +68,7 @@ public class Intake extends SubsystemBase {
 
             prevNoteLoaded = noteLoaded;
 
-            intakeTelemetry.telemeterize(m_cachedState);
+            // intakeTelemetry.telemeterize(m_cachedState);
 
             m_requestParameters.intakeState = m_cachedState;
 

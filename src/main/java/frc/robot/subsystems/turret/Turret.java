@@ -1,5 +1,6 @@
 package frc.robot.subsystems.turret;
 
+import java.sql.Driver;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -34,7 +35,7 @@ public class Turret extends SubsystemBase {
     TalonSRX rollerMotor;
     ProximitySensorInput sensor;
 
-    private final double UpdateFrequency = 150.0;
+    private final double UpdateFrequency = 50.0;
 
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
@@ -110,7 +111,7 @@ public class Turret extends SubsystemBase {
             }
             m_requestParameters.turretState = m_cachedState;
 
-            turretTelemetry.telemetrize(m_cachedState);
+            // turretTelemetry.telemetrize(m_cachedState);
 
             m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
             m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor);
@@ -215,12 +216,17 @@ public class Turret extends SubsystemBase {
         rollerMotor.setSelectedSensorPosition(0);
         rollerMotor.setSensorPhase(true);
 
-        var goalPosition = DriverStation.getAlliance().get().equals(Alliance.Blue)
-                ? new Translation2d(Units.inchesToMeters(9), Units.inchesToMeters(218.64))
-                : new Translation2d(Units.feetToMeters(54.75) - Units.inchesToMeters(9),
-                        Units.inchesToMeters(218.64));
+        var blueGoal = new Translation2d(Units.inchesToMeters(9), Units.inchesToMeters(218.64));
+        var redGoal = new Translation2d(Units.feetToMeters(54.75) - Units.inchesToMeters(9),
+                Units.inchesToMeters(218.64));
 
-        ShootingUtils.configureShootWhileMoving(() -> goalPosition, chassisSpeedsSupplier,
+        ShootingUtils.configureShootWhileMoving(() -> {
+            if (DriverStation.getAlliance().isEmpty())
+                return blueGoal;
+            return DriverStation.getAlliance().get().equals(Alliance.Blue)
+                    ? blueGoal
+                    : redGoal;
+        }, chassisSpeedsSupplier,
                 () -> swerveDriveStateSupplier.get().Pose.getTranslation(),
                 (vector) -> timeOfFlightEquation.get(vector.getNorm()));
         this.noteInRobot = noteInRobot;

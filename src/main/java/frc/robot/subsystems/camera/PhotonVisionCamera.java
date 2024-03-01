@@ -22,9 +22,8 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-public class PhotonVisionCamera extends SubsystemBase {
+public class PhotonVisionCamera {
 
     final double UpdateFrequency = 50.0;
 
@@ -148,7 +147,7 @@ public class PhotonVisionCamera extends SubsystemBase {
                         for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
                             m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
                         }
-                        photonVisionCameraTelemetry.telemetrize(m_cachedState);
+                        // photonVisionCameraTelemetry.telemetrize(m_cachedState);
                     }
 
                     m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
