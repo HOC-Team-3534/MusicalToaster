@@ -23,6 +23,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.SubsystemThread;
 
 public class PhotonVisionCamera extends SubsystemBase {
 
@@ -43,7 +44,29 @@ public class PhotonVisionCamera extends SubsystemBase {
     Supplier<Pose2d> currentPose2dSupplier;
     BiConsumer<Pose3d, Double> visionMeasureConsumer;
 
-    private CameraThread m_thread;
+    private SubsystemThread m_thread = new SubsystemThread(UpdateFrequency) {
+
+        @Override
+        public void run() {
+            photonPoseEstimator.setReferencePose(currentPose2dSupplier.get());
+            var estimatedPose = photonPoseEstimator.update();
+
+            if (estimatedPose.isPresent()) {
+                var estimate = estimatedPose.get();
+                var targetId = estimate.targetsUsed.get(0).getFiducialId();
+
+                var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
+                visionMeasureConsumer.accept(estimate.estimatedPose,
+                        estimate.timestampSeconds);
+                m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
+                for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
+                    m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
+                }
+                photonVisionCameraTelemetry.telemetrize(m_cachedState);
+            }
+        }
+
+    };
 
     public PhotonVisionCamera(Supplier<Pose2d> currentPose2dSupplier,
             BiConsumer<Pose3d, Double> visionMeasurementConsumer) {
@@ -54,7 +77,7 @@ public class PhotonVisionCamera extends SubsystemBase {
         photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout,
                 PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera, robotToCamera);
         photonPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
-        m_thread = new CameraThread();
+
         m_thread.start();
 
     }
@@ -78,86 +101,4 @@ public class PhotonVisionCamera extends SubsystemBase {
     }
 
     final CameraState m_cachedState = new CameraState();
-
-    public class CameraThread {
-        final Thread m_thread;
-        volatile boolean m_running;
-
-        private final MedianFilter peakRemover = new MedianFilter(3);
-        private final LinearFilter lowPass = LinearFilter.movingAverage(50);
-        private double lastTime = 0;
-        private double currentTime = 0;
-        double m_averageLoopTime = 0;
-
-        public CameraThread() {
-            m_thread = new Thread(this::run);
-
-            m_thread.setDaemon(true);
-        }
-
-        /**
-         * Starts the odometry thread.
-         */
-        public void start() {
-            m_running = true;
-            m_thread.start();
-        }
-
-        /**
-         * Stops the odometry thread.
-         */
-        public void stop() {
-            stop(0);
-        }
-
-        /**
-         * Stops the odometry thread with a timeout.
-         *
-         * @param millis The time to wait in milliseconds
-         */
-        public void stop(long millis) {
-            m_running = false;
-            try {
-                m_thread.join(millis);
-            } catch (final InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        public void run() {
-            while (m_running) {
-                Timer.delay(1.0 / UpdateFrequency);
-                try {
-
-                    m_stateLock.writeLock().lock();
-
-                    lastTime = currentTime;
-                    currentTime = Utils.getCurrentTimeSeconds();
-
-                    photonPoseEstimator.setReferencePose(currentPose2dSupplier.get());
-                    var estimatedPose = photonPoseEstimator.update();
-
-                    if (estimatedPose.isPresent()) {
-                        var estimate = estimatedPose.get();
-                        var targetId = estimate.targetsUsed.get(0).getFiducialId();
-
-                        var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
-                        visionMeasureConsumer.accept(estimate.estimatedPose,
-                                estimate.timestampSeconds);
-                        m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
-                        for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
-                            m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
-                        }
-                        photonVisionCameraTelemetry.telemetrize(m_cachedState);
-                    }
-
-                    m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
-
-                } finally {
-                    m_stateLock.writeLock().unlock();
-                }
-            }
-        }
-    }
-
 }
