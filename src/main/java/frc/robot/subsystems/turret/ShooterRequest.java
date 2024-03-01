@@ -8,15 +8,17 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 
 public interface ShooterRequest {
-    public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rightShooterMotor);
+    public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rightShooterMotor,
+            TalonFX leftShooterMotor);
 
     public class ControlShooter implements ShooterRequest {
         private double velocity = 0;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters,
-                TalonFX rightShooterMotor) {
+                TalonFX rightShooterMotor, TalonFX leftShooterMotor) {
             rightShooterMotor.setControl(new VelocityVoltage(velocity));
+            leftShooterMotor.setControl(new VelocityVoltage(velocity));
             return StatusCode.OK;
         }
 
@@ -32,8 +34,9 @@ public interface ShooterRequest {
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters,
-                TalonFX rightShooterMotor) {
+                TalonFX rightShooterMotor, TalonFX leftShooterMotor) {
             rightShooterMotor.setControl(new VoltageOut(percentage * 12));
+            leftShooterMotor.setControl(new VoltageOut(percentage * 12));
             return StatusCode.OK;
         }
 
@@ -47,8 +50,9 @@ public interface ShooterRequest {
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters,
-                TalonFX rightShooterMotor) {
+                TalonFX rightShooterMotor, TalonFX leftShooterMotor) {
             rightShooterMotor.setControl(new VoltageOut(0));
+            leftShooterMotor.setControl(new VoltageOut(0));
             return StatusCode.OK;
         }
     }
