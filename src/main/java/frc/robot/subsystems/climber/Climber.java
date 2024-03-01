@@ -18,6 +18,7 @@ import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.SubsystemThread;
 import frc.robot.subsystems.climber.ClimberRequest.ControlClimberRequestParameters;
 
 public class Climber extends SubsystemBase {
@@ -25,7 +26,14 @@ public class Climber extends SubsystemBase {
 
     final double UpdateFrequency = 100.0;
 
-    ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
+    private final SubsystemThread m_thread = new SubsystemThread(UpdateFrequency) {
+
+        @Override
+        public void run() {
+            m_requestToApply.apply(m_requestParameters, climberMotor);
+        }
+    };
+
     protected ClimberRequest m_requestToApply = new ClimberRequest.Idle();
     protected ControlClimberRequestParameters m_requestParameters = new ControlClimberRequestParameters();
 
@@ -62,6 +70,8 @@ public class Climber extends SubsystemBase {
             System.out.println("Could not configure device. Error: " + statusClimber.toString());
 
         climberMotor.setPosition(0);
+
+        m_thread.start();
     }
 
     public Command applyRequest(
@@ -71,11 +81,11 @@ public class Climber extends SubsystemBase {
 
     private void setControl(ClimberRequest request) {
         try {
-            m_stateLock.writeLock().lock();
+            m_thread.writeLock().lock();
 
             m_requestToApply = request;
         } finally {
-            m_stateLock.writeLock().unlock();
+            m_thread.writeLock().unlock();
         }
     }
 
@@ -89,72 +99,4 @@ public class Climber extends SubsystemBase {
     }
 
     final ClimberState m_cachedState = new ClimberState();
-
-    public class ClimberThread {
-        final Thread m_thread;
-        volatile boolean m_running;
-
-        private final MedianFilter peakRemover = new MedianFilter(3);
-        private final LinearFilter lowPass = LinearFilter.movingAverage(50);
-        private double lastTime = 0;
-        private double currentTime = 0;
-        double m_averageLoopTime = 0;
-
-        public ClimberThread() {
-            m_thread = new Thread(this::run);
-
-            m_thread.setDaemon(true);
-        }
-
-        /**
-         * Starts the odometry thread.
-         */
-        public void start() {
-            m_running = true;
-            m_thread.start();
-        }
-
-        /**
-         * Stops the odometry thread.
-         */
-        public void stop() {
-            stop(0);
-        }
-
-        /**
-         * Stops the odometry thread with a timeout.
-         *
-         * @param millis The time to wait in milliseconds
-         */
-        public void stop(long millis) {
-            m_running = false;
-            try {
-                m_thread.join(millis);
-            } catch (final InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        public void run() {
-            while (m_running) {
-                Timer.delay(1.0 / UpdateFrequency);
-                try {
-                    m_stateLock.writeLock().lock();
-
-                    lastTime = currentTime;
-                    currentTime = Utils.getCurrentTimeSeconds();
-
-                    m_averageLoopTime = lowPass.calculate(peakRemover.calculate(currentTime - lastTime));
-
-                    // m_requestParameters.climberState = m_cachedState;
-
-                    m_requestToApply.apply(m_requestParameters, climberMotor);
-                    // m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor);
-                } finally {
-                    m_stateLock.writeLock().unlock();
-                }
-            }
-        }
-    }
-
 }
