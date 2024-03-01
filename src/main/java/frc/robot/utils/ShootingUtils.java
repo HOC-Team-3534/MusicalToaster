@@ -31,6 +31,9 @@ public class ShootingUtils {
     public static Translation2d findVirtualGoalDisplacementFromRobot(double maxError, double maxIterations,
             double maxTimeOfFlight)
             throws Exception {
+        var goalFinalEquation = getGoalFinalEquation();
+        if (goalFinalEquation == null)
+            return null;
         return shootWhileMovingSolver.findSolution(getGoalFinalEquation(), maxError, maxIterations, maxTimeOfFlight)
                 .getGoalFinalCalculated();
     }
@@ -39,6 +42,9 @@ public class ShootingUtils {
         if (goalPositionSupplier == null || robotPositionSupplier == null || robotPositionSupplier == null) {
             throw new Exception("Configure Shoot While Moving before calling findVirtualGoalToAimFor");
         }
+        var goalPosition = goalPositionSupplier.get();
+        if (goalPosition == null)
+            return null;
         return goalFinalEquation.withGoalPosition(goalPositionSupplier.get())
                 .withRobotPosition(robotPositionSupplier.get()).withRobotVelocity(robotSpeedsSupplier.get());
     }

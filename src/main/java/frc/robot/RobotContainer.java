@@ -70,9 +70,9 @@ public class RobotContainer {
 	// ControlClimber().withVoltage(0.5).withClimberReversed(true);
 
 	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds(),
-			() -> TGR.SetNoteLoadedInTurret.bool());
+			() -> operatorController.getHID().getStartButton());
 
-	private final static Intake intake = new Intake(() -> TGR.ResetAllNotePostions.bool());
+	private final static Intake intake = new Intake(() -> driverController.getHID().getBackButton());
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
 	private final static ControlIntake runExtake = new ControlIntake().withIntakePercent(-1.0);
 	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
@@ -89,7 +89,8 @@ public class RobotContainer {
 			.withRollerOutput(-0.6)
 			.withTilt(Rotation2d.fromDegrees(-30))
 			.withSwerveDriveState(() -> drivetrain.getState())
-			.withDeployTrigger(() -> TGR.DeployInAmp.bool());// TODO Find the actualy tilt for aiming for amp
+			.withDeployTrigger(() -> operatorController.getHID().getYButton());// TODO Find the actualy tilt for aiming
+																				// for amp
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
 			.withRollerPercent(-1.0)
 			.withRotation(new Rotation2d())
@@ -155,7 +156,7 @@ public class RobotContainer {
 								.withRotationalRate(
 										// Drive counterclockwise with negative X (left)
 										-driverController.getRightX() * MaxAngularRate)
-								.withCreepEnabled(TGR.Creep.bool())));
+								.withCreepEnabled(driverController.getHID().getLeftBumper())));
 
 		intake.setDefaultCommand(
 				intake.applyRequest(
@@ -325,7 +326,8 @@ public class RobotContainer {
 				case Speaker:
 					return aimForSpeaker;
 				case Subwoofer:
-					return shootFromSubwoofer.withReadyToShoot(() -> TGR.ShootFromSubwoofer.tgr().getAsBoolean());
+					return shootFromSubwoofer
+							.withReadyToShoot(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
 				case Steal:
 					return aimForSteal;
 				default:
@@ -362,7 +364,7 @@ public class RobotContainer {
 	}
 
 	public static boolean isTiltForcedFlat() {
-		return TGR.ForceTiltFlat.bool();
+		return driverController.getHID().getAButton();
 	}
 
 	static final Translation2d DriveStraightForwardLine = FIELD_DIMENSIONS.CENTER_OF_FIELD
@@ -395,7 +397,6 @@ public class RobotContainer {
 	}
 
 	public enum TGR {
-		Creep(driverController.leftBumper()),
 		ResetFieldRelative(driverController.start()), // TODO should we having this?
 		Intake(driverController.rightTrigger(0.15)),
 		ShootSpeaker(driverController.x()),
@@ -403,14 +404,9 @@ public class RobotContainer {
 		PrepareScoreAmp(driverController.b()),
 		DeployInAmp(driverController.y()),
 		PrepareShootForSubwoofer(operatorController.x()),
-		ShootFromSubwoofer(operatorController.rightTrigger()),
 		// ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
 		// ClimbDown(operatorController.b().and(() ->
 		// !EnabledDebugModes.testingClimber)),
-		ResetAllNotePostions(operatorController.back()),
-		SetNoteLoadedInTurret(operatorController.start()),
-		GetRidOfNote(operatorController.a()),
-		ForceTiltFlat(operatorController.rightBumper()),
 
 		ShootManually(operatorController.leftTrigger(0.15)),
 
@@ -426,10 +422,6 @@ public class RobotContainer {
 
 		public Trigger tgr() {
 			return trigger.and(() -> !Robot.isAutonomous);
-		}
-
-		public boolean bool() {
-			return trigger.getAsBoolean();
 		}
 	}
 

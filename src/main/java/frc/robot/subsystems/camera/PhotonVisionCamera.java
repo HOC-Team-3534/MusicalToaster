@@ -9,23 +9,17 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 
-import com.ctre.phoenix6.Utils;
-
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.filter.LinearFilter;
-import edu.wpi.first.math.filter.MedianFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.SubsystemThread;
 
-public class PhotonVisionCamera extends SubsystemBase {
+public class PhotonVisionCamera {
 
     final double UpdateFrequency = 50.0;
 
@@ -56,8 +50,7 @@ public class PhotonVisionCamera extends SubsystemBase {
                 var targetId = estimate.targetsUsed.get(0).getFiducialId();
 
                 var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
-                visionMeasureConsumer.accept(estimate.estimatedPose,
-                        estimate.timestampSeconds);
+                visionMeasureConsumer.accept(estimate.estimatedPose, estimate.timestampSeconds);
                 m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
                 for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
                     m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
