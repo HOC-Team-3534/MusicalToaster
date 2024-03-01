@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
@@ -271,6 +272,9 @@ public class RobotContainer {
 	 * joysticks}.
 	 */
 	private static void configureBindings() {
+		new Trigger(() -> driverController.getHID().getAButton()).whileTrue(Commands.none());
+		driverController.a().whileTrue(Commands.none());
+
 		TGR.Characterize.tgr().whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
 
 		// reset the field-centric heading on left bumper press

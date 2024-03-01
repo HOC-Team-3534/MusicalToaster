@@ -22,7 +22,6 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
-import frc.robot.subsystems.SubsystemThread;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.sensors.ProximitySensorInput;
@@ -47,77 +46,6 @@ public class Turret extends SubsystemBase {
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
 
     private Supplier<Boolean> noteInRobot;
-
-    private final SubsystemThread m_thread = new SubsystemThread(UpdateFrequency) {
-
-        @Override
-        public void run() {
-            m_cachedState.rawAzimuthEncoderCounts = rollerMotor.getSelectedSensorPosition();
-
-            m_cachedState.azimuth = Rotation2d.fromRotations(m_cachedState.rawAzimuthEncoderCounts / 1440.0);
-
-            rotateMotor.setPosition(m_cachedState.azimuth.getRotations());
-
-            m_cachedState.azimuthFromMotor = Rotation2d
-                    .fromRotations(rotateMotor.getPosition().getValueAsDouble());
-
-            m_cachedState.rawElevationRotations = tiltMotor.getPosition().getValueAsDouble();
-
-            m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
-
-            var rollerOn = Math.abs(rollerMotor.getMotorOutputPercent()) > 0.01;
-
-            if (!m_cachedState.noteLoaded && sensor.get() && rollerOn && !m_cachedState.currentlyShooting) {
-                m_cachedState.noteLoaded = true;
-                m_cachedState.noteLoadedTimer.restart();
-                m_cachedState.noteUnloadedTimer.stop();
-            }
-
-            if (m_cachedState.currentlyShooting && rollerOn) {
-                m_cachedState.noteUnloadedTimer.restart();
-            }
-
-            if (m_cachedState.noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {
-                m_cachedState.noteLoaded = false;
-                m_cachedState.noteUnloadedTimer.reset();
-            }
-
-            m_cachedState.rotateClosedLoopError = Rotation2d
-                    .fromRotations(rotateMotor.getClosedLoopReference().getValueAsDouble()
-                            - rotateMotor.getPosition().getValueAsDouble());
-
-            m_cachedState.tiltClosedLoopError = Rotation2d
-                    .fromRotations(tiltMotor.getClosedLoopReference().getValueAsDouble()
-                            - tiltMotor.getPosition().getValueAsDouble());
-
-            m_cachedState.shooterMotorClosedLoopError = rightShooterMotor.getClosedLoopError()
-                    .getValueAsDouble();
-
-            try {
-                m_cachedState.virtualGoalLocationDisplacement = ShootingUtils
-                        .findVirtualGoalDisplacementFromRobot(0.005, 20, 5);
-            } catch (Exception e) {
-                e.printStackTrace();
-                m_cachedState.virtualGoalLocationDisplacement = null;
-            }
-
-            RobotContainer.setActivelyGrabbing(false);
-
-            RobotContainer.setNoteLoaded(m_cachedState.isNoteLoaded());
-
-            m_cachedState.currentlyShooting = false;
-            if (noteInRobot.get()) {
-                m_cachedState.noteLoaded = true;
-            }
-            m_requestParameters.turretState = m_cachedState;
-
-            // turretTelemetry.telemetrize(m_cachedState);
-
-            m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
-            m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor);
-        }
-
-    };
 
     public Turret(Supplier<ChassisSpeeds> chassisSpeedsSupplier,
             Supplier<Boolean> noteInRobot) {
@@ -230,13 +158,73 @@ public class Turret extends SubsystemBase {
                 () -> RobotContainer.getSwerveDriveState().Pose.getTranslation(),
                 (vector) -> timeOfFlightEquation.get(vector.getNorm()));
         this.noteInRobot = noteInRobot;
-
-        m_thread.start();
     }
 
     @Override
     public void periodic() {
-        super.periodic();
+        m_cachedState.rawAzimuthEncoderCounts = rollerMotor.getSelectedSensorPosition();
+
+        m_cachedState.azimuth = Rotation2d.fromRotations(m_cachedState.rawAzimuthEncoderCounts / 1440.0);
+
+        rotateMotor.setPosition(m_cachedState.azimuth.getRotations());
+
+        m_cachedState.azimuthFromMotor = Rotation2d
+                .fromRotations(rotateMotor.getPosition().getValueAsDouble());
+
+        m_cachedState.rawElevationRotations = tiltMotor.getPosition().getValueAsDouble();
+
+        m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
+
+        var rollerOn = Math.abs(rollerMotor.getMotorOutputPercent()) > 0.01;
+
+        if (!m_cachedState.noteLoaded && sensor.get() && rollerOn && !m_cachedState.currentlyShooting) {
+            m_cachedState.noteLoaded = true;
+            m_cachedState.noteLoadedTimer.restart();
+            m_cachedState.noteUnloadedTimer.stop();
+        }
+
+        if (m_cachedState.currentlyShooting && rollerOn) {
+            m_cachedState.noteUnloadedTimer.restart();
+        }
+
+        if (m_cachedState.noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {
+            m_cachedState.noteLoaded = false;
+            m_cachedState.noteUnloadedTimer.reset();
+        }
+
+        m_cachedState.rotateClosedLoopError = Rotation2d
+                .fromRotations(rotateMotor.getClosedLoopReference().getValueAsDouble()
+                        - rotateMotor.getPosition().getValueAsDouble());
+
+        m_cachedState.tiltClosedLoopError = Rotation2d
+                .fromRotations(tiltMotor.getClosedLoopReference().getValueAsDouble()
+                        - tiltMotor.getPosition().getValueAsDouble());
+
+        m_cachedState.shooterMotorClosedLoopError = rightShooterMotor.getClosedLoopError()
+                .getValueAsDouble();
+
+        try {
+            m_cachedState.virtualGoalLocationDisplacement = ShootingUtils
+                    .findVirtualGoalDisplacementFromRobot(0.005, 20, 5);
+        } catch (Exception e) {
+            e.printStackTrace();
+            m_cachedState.virtualGoalLocationDisplacement = null;
+        }
+
+        RobotContainer.setActivelyGrabbing(false);
+
+        RobotContainer.setNoteLoaded(m_cachedState.isNoteLoaded());
+
+        m_cachedState.currentlyShooting = false;
+        if (noteInRobot.get()) {
+            m_cachedState.noteLoaded = true;
+        }
+        m_requestParameters.turretState = m_cachedState;
+
+        // turretTelemetry.telemetrize(m_cachedState);
+
+        m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
+        m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor);
     }
 
     public Command applyRequest(Supplier<TurretRequest> requestSupplier,
@@ -245,14 +233,8 @@ public class Turret extends SubsystemBase {
     }
 
     private void setControl(TurretRequest request, ShooterRequest shooterRequest) {
-        try {
-            m_thread.writeLock().lock();
-
-            m_requestToApply = request;
-            m_requestToApplyToShooter = shooterRequest;
-        } finally {
-            m_thread.writeLock().unlock();
-        }
+        m_requestToApply = request;
+        m_requestToApplyToShooter = shooterRequest;
     }
 
     public class TurretState {

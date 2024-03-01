@@ -17,10 +17,10 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
-import frc.robot.subsystems.SubsystemThread;
 
-public class PhotonVisionCamera {
+public class PhotonVisionCamera extends SubsystemBase {
 
     final double UpdateFrequency = 50.0;
 
@@ -37,29 +37,6 @@ public class PhotonVisionCamera {
     final PhotonPoseEstimator photonPoseEstimator;
     BiConsumer<Pose3d, Double> visionMeasureConsumer;
 
-    private SubsystemThread m_thread = new SubsystemThread(UpdateFrequency) {
-
-        @Override
-        public void run() {
-            photonPoseEstimator.setReferencePose(RobotContainer.getSwerveDriveState().Pose);
-            var estimatedPose = photonPoseEstimator.update();
-
-            if (estimatedPose.isPresent()) {
-                var estimate = estimatedPose.get();
-                var targetId = estimate.targetsUsed.get(0).getFiducialId();
-
-                var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
-                visionMeasureConsumer.accept(estimate.estimatedPose, estimate.timestampSeconds);
-                m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
-                for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
-                    m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
-                }
-                photonVisionCameraTelemetry.telemetrize(m_cachedState);
-            }
-        }
-
-    };
-
     public PhotonVisionCamera(
             BiConsumer<Pose3d, Double> visionMeasurementConsumer) {
         aprilTagFieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
@@ -68,9 +45,6 @@ public class PhotonVisionCamera {
         photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout,
                 PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera, robotToCamera);
         photonPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
-
-        m_thread.start();
-
     }
 
     // public void updateOurPose(Consumer<Pose3d> updatePose) {
@@ -84,6 +58,25 @@ public class PhotonVisionCamera {
     // updatePose.accept(robotPose);
     // }
     // }
+
+    @Override
+    public void periodic() {
+        photonPoseEstimator.setReferencePose(RobotContainer.getSwerveDriveState().Pose);
+        var estimatedPose = photonPoseEstimator.update();
+
+        if (estimatedPose.isPresent()) {
+            var estimate = estimatedPose.get();
+            var targetId = estimate.targetsUsed.get(0).getFiducialId();
+
+            var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
+            visionMeasureConsumer.accept(estimate.estimatedPose, estimate.timestampSeconds);
+            m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
+            for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
+                m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
+            }
+            photonVisionCameraTelemetry.telemetrize(m_cachedState);
+        }
+    }
 
     public class CameraState {
         public Transform3d robotToTarget;

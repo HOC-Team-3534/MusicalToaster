@@ -1,11 +1,8 @@
 package frc.robot.subsystems.climber;
 
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.StatusCode;
-import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -13,26 +10,14 @@ import com.ctre.phoenix6.configs.Slot1Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 
-import edu.wpi.first.math.filter.LinearFilter;
-import edu.wpi.first.math.filter.MedianFilter;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.SubsystemThread;
 import frc.robot.subsystems.climber.ClimberRequest.ControlClimberRequestParameters;
 
 public class Climber extends SubsystemBase {
     TalonFX climberMotor;
 
     final double UpdateFrequency = 50.0;
-
-    private final SubsystemThread m_thread = new SubsystemThread(UpdateFrequency) {
-
-        @Override
-        public void run() {
-            m_requestToApply.apply(m_requestParameters, climberMotor);
-        }
-    };
 
     protected ClimberRequest m_requestToApply = new ClimberRequest.Idle();
     protected ControlClimberRequestParameters m_requestParameters = new ControlClimberRequestParameters();
@@ -70,8 +55,6 @@ public class Climber extends SubsystemBase {
             System.out.println("Could not configure device. Error: " + statusClimber.toString());
 
         climberMotor.setPosition(0);
-
-        m_thread.start();
     }
 
     public Command applyRequest(
@@ -80,13 +63,7 @@ public class Climber extends SubsystemBase {
     }
 
     private void setControl(ClimberRequest request) {
-        try {
-            m_thread.writeLock().lock();
-
-            m_requestToApply = request;
-        } finally {
-            m_thread.writeLock().unlock();
-        }
+        m_requestToApply = request;
     }
 
     @Override

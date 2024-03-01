@@ -6,7 +6,6 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
-import frc.robot.subsystems.SubsystemThread;
 import frc.robot.subsystems.intake.IntakeRequest.IntakeControlRequestParameters;
 import frc.robot.utils.sensors.ProximitySensorInput;
 
@@ -17,66 +16,9 @@ public class Intake extends SubsystemBase {
 
     final double UpdateFrequency = 50.0;
 
+    boolean prevNoteLoaded;
+
     final static double delayNoteInPositionSeconds = 0.3;
-
-    private final SubsystemThread m_thread = new SubsystemThread(UpdateFrequency) {
-
-        boolean prevNoteLoaded;
-
-        @Override
-        public void run() {
-            var fbPerc = frontBackMotor.getMotorOutputPercent();
-            var lrPerc = leftRightMotor.getMotorOutputPercent();
-            double percs[] = { fbPerc, lrPerc, fbPerc, lrPerc };
-
-            for (int i = 0; i < percs.length; i++) {
-                m_cachedState.intakeDirection[i] = IntakeDirection.getDirection(percs[i]);
-            }
-
-            for (int i = 0; i < sensors.length; i++) {
-                /*
-                 * If the note is not already marked in position
-                 * and the note is seen while the motor is running in
-                 * set note in position to true and reset the delay timer
-                 */
-                if (!m_cachedState.seeingNote[i]
-                        && sensors[i].get()) {
-                    m_cachedState.noteInPosition[i] = true;
-                }
-
-                m_cachedState.seeingNote[i] = sensors[i].get();
-
-                if (resetNoteSupplier.get()) {
-                    m_cachedState.noteInPosition[i] = false;
-                }
-            }
-            var grabNoteIndex = -1;
-            for (int i = 0; i < m_cachedState.noteInPosition.length; i++) {
-                if (m_cachedState.noteInPosition[i]) {
-                    grabNoteIndex = i;
-                    break;
-                }
-            }
-
-            RobotContainer.setGrabNoteIndex(grabNoteIndex);
-
-            var noteLoaded = RobotContainer.getRobotState().noteLoaded;
-
-            if (!prevNoteLoaded && noteLoaded && grabNoteIndex != -1) {
-                m_cachedState.noteInPosition[grabNoteIndex] = false;
-            }
-
-            prevNoteLoaded = noteLoaded;
-
-            // intakeTelemetry.telemeterize(m_cachedState);
-
-            m_requestParameters.intakeState = m_cachedState;
-
-            m_requestToApply.apply(m_requestParameters, frontBackMotor,
-                    leftRightMotor);
-        }
-
-    };
 
     final IntakeTelemetry intakeTelemetry = new IntakeTelemetry();
 
@@ -94,7 +36,6 @@ public class Intake extends SubsystemBase {
             sensors[i] = new ProximitySensorInput(i);
         }
 
-        m_thread.start();
         this.resetNoteSupplier = resetNoteSupplier;
     }
 
@@ -113,23 +54,65 @@ public class Intake extends SubsystemBase {
         }
     }
 
+    @Override
+    public void periodic() {
+        var fbPerc = frontBackMotor.getMotorOutputPercent();
+        var lrPerc = leftRightMotor.getMotorOutputPercent();
+        double percs[] = { fbPerc, lrPerc, fbPerc, lrPerc };
+
+        for (int i = 0; i < percs.length; i++) {
+            m_cachedState.intakeDirection[i] = IntakeDirection.getDirection(percs[i]);
+        }
+
+        for (int i = 0; i < sensors.length; i++) {
+            /*
+             * If the note is not already marked in position
+             * and the note is seen while the motor is running in
+             * set note in position to true and reset the delay timer
+             */
+            if (!m_cachedState.seeingNote[i]
+                    && sensors[i].get()) {
+                m_cachedState.noteInPosition[i] = true;
+            }
+
+            m_cachedState.seeingNote[i] = sensors[i].get();
+
+            if (resetNoteSupplier.get()) {
+                m_cachedState.noteInPosition[i] = false;
+            }
+        }
+        var grabNoteIndex = -1;
+        for (int i = 0; i < m_cachedState.noteInPosition.length; i++) {
+            if (m_cachedState.noteInPosition[i]) {
+                grabNoteIndex = i;
+                break;
+            }
+        }
+
+        RobotContainer.setGrabNoteIndex(grabNoteIndex);
+
+        var noteLoaded = RobotContainer.getRobotState().noteLoaded;
+
+        if (!prevNoteLoaded && noteLoaded && grabNoteIndex != -1) {
+            m_cachedState.noteInPosition[grabNoteIndex] = false;
+        }
+
+        prevNoteLoaded = noteLoaded;
+
+        // intakeTelemetry.telemeterize(m_cachedState);
+
+        m_requestParameters.intakeState = m_cachedState;
+
+        m_requestToApply.apply(m_requestParameters, frontBackMotor,
+                leftRightMotor);
+    }
+
     public Command applyRequest(Supplier<IntakeRequest> requestSupplier) {
         return run(() -> this.setControl(requestSupplier.get()));
     }
 
     private void setControl(IntakeRequest request) {
-        try {
-            m_thread.writeLock().lock();
-
-            m_requestToApply = request;
-        } finally {
-            m_thread.writeLock().unlock();
-        }
-    }
-
-    @Override
-    public void periodic() {
-        super.periodic();
+        m_requestToApply = request;
     }
 
     public class IntakeState {
