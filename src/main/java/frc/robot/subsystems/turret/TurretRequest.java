@@ -92,7 +92,6 @@ public interface TurretRequest {
         private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
         private double shooterTolerance;
         private double rollerPercentOut;
-        private Supplier<SwerveDriveState> swerveDriveStateSupplier;
 
         private Function<Double, Rotation2d> tiltFunction;
 
@@ -108,7 +107,7 @@ public interface TurretRequest {
             var targetAzimuth = currentAzimuth;
 
             if (parameters.turretState.isNoteLoaded()) {
-                var robotOrientation = swerveDriveStateSupplier.get().Pose.getRotation();
+                var robotOrientation = RobotContainer.getSwerveDriveState().Pose.getRotation();
                 var virtualGoalLocationDisplacement = parameters.turretState.virtualGoalLocationDisplacement;
                 var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
                 var distanceToGoal = virtualGoalLocationDisplacement.getNorm();
@@ -139,11 +138,6 @@ public interface TurretRequest {
             return this;
         }
 
-        public AimForSpeaker withSwerveDriveState(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
-            this.swerveDriveStateSupplier = swerveDriveStateSupplier;
-            return this;
-        }
-
         public AimForSpeaker withRotateTolerance(Rotation2d tolerance) {
             this.tolerance = tolerance;
             return this;
@@ -167,7 +161,6 @@ public interface TurretRequest {
     }
 
     public class AimWithRotation implements TurretRequest {
-        private Supplier<SwerveDriveState> swerveDriveStateSupplier;
         private Rotation2d tolerance = Rotation2d.fromDegrees(1);
         private Rotation2d tilt;
         private double rollerPercentOut;
@@ -184,7 +177,7 @@ public interface TurretRequest {
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
-            var robotOrientation = swerveDriveStateSupplier.get().Pose.getRotation();
+            var robotOrientation = RobotContainer.getSwerveDriveState().Pose.getRotation();
             var shooterError = parameters.turretState.shooterMotorClosedLoopError;
 
             if (parameters.turretState.isNoteLoaded()) {
@@ -208,11 +201,6 @@ public interface TurretRequest {
             tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
 
             return StatusCode.OK;
-        }
-
-        public AimWithRotation withSwerveDriveState(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
-            this.swerveDriveStateSupplier = swerveDriveStateSupplier;
-            return this;
         }
 
         public AimWithRotation withRotateTolerance(Rotation2d tolerance) {
@@ -247,7 +235,6 @@ public interface TurretRequest {
     }
 
     public class ScoreAmp implements TurretRequest {
-        private Supplier<SwerveDriveState> swerveDriveStateSupplier;
         private Rotation2d tolerance = Rotation2d.fromDegrees(1);
         private Rotation2d tilt;
         private double rollerPercentOut;
@@ -263,7 +250,7 @@ public interface TurretRequest {
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
-            var robotOrientation = swerveDriveStateSupplier.get().Pose.getRotation();
+            var robotOrientation = RobotContainer.getSwerveDriveState().Pose.getRotation();
             var currentElevation = parameters.turretState.elevation;
 
             if (parameters.turretState.isNoteLoaded()) {
@@ -286,11 +273,6 @@ public interface TurretRequest {
             tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
 
             return StatusCode.OK;
-        }
-
-        public ScoreAmp withSwerveDriveState(Supplier<SwerveDriveState> swerveDriveStateSupplier) {
-            this.swerveDriveStateSupplier = swerveDriveStateSupplier;
-            return this;
         }
 
         public ScoreAmp withRotateTolerance(Rotation2d tolerance) {

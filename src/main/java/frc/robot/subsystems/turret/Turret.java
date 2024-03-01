@@ -119,7 +119,7 @@ public class Turret extends SubsystemBase {
 
     };
 
-    public Turret(Supplier<SwerveDriveState> swerveDriveStateSupplier, Supplier<ChassisSpeeds> chassisSpeedsSupplier,
+    public Turret(Supplier<ChassisSpeeds> chassisSpeedsSupplier,
             Supplier<Boolean> noteInRobot) {
         super();
         /*
@@ -227,7 +227,7 @@ public class Turret extends SubsystemBase {
                     ? blueGoal
                     : redGoal;
         }, chassisSpeedsSupplier,
-                () -> swerveDriveStateSupplier.get().Pose.getTranslation(),
+                () -> RobotContainer.getSwerveDriveState().Pose.getTranslation(),
                 (vector) -> timeOfFlightEquation.get(vector.getNorm()));
         this.noteInRobot = noteInRobot;
 

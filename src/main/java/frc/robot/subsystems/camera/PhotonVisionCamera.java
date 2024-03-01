@@ -17,6 +17,7 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
+import frc.robot.RobotContainer;
 import frc.robot.subsystems.SubsystemThread;
 
 public class PhotonVisionCamera {
@@ -34,15 +35,13 @@ public class PhotonVisionCamera {
             new Rotation3d(0, Units.degreesToRadians(-7), 0));
 
     final PhotonPoseEstimator photonPoseEstimator;
-
-    Supplier<Pose2d> currentPose2dSupplier;
     BiConsumer<Pose3d, Double> visionMeasureConsumer;
 
     private SubsystemThread m_thread = new SubsystemThread(UpdateFrequency) {
 
         @Override
         public void run() {
-            photonPoseEstimator.setReferencePose(currentPose2dSupplier.get());
+            photonPoseEstimator.setReferencePose(RobotContainer.getSwerveDriveState().Pose);
             var estimatedPose = photonPoseEstimator.update();
 
             if (estimatedPose.isPresent()) {
@@ -61,11 +60,10 @@ public class PhotonVisionCamera {
 
     };
 
-    public PhotonVisionCamera(Supplier<Pose2d> currentPose2dSupplier,
+    public PhotonVisionCamera(
             BiConsumer<Pose3d, Double> visionMeasurementConsumer) {
         aprilTagFieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
         aprilTagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
-        this.currentPose2dSupplier = currentPose2dSupplier;
         this.visionMeasureConsumer = visionMeasurementConsumer;
         photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout,
                 PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera, robotToCamera);

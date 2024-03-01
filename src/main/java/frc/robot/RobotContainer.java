@@ -9,6 +9,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -69,7 +70,7 @@ public class RobotContainer {
 	// private final static ControlClimber climberDown = new
 	// ControlClimber().withVoltage(0.5).withClimberReversed(true);
 
-	private final static Turret turret = new Turret(() -> drivetrain.getState(), () -> drivetrain.getChassisSpeeds(),
+	private final static Turret turret = new Turret(() -> drivetrain.getChassisSpeeds(),
 			() -> operatorController.getHID().getStartButton());
 
 	private final static Intake intake = new Intake(() -> driverController.getHID().getBackButton());
@@ -82,13 +83,11 @@ public class RobotContainer {
 			.withTilt(Rotation2d.fromDegrees(40));
 	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
 			.withRollerOutput(0.25)
-			.withTiltFunction((distance) -> new Rotation2d())
-			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find distance table
+			.withTiltFunction((distance) -> new Rotation2d());// TODO Find distance table
 	private final static ScoreAmp scoreAmp = new ScoreAmp()
 			.withRotation(() -> Rotation2d.fromDegrees(270))
 			.withRollerOutput(-0.6)
 			.withTilt(Rotation2d.fromDegrees(-30))
-			.withSwerveDriveState(() -> drivetrain.getState())
 			.withDeployTrigger(() -> operatorController.getHID().getYButton());// TODO Find the actualy tilt for aiming
 																				// for amp
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
@@ -100,11 +99,10 @@ public class RobotContainer {
 				var targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
 						? Rotation2d.fromDegrees(180)
 						: new Rotation2d();
-				return targetAzimuth.minus(drivetrain.getState().Pose.getRotation());
+				return targetAzimuth.minus(getSwerveDriveState().Pose.getRotation());
 			})
 			.withRollerOutput(0.25)
-			.withTilt(Rotation2d.fromDegrees(10))
-			.withSwerveDriveState(() -> drivetrain.getState());// TODO Find the actualy tilt for aiming for amp
+			.withTilt(Rotation2d.fromDegrees(10));// TODO Find the actualy tilt for aiming for amp
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
@@ -134,7 +132,7 @@ public class RobotContainer {
 		// Configure the trigger bindings
 		configureBindings();
 
-		photonVision = new PhotonVisionCamera(() -> drivetrain.getState().Pose,
+		photonVision = new PhotonVisionCamera(
 				(pose, timestamp) -> {
 					if (EnabledDebugModes.updatePoseWithVisionEnabled)
 						drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp);
@@ -182,6 +180,10 @@ public class RobotContainer {
 			shootOrStealChoosers[i] = newShootOrStealChooser();
 			SmartDashboard.putData("Shoot|Steal " + (i + 1), shootOrStealChoosers[i]);
 		}
+	}
+
+	public static SwerveDriveState getSwerveDriveState() {
+		return drivetrain.getState();
 	}
 
 	public static SendableChooser<Autos.AutoNotes> newNoteHiearchyChooser() {
@@ -353,7 +355,7 @@ public class RobotContainer {
 	}
 
 	public static boolean isValidShootPosition() {
-		var x = drivetrain.getState().Pose.getX();
+		var x = getSwerveDriveState().Pose.getX();
 		var alliance = DriverStation.getAlliance().get();
 		var behindAllianceLine = alliance.equals(Alliance.Blue)
 				? x < FIELD_DIMENSIONS.CENTER_OF_FIELD.minus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX()
@@ -385,7 +387,7 @@ public class RobotContainer {
 				positions.add(note, shootOrSteal);
 		}
 		if (positions.isEmpty()) {
-			var current = drivetrain.getState().Pose.getTranslation();
+			var current = getSwerveDriveState().Pose.getTranslation();
 			var x = DriverStation.getAlliance().get().equals(Alliance.Blue) ? DriveStraightForwardLine.getX()
 					: FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
 			var driveAcrossLinePosition = new Translation2d(x, current.getY());
