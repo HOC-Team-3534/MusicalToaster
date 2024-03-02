@@ -6,6 +6,8 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class FieldCentricWithProperDeadband extends FieldCentric {
   public double MaxSpeed = 0;
@@ -41,6 +43,7 @@ public class FieldCentricWithProperDeadband extends FieldCentric {
 
     var states = parameters.kinematics.toSwerveModuleStates(speeds, new Translation2d());
 
+    var startTime = Timer.getFPGATimestamp();
     for (int i = 0; i < modulesToApply.length; ++i) {
       if (Math.abs(states[i].speedMetersPerSecond) < 0.01) {
         if (lastRotations[i] == null) {
@@ -48,9 +51,11 @@ public class FieldCentricWithProperDeadband extends FieldCentric {
         }
         states[i].angle = lastRotations[i];
       }
+
       modulesToApply[i].apply(states[i], DriveRequestType, SteerRequestType);
       lastRotations[i] = states[i].angle;
     }
+    SmartDashboard.putNumber("Request Loop Time Ms", (Timer.getFPGATimestamp() - startTime) * 1000.0);
 
     return StatusCode.OK;
   }

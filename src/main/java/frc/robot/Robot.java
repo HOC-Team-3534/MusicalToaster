@@ -35,6 +35,7 @@ public class Robot extends TimedRobot {
     // and put our
     // autonomous chooser on the dashboard.
     RobotContainer.initialize();
+    CommandScheduler.getInstance().setPeriod(0.010);
   }
 
   /**
