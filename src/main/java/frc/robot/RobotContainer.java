@@ -6,7 +6,6 @@ package frc.robot;
 import java.util.concurrent.Callable;
 
 import com.ctre.phoenix6.Utils;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -117,7 +116,7 @@ public class RobotContainer {
 	}
 
 	public enum TGR {
-		ResetFieldRelative(driverController.start()), // TODO should we having this?
+		ResetFieldRelative(driverController.start()),
 
 		// Below are debugging actions
 

@@ -1,7 +1,6 @@
 package frc.robot.subsystems.swervedrive;
 
 import com.ctre.phoenix6.Utils;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -9,6 +8,7 @@ import edu.wpi.first.networktables.*;
 import edu.wpi.first.wpilibj.smartdashboard.*;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
+import frc.robot.subsystems.swervedrive.MySwerveDrivetrain.SwerveDriveState;
 
 public class Telemetry {
         private final double MaxSpeed;
@@ -27,17 +27,11 @@ public class Telemetry {
         /* What to publish over networktables for telemetry */
         private final NetworkTableInstance inst = NetworkTableInstance.getDefault();
 
-        /* Robot pose for field positioning */
-        private final NetworkTable table = inst.getTable("Pose");
-        private final DoubleArrayPublisher fieldPub = table.getDoubleArrayTopic("robotPose").publish();
-        private final StringPublisher fieldTypePub = table.getStringTopic(".type").publish();
-
         /* Robot speeds for general checking */
         private final NetworkTable driveStats = inst.getTable("Drive");
         private final DoublePublisher velocityX = driveStats.getDoubleTopic("Velocity X").publish();
         private final DoublePublisher velocityY = driveStats.getDoubleTopic("Velocity Y").publish();
         private final DoublePublisher speed = driveStats.getDoubleTopic("Speed").publish();
-        private final DoublePublisher odomPeriod = driveStats.getDoubleTopic("Odometry Period").publish();
 
         /* Keep a reference of the last pose to calculate the speeds */
         private Pose2d m_lastPose = new Pose2d();
@@ -96,7 +90,6 @@ public class Telemetry {
                 speed.set(velocities.getNorm());
                 velocityX.set(velocities.getX());
                 velocityY.set(velocities.getY());
-                odomPeriod.set(state.OdometryPeriod);
 
                 /* Telemeterize the module's states */
                 for (int i = 0; i < 4; ++i) {

@@ -6,8 +6,6 @@
  */
 package frc.robot.subsystems.swervedrive;
 
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
 import com.ctre.phoenix6.BaseStatusSignal;
@@ -23,8 +21,6 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.SwerveControlRequestParameters;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-
-import static com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.SwerveControlRequestParameters;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
