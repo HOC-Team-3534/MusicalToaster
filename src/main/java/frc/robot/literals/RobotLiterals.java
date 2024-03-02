@@ -1,6 +1,8 @@
 package frc.robot.literals;
 
-import swerve.CommandSwerveDrivetrain;
+import java.util.Optional;
+
+import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 
 public class RobotLiterals {
     private final SwerveDrivetrainLiterals swerveDrivetrainLiterals;
@@ -11,7 +13,7 @@ public class RobotLiterals {
         this.driveCharacterizationLiterals = new DriveCharacterizationLiterals();
     }
 
-    public CommandSwerveDrivetrain getDrivetrain() {
+    public Optional<CommandSwerveDrivetrain> getDrivetrain() {
         return this.swerveDrivetrainLiterals.getDrivetrain();
     }
 

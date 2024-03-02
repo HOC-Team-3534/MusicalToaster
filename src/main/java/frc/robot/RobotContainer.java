@@ -3,13 +3,13 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot;
 
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -33,6 +33,7 @@ import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.subsystems.camera.PhotonVisionCamera;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
+import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
@@ -40,7 +41,6 @@ import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest.*;
 import frc.robot.utils.ControllerUtils;
-import swerve.CommandSwerveDrivetrain;
 
 /**
  * This class is where the bulk of the robot should be declared. Since
@@ -59,7 +59,6 @@ public class RobotContainer {
 	static SlewRateLimiter slewRateLimiterX = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
-	private final static CommandSwerveDrivetrain drivetrain = Constants.ROBOT.getDrivetrain();
 	private final static FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
 			.withDeadband(Constants.ROBOT.getMaxSpeedat12V() * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
 			.withMaxSpeed(Constants.ROBOT.getMaxSpeedat12V()).withMaxAngularSpeed(MaxAngularRate)
@@ -71,7 +70,7 @@ public class RobotContainer {
 	// private final static ControlClimber climberDown = new
 	// ControlClimber().withVoltage(0.5).withClimberReversed(true);
 
-	private final static Turret turret = new Turret(() -> drivetrain.getChassisSpeeds(),
+	private final static Turret turret = new Turret(
 			() -> operatorController.getHID().getStartButton());
 
 	private final static Intake intake = new Intake(() -> driverController.getHID().getBackButton());
@@ -97,10 +96,10 @@ public class RobotContainer {
 			.withTilt(Rotation2d.fromDegrees(48)).withShooterTolerance(5.0);
 	private final static AimWithRotation aimForSteal = new AimWithRotation()
 			.withRotation(() -> {
-				var targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
+				Rotation2d targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
 						? Rotation2d.fromDegrees(180)
 						: new Rotation2d();
-				return targetAzimuth.minus(getSwerveDriveState().Pose.getRotation());
+				return targetAzimuth.minus(getPoseRotation().orElse(new Rotation2d()));
 			})
 			.withRollerOutput(0.25)
 			.withTilt(Rotation2d.fromDegrees(10));// TODO Find the actualy tilt for aiming for amp
@@ -133,29 +132,35 @@ public class RobotContainer {
 		// Configure the trigger bindings
 		configureBindings();
 
+		Constants.ROBOT.getDrivetrain();
+
 		photonVision = new PhotonVisionCamera(
 				(pose, timestamp) -> {
 					if (EnabledDebugModes.updatePoseWithVisionEnabled)
-						drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp);
+						CommandSwerveDrivetrain.getInstance()
+								.ifPresent((drivetrain) -> drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp));
+					;
 				});
 
-		// Set Default Commands for Subsystems
-		drivetrain.setDefaultCommand(
-				// Drivetrain will execute this command periodically
-				drivetrain.applyRequest(
-						() -> drive
-								.withVelocityX(
-										// Drive forward with negative Y (forward)
-										-driverController.getLeftY() * Constants.ROBOT.getMaxSpeedat12V()
-												* getCoordinateSystemInversionDriving())
-								.withVelocityY(
-										// Drive left with negative X (left)
-										-driverController.getLeftX() * Constants.ROBOT.getMaxSpeedat12V()
-												* getCoordinateSystemInversionDriving())
-								.withRotationalRate(
-										// Drive counterclockwise with negative X (left)
-										-driverController.getRightX() * MaxAngularRate)
-								.withCreepEnabled(driverController.getHID().getLeftBumper())));
+		CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
+			drivetrain.setDefaultCommand(
+					drivetrain.applyRequest(
+							() -> drive
+									.withVelocityX(
+											// Drive forward with negative Y (forward)
+											-driverController.getLeftY()
+													* Constants.ROBOT.getMaxSpeedat12V()
+													* getCoordinateSystemInversionDriving())
+									.withVelocityY(
+											// Drive left with negative X (left)
+											-driverController.getLeftX()
+													* Constants.ROBOT.getMaxSpeedat12V()
+													* getCoordinateSystemInversionDriving())
+									.withRotationalRate(
+											// Drive counterclockwise with negative X (left)
+											-driverController.getRightX() * MaxAngularRate)
+									.withCreepEnabled(driverController.getHID().getLeftBumper())));
+		});
 
 		intake.setDefaultCommand(
 				intake.applyRequest(
@@ -171,7 +176,8 @@ public class RobotContainer {
 		// turret.setDefaultCommand(turret.applyRequest(() -> idle, () -> shooterOff));
 
 		if (Utils.isSimulation()) {
-			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
+			CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
+					.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90))));
 		}
 
 		// Show Status of Subsystems on Dashboard
@@ -183,8 +189,14 @@ public class RobotContainer {
 		}
 	}
 
-	public static SwerveDriveState getSwerveDriveState() {
-		return drivetrain.getState();
+	public static Optional<Pose2d> getPose() {
+		return CommandSwerveDrivetrain.getInstance()
+				.map((drivetrain) -> drivetrain.getState().Pose);
+	}
+
+	public static Optional<Rotation2d> getPoseRotation() {
+		return CommandSwerveDrivetrain.getInstance()
+				.map((drivetrain) -> drivetrain.getState().Pose.getRotation());
 	}
 
 	public static SendableChooser<Autos.AutoNotes> newNoteHiearchyChooser() {
@@ -272,13 +284,14 @@ public class RobotContainer {
 	 * joysticks}.
 	 */
 	private static void configureBindings() {
-		new Trigger(() -> driverController.getHID().getAButton()).whileTrue(Commands.none());
-		driverController.a().whileTrue(Commands.none());
-
-		TGR.Characterize.tgr().whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
+		TGR.Characterize.tgr().whileTrue(CommandSwerveDrivetrain.getInstance()
+				.map((drivetrain) -> drivetrain.characterizeDrive(1.0, 4.0))
+				.orElse(Commands.none()));
 
 		// reset the field-centric heading on left bumper press
-		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
+		TGR.ResetFieldRelative.tgr().onTrue(CommandSwerveDrivetrain.getInstance()
+				.map((drivetrain) -> drivetrain.runOnce(() -> drivetrain.seedFieldRelative()))
+				.orElse(Commands.none()));
 
 		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
 		TGR.Extake.tgr().whileTrue(intake.applyRequest(() -> runExtake));
@@ -360,14 +373,16 @@ public class RobotContainer {
 	}
 
 	public static boolean isValidShootPosition() {
-		var x = getSwerveDriveState().Pose.getX();
-		var alliance = DriverStation.getAlliance().get();
-		var behindAllianceLine = alliance.equals(Alliance.Blue)
-				? x < FIELD_DIMENSIONS.CENTER_OF_FIELD.minus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX()
-				: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX();
-		if (!behindAllianceLine)
-			return false;
-		return !isTiltForcedFlat();
+		var behindAllianceLine = getPose().map((pose) -> {
+			var x = pose.getX();
+			var alliance = DriverStation.getAlliance().get();
+			return alliance.equals(Alliance.Blue)
+					? x < FIELD_DIMENSIONS.CENTER_OF_FIELD.minus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER)
+							.getX()
+					: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER)
+							.getX();
+		}).orElse(true);
+		return behindAllianceLine && !isTiltForcedFlat();
 	}
 
 	public static boolean isTiltForcedFlat() {
@@ -392,15 +407,20 @@ public class RobotContainer {
 				positions.add(note, shootOrSteal);
 		}
 		if (positions.isEmpty()) {
-			var current = getSwerveDriveState().Pose.getTranslation();
-			var x = DriverStation.getAlliance().get().equals(Alliance.Blue) ? DriveStraightForwardLine.getX()
-					: FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
-			var driveAcrossLinePosition = new Translation2d(x, current.getY());
-			positions.add(new AutoPosition(driveAcrossLinePosition,
-					AutoPositionType.Shoot, ShooterType.Speaker)
-					.withNotSkippable());
+			getPose().ifPresent((pose) -> {
+				var current = pose.getTranslation();
+				var x = DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Blue)
+						? DriveStraightForwardLine.getX()
+						: FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
+				var driveAcrossLinePosition = new Translation2d(x, current.getY());
+				positions.add(new AutoPosition(driveAcrossLinePosition,
+						AutoPositionType.Shoot, ShooterType.Speaker)
+						.withNotSkippable());
+			});
 		}
-		return Autos.getDynamicAutonomous(turret, drivetrain, positions);
+		if (positions.isEmpty() || CommandSwerveDrivetrain.getInstance().isEmpty())
+			return Commands.none();
+		return Autos.getDynamicAutonomous(turret, CommandSwerveDrivetrain.getInstance().get(), positions);
 	}
 
 	public enum TGR {

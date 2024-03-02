@@ -61,21 +61,23 @@ public class PhotonVisionCamera extends SubsystemBase {
 
     @Override
     public void periodic() {
-        photonPoseEstimator.setReferencePose(RobotContainer.getSwerveDriveState().Pose);
-        var estimatedPose = photonPoseEstimator.update();
+        RobotContainer.getPose().ifPresent((referencePose) -> {
+            photonPoseEstimator.setReferencePose(referencePose);
+            var estimatedPose = photonPoseEstimator.update();
 
-        if (estimatedPose.isPresent()) {
-            var estimate = estimatedPose.get();
-            var targetId = estimate.targetsUsed.get(0).getFiducialId();
+            if (estimatedPose.isPresent()) {
+                var estimate = estimatedPose.get();
+                var targetId = estimate.targetsUsed.get(0).getFiducialId();
 
-            var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
-            visionMeasureConsumer.accept(estimate.estimatedPose, estimate.timestampSeconds);
-            m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
-            for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
-                m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
+                var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
+                visionMeasureConsumer.accept(estimate.estimatedPose, estimate.timestampSeconds);
+                m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
+                for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
+                    m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
+                }
+                photonVisionCameraTelemetry.telemetrize(m_cachedState);
             }
-            photonVisionCameraTelemetry.telemetrize(m_cachedState);
-        }
+        });
     }
 
     public class CameraState {

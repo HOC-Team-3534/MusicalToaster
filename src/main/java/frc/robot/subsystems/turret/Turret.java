@@ -1,6 +1,5 @@
 package frc.robot.subsystems.turret;
 
-import java.sql.Driver;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -8,9 +7,7 @@ import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -22,6 +19,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
+import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.sensors.ProximitySensorInput;
@@ -34,8 +32,6 @@ public class Turret extends SubsystemBase {
     TalonSRX rollerMotor;
     ProximitySensorInput sensor;
 
-    private final double UpdateFrequency = 50.0;
-
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
     final static double delayNoteLoadedSeconds = 0.2;
@@ -47,7 +43,7 @@ public class Turret extends SubsystemBase {
 
     private Supplier<Boolean> noteInRobot;
 
-    public Turret(Supplier<ChassisSpeeds> chassisSpeedsSupplier,
+    public Turret(
             Supplier<Boolean> noteInRobot) {
         super();
         /*
@@ -154,8 +150,10 @@ public class Turret extends SubsystemBase {
             return DriverStation.getAlliance().get().equals(Alliance.Blue)
                     ? blueGoal
                     : redGoal;
-        }, chassisSpeedsSupplier,
-                () -> RobotContainer.getSwerveDriveState().Pose.getTranslation(),
+        }, () -> CommandSwerveDrivetrain.getInstance().map((drivetrain) -> drivetrain.getChassisSpeeds())
+                .orElse(new ChassisSpeeds()),
+                () -> RobotContainer.getPose().map((drivetrain) -> drivetrain.getTranslation())
+                        .orElse(new Translation2d()),
                 (vector) -> timeOfFlightEquation.get(vector.getNorm()));
         this.noteInRobot = noteInRobot;
     }
@@ -221,7 +219,7 @@ public class Turret extends SubsystemBase {
         }
         m_requestParameters.turretState = m_cachedState;
 
-        // turretTelemetry.telemetrize(m_cachedState);
+        turretTelemetry.telemetrize(m_cachedState);
 
         m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
         m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor, leftShooterMotor);

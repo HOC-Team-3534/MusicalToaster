@@ -1,5 +1,7 @@
 package frc.robot.literals;
 
+import java.util.Optional;
+
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.ClosedLoopOutputType;
@@ -10,9 +12,10 @@ import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
 
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
-import swerve.CommandSwerveDrivetrain;
+import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 
 public class SwerveDrivetrainLiterals {
 
@@ -173,7 +176,7 @@ public class SwerveDrivetrainLiterals {
 
         }
 
-        public CommandSwerveDrivetrain getDrivetrain() {
+        public Optional<CommandSwerveDrivetrain> getDrivetrain() {
                 var DrivetrainConstants = new SwerveDrivetrainConstants()
                                 .withPigeon2Id(kPigeonId)
                                 .withCANbusName(kCANbusName);
@@ -197,8 +200,10 @@ public class SwerveDrivetrainLiterals {
                                 4, rotateRadius,
                                 new ReplanningConfig());
 
-                return new CommandSwerveDrivetrain(DrivetrainConstants,
-                                kAutonomousMaxSpeedMps,
+                return CommandSwerveDrivetrain.getInstance(DrivetrainConstants,
+                                VecBuilder.fill(0.1, 0.1, 0.1),
+                                VecBuilder.fill(0.1, 0.1, 0.1),
+                                getMaxSpeedAt12V(),
                                 HoloConfig,
                                 FrontLeft,
                                 FrontRight, BackLeft, BackRight);

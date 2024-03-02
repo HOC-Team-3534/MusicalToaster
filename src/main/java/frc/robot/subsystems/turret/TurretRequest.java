@@ -8,7 +8,6 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -107,7 +106,7 @@ public interface TurretRequest {
             var targetAzimuth = currentAzimuth;
 
             if (parameters.turretState.isNoteLoaded()) {
-                var robotOrientation = RobotContainer.getSwerveDriveState().Pose.getRotation();
+                var robotOrientation = RobotContainer.getPoseRotation().orElse(new Rotation2d());
                 var virtualGoalLocationDisplacement = parameters.turretState.virtualGoalLocationDisplacement;
                 var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
                 var distanceToGoal = virtualGoalLocationDisplacement.getNorm();
@@ -177,7 +176,7 @@ public interface TurretRequest {
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
-            var robotOrientation = RobotContainer.getSwerveDriveState().Pose.getRotation();
+            var robotOrientation = RobotContainer.getPoseRotation().orElse(new Rotation2d());
             var shooterError = parameters.turretState.shooterMotorClosedLoopError;
 
             if (parameters.turretState.isNoteLoaded()) {
@@ -250,7 +249,7 @@ public interface TurretRequest {
             var rollerOn = false;
             var outputTilt = new Rotation2d();
             var targetAzimuth = currentAzimuth;
-            var robotOrientation = RobotContainer.getSwerveDriveState().Pose.getRotation();
+            var robotOrientation = RobotContainer.getPoseRotation().orElse(new Rotation2d());
             var currentElevation = parameters.turretState.elevation;
 
             if (parameters.turretState.isNoteLoaded()) {
