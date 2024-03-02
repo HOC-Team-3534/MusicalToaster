@@ -85,7 +85,7 @@ public class RobotContainer {
 	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
 			.withRollerOutput(-0.75)
 			.withTiltFunction((distance) -> {
-				var degrees = 1.125 * Math.pow(distance, 2) - 9.575 * distance + 43.875;
+				var degrees = 1.9365 * Math.pow(distance, 2) - 18.46 * distance + 67.525;
 				if (degrees < 0)
 					degrees = 0;
 				if (degrees > 50)

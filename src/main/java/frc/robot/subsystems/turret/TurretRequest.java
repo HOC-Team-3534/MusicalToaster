@@ -88,7 +88,7 @@ public interface TurretRequest {
 
     public class AimForSpeaker implements TurretRequest {
         private Rotation2d tolerance = Rotation2d.fromDegrees(3);
-        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(0.5);
         private double shooterTolerance;
         private double rollerPercentOut;
 
