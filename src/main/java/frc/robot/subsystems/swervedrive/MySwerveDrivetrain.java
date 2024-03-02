@@ -77,6 +77,8 @@ public class MySwerveDrivetrain extends SubsystemBase {
 
     protected final SimSwerveDrivetrain m_simDrive;
 
+    protected BaseStatusSignal[] m_allSignals;
+
     /**
      * Plain-Old-Data class holding the state of the swerve drivetrain.
      * This encapsulates most data that is relevant for telemetry or
@@ -171,10 +173,24 @@ public class MySwerveDrivetrain extends SubsystemBase {
         m_operatorForwardDirection = new Rotation2d();
 
         m_simDrive = new SimSwerveDrivetrain(m_moduleLocations, m_pigeon2, driveTrainConstants, modules);
+
+        /* 4 signals for each module + 2 for Pigeon2 */
+        m_allSignals = new BaseStatusSignal[(ModuleCount * 4) + 2];
+        for (int i = 0; i < ModuleCount; ++i) {
+            var m = Modules[i];
+            m_allSignals[(i * 4) + 0] = m.getDriveMotor().getPosition().clone();
+            m_allSignals[(i * 4) + 1] = m.getDriveMotor().getVelocity().clone();
+            m_allSignals[(i * 4) + 2] = m.getSteerMotor().getPosition().clone();
+            m_allSignals[(i * 4) + 3] = m.getSteerMotor().getVelocity().clone();
+        }
+        m_allSignals[m_allSignals.length - 2] = m_yawGetter;
+        m_allSignals[m_allSignals.length - 1] = m_angularVelocity;
     }
 
     @Override
     public void periodic() {
+        BaseStatusSignal.waitForAll(0.010, m_allSignals);
+
         /* Now update odometry */
         /* Keep track of the change in azimuth rotations */
         for (int i = 0; i < ModuleCount; ++i) {
