@@ -87,7 +87,7 @@ public interface TurretRequest {
     }
 
     public class AimForSpeaker implements TurretRequest {
-        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
+        private Rotation2d tolerance = Rotation2d.fromDegrees(3);
         private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
         private double shooterTolerance;
         private double rollerPercentOut;
@@ -373,12 +373,12 @@ public interface TurretRequest {
 
     public class ShootFromSubwoofer implements TurretRequest {
 
-        private Rotation2d tilt;
+        private Supplier<Rotation2d> tiltSupplier;
         private Rotation2d rotation;
         private Supplier<Boolean> readyToShoot;
-        private Rotation2d tolerance = Rotation2d.fromDegrees(5);
+        private Rotation2d tolerance = Rotation2d.fromDegrees(3);
         private double rollerPercentOut;
-        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(5);
+        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(.5);
         private double shooterTolerance;
 
         @Override
@@ -392,7 +392,7 @@ public interface TurretRequest {
 
             var rotateError = rotation.minus(currentAzimuth);
             if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()) {
-                outputTilt = tilt;
+                outputTilt = tiltSupplier.get();
                 var tiltError = outputTilt.minus(currentElevation);
                 if (Math.abs(tiltError.getDegrees()) <= tiltTolerance.getDegrees()
                         && Math.abs(shooterError) <= shooterTolerance && readyToShoot.get()) {
@@ -408,8 +408,8 @@ public interface TurretRequest {
             return StatusCode.OK;
         }
 
-        public ShootFromSubwoofer withTilt(Rotation2d tilt) {
-            this.tilt = tilt;
+        public ShootFromSubwoofer withTilt(Supplier<Rotation2d> tiltSupplier) {
+            this.tiltSupplier = tiltSupplier;
             return this;
         }
 
