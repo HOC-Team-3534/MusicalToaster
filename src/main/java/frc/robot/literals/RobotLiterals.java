@@ -1,6 +1,6 @@
 package frc.robot.literals;
 
-import swerve.CommandSwerveDrivetrain;
+import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 
 public class RobotLiterals {
     private final SwerveDrivetrainLiterals swerveDrivetrainLiterals;

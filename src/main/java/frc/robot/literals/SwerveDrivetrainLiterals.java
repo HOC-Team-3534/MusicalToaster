@@ -12,7 +12,7 @@ import com.pathplanner.lib.util.ReplanningConfig;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
-import swerve.CommandSwerveDrivetrain;
+import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 
 public class SwerveDrivetrainLiterals {
 
