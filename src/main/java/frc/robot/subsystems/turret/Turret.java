@@ -227,7 +227,9 @@ public class Turret extends SubsystemBase {
             m_cachedState.virtualGoalLocationDisplacement = null;
         }
 
-        RobotContainer.setActivelyGrabbing(false);
+        if (!rollerOn) {
+            RobotContainer.setActivelyGrabbing(false);
+        }
 
         RobotContainer.setNoteLoaded(m_cachedState.isNoteLoaded());
 
