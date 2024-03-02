@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
+
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -27,19 +28,24 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.commands.AutoPosition;
+import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
-import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.subsystems.camera.PhotonVisionCamera;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
+import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
-import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.Turret;
-import frc.robot.subsystems.turret.TurretRequest.*;
+import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
+import frc.robot.subsystems.turret.TurretRequest.AimWithRotation;
+import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
+import frc.robot.subsystems.turret.TurretRequest.JustRoller;
+import frc.robot.subsystems.turret.TurretRequest.ScoreAmp;
+import frc.robot.subsystems.turret.TurretRequest.ShootFromSubwoofer;
 import frc.robot.utils.ControllerUtils;
 
 /**
@@ -64,16 +70,11 @@ public class RobotContainer {
 			.withMaxSpeed(Constants.ROBOT.getMaxSpeedat12V()).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-	// private final static Climber climber = new Climber();
 	// private final static ControlClimber climberUp = new
 	// ControlClimber().withVoltage(0.5).withClimberReversed(false);
 	// private final static ControlClimber climberDown = new
 	// ControlClimber().withVoltage(0.5).withClimberReversed(true);
 
-	private final static Turret turret = new Turret(
-			() -> operatorController.getHID().getStartButton());
-
-	private final static Intake intake = new Intake(() -> driverController.getHID().getBackButton());
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
 	private final static ControlIntake runExtake = new ControlIntake().withIntakePercent(-1.0);
 	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
@@ -110,8 +111,6 @@ public class RobotContainer {
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 
-	private static PhotonVisionCamera photonVision;
-
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
 
@@ -133,14 +132,10 @@ public class RobotContainer {
 		configureBindings();
 
 		Constants.ROBOT.getDrivetrain();
+		Turret.createInstance(() -> operatorController.getHID().getStartButton());
+		Intake.createInstance(() -> driverController.getHID().getBackButton());
 
-		photonVision = new PhotonVisionCamera(
-				(pose, timestamp) -> {
-					if (EnabledDebugModes.updatePoseWithVisionEnabled)
-						CommandSwerveDrivetrain.getInstance()
-								.ifPresent((drivetrain) -> drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp));
-					;
-				});
+		PhotonVisionCamera.createInstance();
 
 		CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
 			drivetrain.setDefaultCommand(
@@ -162,14 +157,14 @@ public class RobotContainer {
 									.withCreepEnabled(driverController.getHID().getLeftBumper())));
 		});
 
-		intake.setDefaultCommand(
+		Intake.getInstance().ifPresent((intake) -> intake.setDefaultCommand(
 				intake.applyRequest(
 						() -> isActivelyIndexingFromIntake()
 								? runIntake
-								: stopIntake));
+								: stopIntake)));
 
-		turret.setDefaultCommand(
-				turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
+		Turret.getInstance().ifPresent((turret) -> turret.setDefaultCommand(
+				turret.applyRequest(() -> indexFromIntake, () -> shooterOff)));
 
 		// var idle = new TurretRequest.Idle();
 
@@ -293,15 +288,24 @@ public class RobotContainer {
 				.map((drivetrain) -> drivetrain.runOnce(() -> drivetrain.seedFieldRelative()))
 				.orElse(Commands.none()));
 
-		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
-		TGR.Extake.tgr().whileTrue(intake.applyRequest(() -> runExtake));
+		TGR.Intake.tgr()
+				.whileTrue(Intake.getInstance()
+						.map((intake) -> intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake))
+						.orElse(Commands.none()));
+		TGR.Extake.tgr()
+				.whileTrue(Intake.getInstance()
+						.map((intake) -> intake.applyRequest(() -> runExtake))
+						.orElse(Commands.none()));
 
 		var justRoller = new JustRoller();
 
 		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(0.2);
 		var shooterTestingVelocity = (new ShooterRequest.ControlShooter().withVelocity(50));
 
-		TGR.ShootManually.tgr().whileTrue(turret.applyRequest(() -> justRoller, () -> shooterTestingVelocity));
+		TGR.ShootManually.tgr()
+				.whileTrue(Turret.getInstance()
+						.map((turret) -> turret.applyRequest(() -> justRoller, () -> shooterTestingVelocity))
+						.orElse(Commands.none()));
 
 		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
@@ -313,11 +317,9 @@ public class RobotContainer {
 	}
 
 	public static Command getIntakeAutonomouslyCommand() {
-		return intake.applyRequest(() -> {
-			if (isNoteInRobot())
-				return stopIntake;
-			return runIntake;
-		});
+		return Intake.getInstance()
+				.map((intake) -> intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake))
+				.orElse(Commands.none());
 	}
 
 	public static boolean isNoteInRobot() {
@@ -335,41 +337,43 @@ public class RobotContainer {
 	}
 
 	public static Command getShootCommand(Supplier<ShooterType> shooterTypeSupplier) {
-		return turret.applyRequest(() -> {
-			var type = shooterTypeSupplier.get();
-			if (!getRobotState().noteLoaded
-					|| (type.equals(ShooterType.Speaker) && !isValidShootPosition()))
-				return indexFromIntake;
-			switch (type) {
-				case Amp:
-					return scoreAmp;
-				case Speaker:
-					return aimForSpeaker;
-				case Subwoofer:
-					return shootFromSubwoofer
-							.withReadyToShoot(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
-				case Steal:
-					return aimForSteal;
-				default:
+		return Turret.getInstance().map((turret) -> {
+			return turret.applyRequest(() -> {
+				var type = shooterTypeSupplier.get();
+				if (!getRobotState().noteLoaded
+						|| (type.equals(ShooterType.Speaker) && !isValidShootPosition()))
 					return indexFromIntake;
+				switch (type) {
+					case Amp:
+						return scoreAmp;
+					case Speaker:
+						return aimForSpeaker;
+					case Subwoofer:
+						return shootFromSubwoofer
+								.withReadyToShoot(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
+					case Steal:
+						return aimForSteal;
+					default:
+						return indexFromIntake;
 
-			}
-		}, () -> {
-			var type = shooterTypeSupplier.get();
-			switch (type) {
-				case Amp:
-					return shooterAmp;
-				case Speaker:
-					return shooterSpeaker;
-				case Steal:
-					return shooterSteal;
-				case Subwoofer:
-					return shootSubwoofer;
-				default:
-					return shooterSpeaker;
+				}
+			}, () -> {
+				var type = shooterTypeSupplier.get();
+				switch (type) {
+					case Amp:
+						return shooterAmp;
+					case Speaker:
+						return shooterSpeaker;
+					case Steal:
+						return shooterSteal;
+					case Subwoofer:
+						return shootSubwoofer;
+					default:
+						return shooterSpeaker;
 
-			}
-		});
+				}
+			});
+		}).orElse(Commands.none());
 	}
 
 	public static boolean isValidShootPosition() {
@@ -418,9 +422,7 @@ public class RobotContainer {
 						.withNotSkippable());
 			});
 		}
-		if (positions.isEmpty() || CommandSwerveDrivetrain.getInstance().isEmpty())
-			return Commands.none();
-		return Autos.getDynamicAutonomous(turret, CommandSwerveDrivetrain.getInstance().get(), positions);
+		return Autos.getDynamicAutonomous(positions);
 	}
 
 	public enum TGR {

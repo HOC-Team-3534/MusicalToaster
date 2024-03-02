@@ -207,7 +207,7 @@ public class MySwerveDrivetrain extends SubsystemBase {
          * Checked up until this point everything good!
          */
 
-        m_requestToApply.apply(m_requestParameters, Modules);// Most likely 100
+        // Most likely 100
 
         /* Update our cached state with the newly updated data */
         m_cachedState.Pose = m_odometry.getEstimatedPosition();
@@ -243,6 +243,7 @@ public class MySwerveDrivetrain extends SubsystemBase {
      */
     public void setControl(SwerveRequest request) {
         m_requestToApply = request;
+        m_requestToApply.apply(m_requestParameters, Modules);
     }
 
     /**

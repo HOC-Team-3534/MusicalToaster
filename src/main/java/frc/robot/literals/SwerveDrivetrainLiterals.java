@@ -200,7 +200,7 @@ public class SwerveDrivetrainLiterals {
                                 4, rotateRadius,
                                 new ReplanningConfig());
 
-                return CommandSwerveDrivetrain.getInstance(DrivetrainConstants,
+                return CommandSwerveDrivetrain.createInstance(DrivetrainConstants,
                                 VecBuilder.fill(0.1, 0.1, 0.1),
                                 VecBuilder.fill(0.1, 0.1, 0.1),
                                 getMaxSpeedAt12V(),

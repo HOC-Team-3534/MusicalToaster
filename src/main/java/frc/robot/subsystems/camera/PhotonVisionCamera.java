@@ -1,9 +1,8 @@
 package frc.robot.subsystems.camera;
 
+import java.util.Optional;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.BiConsumer;
-import java.util.function.Supplier;
 
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
@@ -11,7 +10,6 @@ import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -19,6 +17,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotContainer;
+import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 
 public class PhotonVisionCamera extends SubsystemBase {
 
@@ -35,13 +34,27 @@ public class PhotonVisionCamera extends SubsystemBase {
             new Rotation3d(0, Units.degreesToRadians(-7), 0));
 
     final PhotonPoseEstimator photonPoseEstimator;
-    BiConsumer<Pose3d, Double> visionMeasureConsumer;
 
-    public PhotonVisionCamera(
-            BiConsumer<Pose3d, Double> visionMeasurementConsumer) {
+    private static final boolean enabled = true;
+    private static PhotonVisionCamera INSTANCE;
+
+    public static Optional<PhotonVisionCamera> createInstance() {
+        if (INSTANCE != null) {
+            return Optional.of(INSTANCE);
+        }
+        if (!enabled)
+            return Optional.ofNullable(null);
+        INSTANCE = new PhotonVisionCamera();
+        return Optional.of(INSTANCE);
+    }
+
+    public static Optional<PhotonVisionCamera> getInstance() {
+        return Optional.ofNullable(INSTANCE);
+    }
+
+    public PhotonVisionCamera() {
         aprilTagFieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
         aprilTagFieldLayout.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
-        this.visionMeasureConsumer = visionMeasurementConsumer;
         photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout,
                 PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, camera, robotToCamera);
         photonPoseEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
@@ -70,7 +83,10 @@ public class PhotonVisionCamera extends SubsystemBase {
                 var targetId = estimate.targetsUsed.get(0).getFiducialId();
 
                 var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
-                visionMeasureConsumer.accept(estimate.estimatedPose, estimate.timestampSeconds);
+
+                CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
+                        .addVisionMeasurement(estimate.estimatedPose.toPose2d(), estimate.timestampSeconds));
+
                 m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
                 for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
                     m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();

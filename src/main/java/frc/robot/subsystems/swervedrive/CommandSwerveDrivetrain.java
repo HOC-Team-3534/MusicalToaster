@@ -46,7 +46,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain {
     private static final boolean enabled = true;
     private static CommandSwerveDrivetrain INSTANCE;
 
-    public static Optional<CommandSwerveDrivetrain> getInstance(SwerveDrivetrainConstants driveTrainConstants,
+    public static Optional<CommandSwerveDrivetrain> createInstance(SwerveDrivetrainConstants driveTrainConstants,
             Matrix<N3, N1> odometryStandardDeviation, Matrix<N3, N1> visionStandardDeviation,
             double maxSpeed, HolonomicPathFollowerConfig holoConfig,
             SwerveModuleConstants... modules) {

@@ -1,5 +1,6 @@
 package frc.robot.subsystems.turret;
 
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -41,10 +42,27 @@ public class Turret extends SubsystemBase {
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
 
-    private Supplier<Boolean> noteInRobot;
+    private static final boolean enabled = true;
+    private static Turret INSTANCE;
 
-    public Turret(
-            Supplier<Boolean> noteInRobot) {
+    private Supplier<Boolean> hardSetNoteInRobotSupplier;
+
+    public static Optional<Turret> createInstance(Supplier<Boolean> hardSetNoteInRobotSupplier) {
+        if (INSTANCE != null) {
+            return Optional.of(INSTANCE);
+        }
+        if (!enabled)
+            return Optional.ofNullable(null);
+        INSTANCE = new Turret(hardSetNoteInRobotSupplier);
+        return Optional.of(INSTANCE);
+    }
+
+    public static Optional<Turret> getInstance() {
+        return Optional.ofNullable(INSTANCE);
+    }
+
+    private Turret(
+            Supplier<Boolean> hardSetNoteInRobotSupplier) {
         super();
         /*
          * Device instantiation
@@ -155,7 +173,7 @@ public class Turret extends SubsystemBase {
                 () -> RobotContainer.getPose().map((drivetrain) -> drivetrain.getTranslation())
                         .orElse(new Translation2d()),
                 (vector) -> timeOfFlightEquation.get(vector.getNorm()));
-        this.noteInRobot = noteInRobot;
+        this.hardSetNoteInRobotSupplier = hardSetNoteInRobotSupplier;
     }
 
     @Override
@@ -214,15 +232,12 @@ public class Turret extends SubsystemBase {
         RobotContainer.setNoteLoaded(m_cachedState.isNoteLoaded());
 
         m_cachedState.currentlyShooting = false;
-        if (noteInRobot.get()) {
+        if (hardSetNoteInRobotSupplier.get()) {
             m_cachedState.noteLoaded = true;
         }
         m_requestParameters.turretState = m_cachedState;
 
         turretTelemetry.telemetrize(m_cachedState);
-
-        m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
-        m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor, leftShooterMotor);
     }
 
     public Command applyRequest(Supplier<TurretRequest> requestSupplier,
@@ -233,6 +248,8 @@ public class Turret extends SubsystemBase {
     private void setControl(TurretRequest request, ShooterRequest shooterRequest) {
         m_requestToApply = request;
         m_requestToApplyToShooter = shooterRequest;
+        m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
+        m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor, leftShooterMotor);
     }
 
     public class TurretState {

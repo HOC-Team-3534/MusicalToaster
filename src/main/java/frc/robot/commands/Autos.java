@@ -18,6 +18,7 @@ import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.RobotContainer.ShooterType;
 import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.RobotContainer;
+import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.Turret;
 
@@ -25,30 +26,31 @@ public final class Autos {
 
   static Timer timer = new Timer();
 
-  public static Command getDynamicAutonomous(Turret turret, CommandSwerveDrivetrain drivetrain,
-      AutoPositionList positions) {
-    return Commands
-        .runOnce(() -> drivetrain.seedFieldRelative(drivetrain.getState().Pose))
-        .andThen(
-            Commands.deadline(
-                Commands.deferredProxy(
-                    () -> {
-                      timer.reset();
-                      return followPathToNextPositionCommand(drivetrain, positions)
-                          .until(() -> timer.get() > 0.25
-                              && !RobotContainer.isNoteInRobot()
-                              && currentTargetAutoPosition.isSkippable()
-                              && currentTargetAutoPosition.getType().equals(AutoPositionType.Shoot));
-                    })
-                    .repeatedly()
-                    .until(() -> positions.size() == 0)
-                    .andThen(Commands.waitSeconds(2.0)),
-                RobotContainer.getShootCommand(() -> {
-                  if (prevAutoPosition == null)
-                    return ShooterType.Speaker;
-                  return prevAutoPosition.getShootOrStealNote();
-                }),
-                RobotContainer.getIntakeAutonomouslyCommand()));
+  public static Command getDynamicAutonomous(AutoPositionList positions) {
+    if (positions.isEmpty() || CommandSwerveDrivetrain.getInstance().isEmpty() || Turret.getInstance().isEmpty()
+        || Intake.getInstance().isEmpty())
+      return Commands.none();
+    return CommandSwerveDrivetrain.getInstance().map((drivetrain) -> {
+      return (Command) Commands
+          .runOnce(() -> drivetrain.seedFieldRelative(drivetrain.getState().Pose))
+          .andThen(
+              Commands.deadline(
+                  Commands.deferredProxy(
+                      () -> {
+                        timer.reset();
+                        return followPathToNextPositionCommand(drivetrain, positions)
+                            .until(() -> timer.get() > 0.25
+                                && !RobotContainer.isNoteInRobot()
+                                && currentTargetAutoPosition.isSkippable()
+                                && currentTargetAutoPosition.getType().equals(AutoPositionType.Shoot));
+                      })
+                      .repeatedly()
+                      .until(() -> positions.size() == 0)
+                      .andThen(Commands.waitSeconds(2.0)),
+                  RobotContainer.getShootCommand(
+                      () -> prevAutoPosition == null ? ShooterType.Speaker : prevAutoPosition.getShootOrStealNote()),
+                  RobotContainer.getIntakeAutonomouslyCommand()));
+    }).orElse(Commands.none());
   }
 
   public static AutoPosition currentTargetAutoPosition, prevAutoPosition;

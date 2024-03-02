@@ -1,5 +1,6 @@
 package frc.robot.subsystems.intake;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
@@ -14,8 +15,6 @@ public class Intake extends SubsystemBase {
     TalonSRX frontBackMotor, leftRightMotor;
     ProximitySensorInput sensors[] = new ProximitySensorInput[4];
 
-    final double UpdateFrequency = 50.0;
-
     boolean prevNoteLoaded;
 
     final static double delayNoteInPositionSeconds = 0.3;
@@ -27,7 +26,24 @@ public class Intake extends SubsystemBase {
 
     private final Supplier<Boolean> resetNoteSupplier;
 
-    public Intake(Supplier<Boolean> resetNoteSupplier) {
+    private static final boolean enabled = true;
+    private static Intake INSTANCE;
+
+    public static Optional<Intake> createInstance(Supplier<Boolean> resetNoteSupplier) {
+        if (INSTANCE != null) {
+            return Optional.of(INSTANCE);
+        }
+        if (!enabled)
+            return Optional.ofNullable(null);
+        INSTANCE = new Intake(resetNoteSupplier);
+        return Optional.of(INSTANCE);
+    }
+
+    public static Optional<Intake> getInstance() {
+        return Optional.ofNullable(INSTANCE);
+    }
+
+    private Intake(Supplier<Boolean> resetNoteSupplier) {
         frontBackMotor = new TalonSRX(19);
         leftRightMotor = new TalonSRX(20);
         leftRightMotor.setInverted(true);
@@ -99,12 +115,9 @@ public class Intake extends SubsystemBase {
 
         prevNoteLoaded = noteLoaded;
 
-        // intakeTelemetry.telemeterize(m_cachedState);
+        intakeTelemetry.telemeterize(m_cachedState);
 
         m_requestParameters.intakeState = m_cachedState;
-
-        m_requestToApply.apply(m_requestParameters, frontBackMotor,
-                leftRightMotor);
     }
 
     public Command applyRequest(Supplier<IntakeRequest> requestSupplier) {
@@ -113,6 +126,8 @@ public class Intake extends SubsystemBase {
 
     private void setControl(IntakeRequest request) {
         m_requestToApply = request;
+        m_requestToApply.apply(m_requestParameters, frontBackMotor,
+                leftRightMotor);
     }
 
     public class IntakeState {
