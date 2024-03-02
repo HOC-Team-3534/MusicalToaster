@@ -6,8 +6,6 @@
  */
 package frc.robot.subsystems.swervedrive;
 
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
 import com.ctre.phoenix6.BaseStatusSignal;
@@ -21,7 +19,6 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.SwerveControlRequestParameters;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import static com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.SwerveControlRequestParameters;
@@ -39,6 +36,8 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 /**
@@ -209,6 +208,10 @@ public class MySwerveDrivetrain extends SubsystemBase {
         double yawDegrees = BaseStatusSignal.getLatencyCompensatedValue(
                 m_yawGetter, m_angularVelocity);
 
+        /*
+         * Checked up until this point everything good!
+         */
+
         /* Keep track of previous and current pose to account for the carpet vector */
         m_odometry.update(Rotation2d.fromDegrees(yawDegrees), m_modulePositions);
 
@@ -224,7 +227,11 @@ public class MySwerveDrivetrain extends SubsystemBase {
         m_requestParameters.updatePeriod = 0.020;
         m_requestParameters.operatorForwardDirection = m_operatorForwardDirection;
 
-        m_requestToApply.apply(m_requestParameters, Modules);
+        /*
+         * Checked up until this point everything good!
+         */
+
+        m_requestToApply.apply(m_requestParameters, Modules);// Most likely 100
 
         /* Update our cached state with the newly updated data */
         m_cachedState.Pose = m_odometry.getEstimatedPosition();
@@ -236,6 +243,11 @@ public class MySwerveDrivetrain extends SubsystemBase {
         if (m_cachedState.ModuleTargets == null) {
             m_cachedState.ModuleTargets = new SwerveModuleState[Modules.length];
         }
+
+        /*
+         * Check and spiking!!!!!!
+         */
+
         for (int i = 0; i < Modules.length; ++i) {
             m_cachedState.ModuleStates[i] = Modules[i].getCurrentState();
             m_cachedState.ModuleTargets[i] = Modules[i].getTargetState();
@@ -245,6 +257,7 @@ public class MySwerveDrivetrain extends SubsystemBase {
             /* Log our state */
             m_telemetryFunction.accept(m_cachedState);
         }
+
     }
 
     /**
