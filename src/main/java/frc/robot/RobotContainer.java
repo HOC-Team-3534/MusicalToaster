@@ -4,41 +4,23 @@
 package frc.robot;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain.SwerveDriveState;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
+
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
-import frc.robot.commands.AutoPosition;
-import frc.robot.commands.AutoPositionList;
-import frc.robot.commands.Autos;
-import frc.robot.commands.AutoPosition.AutoPositionType;
-import frc.robot.subsystems.camera.PhotonVisionCamera;
-import frc.robot.subsystems.intake.Intake;
-import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
-import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
-import frc.robot.subsystems.turret.ShooterRequest.Idle;
-import frc.robot.subsystems.turret.ShooterRequest;
-import frc.robot.subsystems.turret.Turret;
-import frc.robot.subsystems.turret.TurretRequest.*;
 import frc.robot.utils.ControllerUtils;
 import swerve.CommandSwerveDrivetrain;
 
@@ -55,7 +37,8 @@ public class RobotContainer {
 	private static double MaxAngularRate = 4 * Math.PI;
 
 	private static final CommandXboxController driverController = new CommandXboxController(0);
-	private static final CommandXboxController operatorController = new CommandXboxController(1);
+	// private static final CommandXboxController operatorController = new
+	// CommandXboxController(1);
 	static SlewRateLimiter slewRateLimiterX = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
 	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
@@ -65,66 +48,6 @@ public class RobotContainer {
 			.withMaxSpeed(Constants.ROBOT.getMaxSpeedat12V()).withMaxAngularSpeed(MaxAngularRate)
 			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 
-	// private final static Climber climber = new Climber();
-	// private final static ControlClimber climberUp = new
-	// ControlClimber().withVoltage(0.5).withClimberReversed(false);
-	// private final static ControlClimber climberDown = new
-	// ControlClimber().withVoltage(0.5).withClimberReversed(true);
-
-	private final static Turret turret = new Turret(() -> drivetrain.getChassisSpeeds(),
-			() -> operatorController.getHID().getStartButton());
-
-	private final static Intake intake = new Intake(() -> driverController.getHID().getBackButton());
-	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
-	private final static ControlIntake runExtake = new ControlIntake().withIntakePercent(-1.0);
-	private final static ControlIntake stopIntake = new ControlIntake().withIntakePercent(0.0);
-
-	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
-			.withRollerOutput(-1.0)
-			.withTilt(Rotation2d.fromDegrees(40));
-	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
-			.withRollerOutput(0.25)
-			.withTiltFunction((distance) -> new Rotation2d());// TODO Find distance table
-	private final static ScoreAmp scoreAmp = new ScoreAmp()
-			.withRotation(() -> Rotation2d.fromDegrees(270))
-			.withRollerOutput(-0.6)
-			.withTilt(Rotation2d.fromDegrees(-30))
-			.withDeployTrigger(() -> operatorController.getHID().getYButton());// TODO Find the actualy tilt for aiming
-																				// for amp
-	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
-			.withRollerPercent(-1.0)
-			.withRotation(new Rotation2d())
-			.withTilt(Rotation2d.fromDegrees(48)).withShooterTolerance(5.0);
-	private final static AimWithRotation aimForSteal = new AimWithRotation()
-			.withRotation(() -> {
-				var targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
-						? Rotation2d.fromDegrees(180)
-						: new Rotation2d();
-				return targetAzimuth.minus(getSwerveDriveState().Pose.getRotation());
-			})
-			.withRollerOutput(0.25)
-			.withTilt(Rotation2d.fromDegrees(10));// TODO Find the actualy tilt for aiming for amp
-
-	private final static Idle shooterOff = new ShooterRequest.Idle();
-	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
-	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(70);// TODO Find these
-	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
-	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
-
-	private static PhotonVisionCamera photonVision;
-
-	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
-	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
-
-	private static ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
-	private static RobotState m_robotState = new RobotState();
-
-	public static class RobotState {
-		public int grabNoteIndex = -1;
-		public boolean activelyGrabbing;
-		public boolean noteLoaded;
-	}
-
 	/**
 	 * The container for the robot. Contains subsystems, OI devices, and
 	 * commands.
@@ -132,12 +55,6 @@ public class RobotContainer {
 	public static void initialize() {
 		// Configure the trigger bindings
 		configureBindings();
-
-		photonVision = new PhotonVisionCamera(
-				(pose, timestamp) -> {
-					if (EnabledDebugModes.updatePoseWithVisionEnabled)
-						drivetrain.addVisionMeasurement(pose.toPose2d(), timestamp);
-				});
 
 		// Set Default Commands for Subsystems
 		drivetrain.setDefaultCommand(
@@ -157,15 +74,6 @@ public class RobotContainer {
 										-driverController.getRightX() * MaxAngularRate)
 								.withCreepEnabled(driverController.getHID().getLeftBumper())));
 
-		intake.setDefaultCommand(
-				intake.applyRequest(
-						() -> isActivelyIndexingFromIntake()
-								? runIntake
-								: stopIntake));
-
-		turret.setDefaultCommand(
-				turret.applyRequest(() -> indexFromIntake, () -> shooterOff));
-
 		// var idle = new TurretRequest.Idle();
 
 		// turret.setDefaultCommand(turret.applyRequest(() -> idle, () -> shooterOff));
@@ -173,90 +81,10 @@ public class RobotContainer {
 		if (Utils.isSimulation()) {
 			drivetrain.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90)));
 		}
-
-		// Show Status of Subsystems on Dashboard
-		for (int i = 0; i < 5; i++) {
-			noteHiearchyChoosers[i] = newNoteHiearchyChooser();
-			SmartDashboard.putData("Note Hiearchy " + (i + 1), noteHiearchyChoosers[i]);
-			shootOrStealChoosers[i] = newShootOrStealChooser();
-			SmartDashboard.putData("Shoot|Steal " + (i + 1), shootOrStealChoosers[i]);
-		}
 	}
 
 	public static SwerveDriveState getSwerveDriveState() {
 		return drivetrain.getState();
-	}
-
-	public static SendableChooser<Autos.AutoNotes> newNoteHiearchyChooser() {
-		SendableChooser<Autos.AutoNotes> noteHiearchy = new SendableChooser<>();
-
-		noteHiearchy.setDefaultOption("None", null);
-		noteHiearchy.addOption("Blue Note 1", Autos.AutoNotes.BlueNote1);
-		noteHiearchy.addOption("Blue Note 2", Autos.AutoNotes.BlueNote2);
-		noteHiearchy.addOption("Blue Note 3", Autos.AutoNotes.BlueNote3);
-		noteHiearchy.addOption("Center Note 4", Autos.AutoNotes.MiddleNote4);
-		noteHiearchy.addOption("Center Note 5", Autos.AutoNotes.MiddleNote5);
-		noteHiearchy.addOption("Center Note 6", Autos.AutoNotes.MiddleNote6);
-		noteHiearchy.addOption("Center Note 7", Autos.AutoNotes.MiddleNote7);
-		noteHiearchy.addOption("Center Note 8", Autos.AutoNotes.MiddleNote8);
-		noteHiearchy.addOption("Red Note 9", Autos.AutoNotes.RedNote9);
-		noteHiearchy.addOption("Red Note 10", Autos.AutoNotes.RedNote10);
-		noteHiearchy.addOption("Red Note 11", Autos.AutoNotes.RedNote11);
-
-		return noteHiearchy;
-	}
-
-	public static SendableChooser<ShooterType> newShootOrStealChooser() {
-		SendableChooser<ShooterType> shootOrSteal = new SendableChooser<>();
-
-		shootOrSteal.setDefaultOption("Shoot", ShooterType.Speaker);
-		shootOrSteal.addOption("Steal", ShooterType.Steal);
-
-		return shootOrSteal;
-	}
-
-	public static boolean isActivelyIndexingFromIntake() {
-		return getRobotState().activelyGrabbing;
-	}
-
-	public static RobotState getRobotState() {
-		try {
-			m_stateLock.readLock().lock();
-
-			return m_robotState;
-		} finally {
-			m_stateLock.readLock().unlock();
-		}
-	}
-
-	public static void setActivelyGrabbing(boolean activelyGrabbing) {
-		try {
-			m_stateLock.writeLock().lock();
-
-			m_robotState.activelyGrabbing = activelyGrabbing;
-		} finally {
-			m_stateLock.writeLock().unlock();
-		}
-	}
-
-	public static void setNoteLoaded(boolean noteLoaded) {
-		try {
-			m_stateLock.writeLock().lock();
-
-			m_robotState.noteLoaded = noteLoaded;
-		} finally {
-			m_stateLock.writeLock().unlock();
-		}
-	}
-
-	public static void setGrabNoteIndex(int grabNoteIndex) {
-		try {
-			m_stateLock.writeLock().lock();
-
-			m_robotState.grabNoteIndex = grabNoteIndex;
-		} finally {
-			m_stateLock.writeLock().unlock();
-		}
 	}
 
 	/**
@@ -272,44 +100,10 @@ public class RobotContainer {
 	 * joysticks}.
 	 */
 	private static void configureBindings() {
-		new Trigger(() -> driverController.getHID().getAButton()).whileTrue(Commands.none());
-		driverController.a().whileTrue(Commands.none());
-
 		TGR.Characterize.tgr().whileTrue(drivetrain.characterizeDrive(1.0, 4.0));
 
 		// reset the field-centric heading on left bumper press
 		TGR.ResetFieldRelative.tgr().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldRelative()));
-
-		TGR.Intake.tgr().whileTrue(intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake));
-		TGR.Extake.tgr().whileTrue(intake.applyRequest(() -> runExtake));
-
-		var justRoller = new JustRoller();
-
-		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(0.2);
-		var shooterTestingVelocity = (new ShooterRequest.ControlShooter().withVelocity(50));
-
-		TGR.ShootManually.tgr().whileTrue(turret.applyRequest(() -> justRoller, () -> shooterTestingVelocity));
-
-		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
-		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
-		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
-
-		// TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
-		// TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
-
-	}
-
-	public static Command getIntakeAutonomouslyCommand() {
-		return intake.applyRequest(() -> {
-			if (isNoteInRobot())
-				return stopIntake;
-			return runIntake;
-		});
-	}
-
-	public static boolean isNoteInRobot() {
-		var state = getRobotState();
-		return state.grabNoteIndex != -1 || state.noteLoaded;
 	}
 
 	public static int getCoordinateSystemInversionDriving() {
@@ -317,105 +111,17 @@ public class RobotContainer {
 		return alliance.isPresent() && alliance.get().equals(Alliance.Red) ? -1 : 1;
 	}
 
-	public enum ShooterType {
-		Speaker, Amp, Steal, Subwoofer
-	}
-
-	public static Command getShootCommand(Supplier<ShooterType> shooterTypeSupplier) {
-		return turret.applyRequest(() -> {
-			var type = shooterTypeSupplier.get();
-			if (!getRobotState().noteLoaded
-					|| (type.equals(ShooterType.Speaker) && !isValidShootPosition()))
-				return indexFromIntake;
-			switch (type) {
-				case Amp:
-					return scoreAmp;
-				case Speaker:
-					return aimForSpeaker;
-				case Subwoofer:
-					return shootFromSubwoofer
-							.withReadyToShoot(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
-				case Steal:
-					return aimForSteal;
-				default:
-					return indexFromIntake;
-
-			}
-		}, () -> {
-			var type = shooterTypeSupplier.get();
-			switch (type) {
-				case Amp:
-					return shooterAmp;
-				case Speaker:
-					return shooterSpeaker;
-				case Steal:
-					return shooterSteal;
-				case Subwoofer:
-					return shootSubwoofer;
-				default:
-					return shooterSpeaker;
-
-			}
-		});
-	}
-
-	public static boolean isValidShootPosition() {
-		var x = getSwerveDriveState().Pose.getX();
-		var alliance = DriverStation.getAlliance().get();
-		var behindAllianceLine = alliance.equals(Alliance.Blue)
-				? x < FIELD_DIMENSIONS.CENTER_OF_FIELD.minus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX()
-				: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER).getX();
-		if (!behindAllianceLine)
-			return false;
-		return !isTiltForcedFlat();
-	}
-
-	public static boolean isTiltForcedFlat() {
-		return driverController.getHID().getAButton();
-	}
-
-	static final Translation2d DriveStraightForwardLine = FIELD_DIMENSIONS.CENTER_OF_FIELD
-			.minus(FIELD_DIMENSIONS.OFFSET_AUTO_CROSS_LINE_FROM_CENTER)
-			.plus(new Translation2d(Units.inchesToMeters(25.0), 0));
-
 	/**
 	 * Use this to pass the autonomous command to the main {@link Robot} class.
 	 *
 	 * @return the command to run in autonomous
 	 */
 	public static Command getAutonomousCommand() {
-		AutoPositionList positions = new AutoPositionList();
-		for (int i = 0; i < noteHiearchyChoosers.length && i < shootOrStealChoosers.length; i++) {
-			var note = noteHiearchyChoosers[i].getSelected();
-			var shootOrSteal = shootOrStealChoosers[i].getSelected();
-			if (note != null)
-				positions.add(note, shootOrSteal);
-		}
-		if (positions.isEmpty()) {
-			var current = getSwerveDriveState().Pose.getTranslation();
-			var x = DriverStation.getAlliance().get().equals(Alliance.Blue) ? DriveStraightForwardLine.getX()
-					: FIELD_DIMENSIONS.LENGTH - DriveStraightForwardLine.getX();
-			var driveAcrossLinePosition = new Translation2d(x, current.getY());
-			positions.add(new AutoPosition(driveAcrossLinePosition,
-					AutoPositionType.Shoot, ShooterType.Speaker)
-					.withNotSkippable());
-		}
-		return Autos.getDynamicAutonomous(turret, drivetrain, positions);
+		return Commands.none();
 	}
 
 	public enum TGR {
 		ResetFieldRelative(driverController.start()), // TODO should we having this?
-		Intake(driverController.rightTrigger(0.15)),
-		ShootSpeaker(driverController.x()),
-		Extake(driverController.rightBumper()),
-		PrepareScoreAmp(driverController.b()),
-		DeployInAmp(driverController.y()),
-		PrepareShootForSubwoofer(operatorController.x()),
-		// ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
-		// ClimbDown(operatorController.b().and(() ->
-		// !EnabledDebugModes.testingClimber)),
-
-		ShootManually(operatorController.leftTrigger(0.15)),
 
 		// Below are debugging actions
 

@@ -3,12 +3,7 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot;
 
-import edu.wpi.first.cameraserver.CameraServer;
-import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.shuffleboard.EventImportance;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -24,8 +19,6 @@ public class Robot extends TimedRobot {
 
   public static boolean isAutonomous, isTeleopEnabled;
 
-  Timer m_gcTimer = new Timer();
-
   /**
    * This function is run when the robot is first started up and should be used
    * for any initialization code.
@@ -38,8 +31,6 @@ public class Robot extends TimedRobot {
     // and put our
     // autonomous chooser on the dashboard.
     RobotContainer.initialize();
-
-    m_gcTimer.start();
   }
 
   /**
@@ -62,15 +53,6 @@ public class Robot extends TimedRobot {
     // robot's periodic
     // block in order for anything in the Command-based framework to work.
     CommandScheduler.getInstance().run();
-
-    // if (m_gcTimer.advanceIfElapsed(5.0)) {
-    // DataLogManager.log("%%%%%%%%%%% Before Garbage Collection: " +
-    // Runtime.getRuntime().freeMemory());
-    // System.gc();
-    // DataLogManager.log("%%%%%%%%%%% Ran Garbage Collection: " +
-    // Runtime.getRuntime().freeMemory());
-
-    // }
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
