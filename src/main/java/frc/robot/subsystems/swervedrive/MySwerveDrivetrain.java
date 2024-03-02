@@ -61,7 +61,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 public class MySwerveDrivetrain extends SubsystemBase {
     protected final boolean IsOnCANFD;
 
-    protected final double UpdateFrequency;
     protected final int ModuleCount;
     protected final SwerveModule[] Modules;
 
@@ -169,12 +168,6 @@ public class MySwerveDrivetrain extends SubsystemBase {
             Matrix<N3, N1> odometryStandardDeviation, Matrix<N3, N1> visionStandardDeviation,
             SwerveModuleConstants... modules) {
         IsOnCANFD = checkIsOnCanFD(driveTrainConstants.CANbusName);
-
-        if (OdometryUpdateFrequency == 0) {
-            UpdateFrequency = IsOnCANFD ? 250 : 100;
-        } else {
-            UpdateFrequency = OdometryUpdateFrequency;
-        }
         ModuleCount = modules.length;
 
         m_pigeon2 = new Pigeon2(driveTrainConstants.Pigeon2Id, driveTrainConstants.CANbusName);
@@ -228,7 +221,7 @@ public class MySwerveDrivetrain extends SubsystemBase {
         m_requestParameters.swervePositions = m_moduleLocations;
         m_requestParameters.currentChassisSpeed = speeds;
         m_requestParameters.timestamp = Utils.getCurrentTimeSeconds();
-        m_requestParameters.updatePeriod = 1.0 / UpdateFrequency;
+        m_requestParameters.updatePeriod = 0.020;
         m_requestParameters.operatorForwardDirection = m_operatorForwardDirection;
 
         m_requestToApply.apply(m_requestParameters, Modules);
