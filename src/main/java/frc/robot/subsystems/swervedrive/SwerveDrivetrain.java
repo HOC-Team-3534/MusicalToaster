@@ -12,7 +12,7 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain {
+public class SwerveDrivetrain extends MySwerveDrivetrain {
     private static final SendableChooser<String> centricityChooser = new SendableChooser<>();
 
     public enum RobotCentricity {
@@ -44,13 +44,7 @@ public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.Swerve
      * @return Kinematics of the drivetrain
      */
     public SwerveDriveKinematics getKinematics() {
-        try {
-            m_stateLock.readLock().lock();
-
-            return m_kinematics;
-        } finally {
-            m_stateLock.readLock().unlock();
-        }
+        return m_kinematics;
     }
 
     public ChassisSpeeds getChassisSpeeds() {
