@@ -419,7 +419,6 @@ public class RobotContainer {
 
 		Supplier<Double> supplier;
 		Optional<SlewRateLimiter> slewRateLimiter = Optional.empty();
-		static double deadband = 0.10;
 		boolean allianceInvert;
 
 		AXS(Supplier<Double> supplier, double rate, boolean allianceInvert) {
@@ -438,7 +437,7 @@ public class RobotContainer {
 		}
 
 		AXS(Supplier<Double> supplier) {
-			this.supplier = () -> ControllerUtils.modifyAxis(-supplier.get(), deadband, getCreepScale())
+			this.supplier = () -> ControllerUtils.modifyAxis(-supplier.get(), getDeadband(), getCreepScale())
 					* (allianceInvert ? getAllianceInversion() : 1);
 		}
 
@@ -456,6 +455,10 @@ public class RobotContainer {
 
 		public static double getCreepScale() {
 			return BTN.Creep.get() ? 0.25 : 1;
+		}
+
+		public static double getDeadband() {
+			return 0.1;
 		}
 	}
 }
