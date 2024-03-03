@@ -11,7 +11,7 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-public class SwerveDrivetrain extends MySwerveDrivetrain {
+public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain {
     private static final SendableChooser<String> centricityChooser = new SendableChooser<>();
 
     public enum RobotCentricity {
@@ -21,7 +21,7 @@ public class SwerveDrivetrain extends MySwerveDrivetrain {
     public SwerveDrivetrain(SwerveDrivetrainConstants driveTrainConstants,
             Matrix<N3, N1> odometryStandardDeviation, Matrix<N3, N1> visionStandardDeviation,
             SwerveModuleConstants[] modules) {
-        super(driveTrainConstants, odometryStandardDeviation, visionStandardDeviation,
+        super(driveTrainConstants, 100, odometryStandardDeviation, visionStandardDeviation,
                 modules);
         centricityChooser.setDefaultOption("Field Centric", RobotCentricity.FieldCentric.toString());
         centricityChooser.addOption("Robot Centric", RobotCentricity.RobotCentric.toString());

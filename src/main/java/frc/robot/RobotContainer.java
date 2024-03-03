@@ -83,8 +83,22 @@ public class RobotContainer {
 			.withRollerOutput(-1.0)
 			.withTilt(Rotation2d.fromDegrees(40));
 	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
-			.withRollerOutput(0.25)
-			.withTiltFunction((distance) -> new Rotation2d());// TODO Find distance table
+			.withRollerOutput(-0.75)
+			.withTiltFunction((distance) -> {
+				// var degrees = 1.9365 * Math.pow(distance, 2) - 18.46 * distance + 67.525;
+				var heightDifferenceInches = 60;
+				if (distance > Units.feetToMeters(13.0))
+					heightDifferenceInches += 2;
+				if (distance > 5.25)
+					heightDifferenceInches += 1;
+				var degrees = Rotation2d.fromRadians(Math.atan(Units.inchesToMeters(60.0) / distance)).getDegrees();
+				if (degrees < 0)
+					degrees = 0;
+				if (degrees > 50)
+					degrees = 50;
+				return Rotation2d.fromDegrees(degrees);
+			})
+			.withShooterTolerance(5.0);// TODO Find distance table
 	private final static ScoreAmp scoreAmp = new ScoreAmp()
 			.withRotation(() -> Rotation2d.fromDegrees(270))
 			.withRollerOutput(-0.6)
@@ -94,7 +108,16 @@ public class RobotContainer {
 	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
 			.withRollerPercent(-1.0)
 			.withRotation(new Rotation2d())
-			.withTilt(Rotation2d.fromDegrees(48)).withShooterTolerance(5.0);
+			.withTilt(() -> {
+				var degrees = SmartDashboard.getNumber("Tilt", 48);
+				if (degrees < 0)
+					degrees = 0;
+				if (degrees > 50)
+					degrees = 50;
+
+				return Rotation2d.fromDegrees(degrees);
+			})
+			.withShooterTolerance(5.0);
 	private final static AimWithRotation aimForSteal = new AimWithRotation()
 			.withRotation(() -> {
 				Rotation2d targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
@@ -107,7 +130,7 @@ public class RobotContainer {
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
-	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(70);// TODO Find these
+	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 
@@ -128,14 +151,17 @@ public class RobotContainer {
 	 * commands.
 	 */
 	public static void initialize() {
-		// Configure the trigger bindings
-		configureBindings();
 
 		Constants.ROBOT.getDrivetrain();
 		Turret.createInstance(() -> operatorController.getHID().getStartButton());
 		Intake.createInstance(() -> driverController.getHID().getBackButton());
 
 		PhotonVisionCamera.createInstance();
+
+		// Configure the trigger bindings
+		configureBindings();
+
+		SmartDashboard.putNumber("Tilt", 48.0);
 
 		CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
 			drivetrain.setDefaultCommand(
@@ -300,14 +326,15 @@ public class RobotContainer {
 		var justRoller = new JustRoller();
 
 		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(0.2);
-		var shooterTestingVelocity = (new ShooterRequest.ControlShooter().withVelocity(50));
+		var shooterTestingVelocity = (new ShooterRequest.ControlShooter().withVelocity(80));
 
-		TGR.ShootManually.tgr()
-				.whileTrue(Turret.getInstance()
-						.map((turret) -> turret.applyRequest(() -> justRoller, () -> shooterTestingVelocity))
-						.orElse(Commands.none()));
+		// TGR.ShootManually.tgr()
+		// .whileTrue(Turret.getInstance()
+		// .map((turret) -> turret.applyRequest(() -> justRoller, () ->
+		// shooterTestingVelocity))
+		// .orElse(Commands.none()));
 
-		// TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
+		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
@@ -349,8 +376,10 @@ public class RobotContainer {
 					case Speaker:
 						return aimForSpeaker;
 					case Subwoofer:
-						return shootFromSubwoofer
-								.withReadyToShoot(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
+						// return shootFromSubwoofer
+						// .withReadyToShoot(() -> operatorController.getHID().getRightTriggerAxis() >
+						// 0.15);
+						return shootFromSubwoofer.withReadyToShoot(() -> true);
 					case Steal:
 						return aimForSteal;
 					default:
