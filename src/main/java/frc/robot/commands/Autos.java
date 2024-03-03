@@ -40,7 +40,7 @@ public final class Autos {
                         timer.reset();
                         return followPathToNextPositionCommand(drivetrain, positions)
                             .until(() -> timer.get() > 0.25
-                                && !RobotContainer.isNoteInRobot()
+                                && !RobotContainer.getRobotState().isNoteInRobot()
                                 && currentTargetAutoPosition.isSkippable()
                                 && currentTargetAutoPosition.getType().equals(AutoPositionType.Shoot));
                       })
