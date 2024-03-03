@@ -274,7 +274,10 @@ public class RobotContainer {
 						.orElse(Commands.none()));
 		TGR.Extake.tgr()
 				.whileTrue(Intake.getInstance()
-						.map((intake) -> intake.applyRequest(() -> runExtake))
+						.map((intake) -> {
+							intake.resetAllNoteInPosition();
+							return intake.applyRequest(() -> runExtake);
+						})
 						.orElse(Commands.none()));
 
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
