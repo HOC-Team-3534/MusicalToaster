@@ -23,7 +23,7 @@ public class PhotonVisionCamera extends SubsystemBase {
 
     final PhotonPoseEstimator photonPoseEstimator;
 
-    private static final boolean enabled = true;
+    private static final boolean enabled = false;
     private static PhotonVisionCamera INSTANCE;
 
     public static Optional<PhotonVisionCamera> createInstance() {

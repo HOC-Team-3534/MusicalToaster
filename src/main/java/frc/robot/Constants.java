@@ -67,7 +67,7 @@ public final class Constants {
       .withAutonomousMaxSpeed(3.0)
       .withWheelRadius(3.9 / 2.0)
       .withDriveGains(0.1866, 2.35554, 0.02379)
-      .withEncoderOffsets(0.00048828125, -0.481201171875, -0.2978515625, -0.37939453125)
+      .withEncoderOffsets(-0.240722, 0.3996582, 0.32983, 0.23388)
       .withRobotDimensions(21.5, 21.5);
 
   public static CameraLiterals CBOT_CAMERA_LITERALS = new CameraLiterals(
@@ -82,7 +82,7 @@ public final class Constants {
 
   private static RobotLiterals CBOT = new RobotLiterals(CBOT_SWERVE_LITERALS, CBOT_CAMERA_LITERALS);
 
-  public static RobotLiterals ROBOT = PBOT;
+  public static RobotLiterals ROBOT = CBOT;
 
   public static final class Drive {
 
