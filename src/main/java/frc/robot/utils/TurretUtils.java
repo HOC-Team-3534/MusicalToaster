@@ -4,7 +4,8 @@ import edu.wpi.first.math.geometry.Rotation2d;
 
 public class TurretUtils {
 
-    public static Rotation2d calculateTargetAzimuth(Rotation2d target, Rotation2d current, double lowerLimitDegrees,
+    public static Rotation2d calculateTargetAzimuthWithinLimits(Rotation2d target, Rotation2d current,
+            double lowerLimitDegrees,
             double upperLimitDegrees) {
         double a = current.getDegrees();
         double b = target.getDegrees();

@@ -1,5 +1,7 @@
 package frc.robot.subsystems.turret;
 
+import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -10,9 +12,9 @@ import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.RobotContainer;
 import frc.robot.subsystems.turret.Turret.TurretState;
+import frc.robot.utils.MathUtils;
 import frc.robot.utils.TurretUtils;
 
 public interface TurretRequest {
@@ -23,19 +25,26 @@ public interface TurretRequest {
     public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
             TalonSRX rollerMotor);
 
-    public static final double lowerLimitDegrees = -240;
-    public static final double upperLimitDegrees = 240;
+    static final double lowerLimit_azimuthDegrees = -240;
+    static final double upperLimit_azimuthDegrees = 240;
+
+    static final double lowerLimit_elevationDegrees = -50;
+    static final double upperLimit_elevationDegrees = 50;
+
+    static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
+    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(1);
+    static final double shooterTolerance = 5.0;
+    static final double rollerShootPercentOut = -0.75;
 
     public class IndexFromIntake implements TurretRequest {
-        private Rotation2d tolerance = Rotation2d.fromDegrees(3);
         private Rotation2d tilt;
         private double rollerPercentOut;
-        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(3);
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
-            ;
+            parameters.turretState.currentlyShooting = false;
+
             int index = RobotContainer.getRobotState().grabNoteIndex;
             var currentAzimuth = parameters.turretState.azimuth;
             var currentElevation = parameters.turretState.elevation;
@@ -45,17 +54,21 @@ public interface TurretRequest {
 
             if (!parameters.turretState.isNoteLoaded() && index != -1) {
                 targetAzimuth = Rotation2d.fromRotations(0.25 * (index + 2));
-                targetAzimuth = TurretUtils.calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
-                        upperLimitDegrees);
-                var rotateError = targetAzimuth.minus(currentAzimuth);
-                if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()
-                        && !RobotContainer.isTiltForcedFlat()) {
-                    outputTilt = tilt;
-                    var tiltError = outputTilt.minus(currentElevation);
-                    if (Math.abs(tiltError.getDegrees()) <= tiltTolerance.getDegrees()) {
-                        RobotContainer.setActivelyGrabbing(true);
-                        rollerOn = true;
-                    }
+                targetAzimuth = TurretUtils.calculateTargetAzimuthWithinLimits(targetAzimuth, currentAzimuth,
+                        lowerLimit_azimuthDegrees,
+                        upperLimit_azimuthDegrees);
+
+                outputTilt = RobotContainer.isTiltForcedFlat()
+                        ? new Rotation2d()
+                        : tilt;
+
+                var azimuthError = targetAzimuth.minus(currentAzimuth);
+                var elevationError = outputTilt.minus(currentElevation);
+
+                if (MathUtils.withinTolerance(azimuthError, azimuthTolerance)
+                        && MathUtils.withinTolerance(elevationError, elevationTolerance)) {
+                    RobotContainer.setActivelyGrabbing(true);
+                    rollerOn = true;
                 }
             }
 
@@ -63,11 +76,6 @@ public interface TurretRequest {
             rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
             tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
             return StatusCode.OK;
-        }
-
-        public IndexFromIntake withRotateTolerance(Rotation2d tolerance) {
-            this.tolerance = tolerance;
-            return this;
         }
 
         public IndexFromIntake withTilt(Rotation2d tilt) {
@@ -79,11 +87,90 @@ public interface TurretRequest {
             this.rollerPercentOut = percentOut;
             return this;
         }
+    }
 
-        public IndexFromIntake withTiltTolerance(Rotation2d tiltTolerance) {
-            this.tiltTolerance = tiltTolerance;
+    public class ControlTurret implements TurretRequest {
+
+        // Given parameters and rotation of robot, determine rotation of turret
+        Function<TurretControlRequestParameters, Rotation2d> targetAzimuthFunction;
+        Function<TurretControlRequestParameters, Rotation2d> targetElevationFunction;
+        Supplier<Boolean> allowShootWhenAimedSupplier;
+
+        @Override
+        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+                TalonSRX rollerMotor) {
+            boolean rollerOn = false;
+            Rotation2d targetAzimuth;
+            Rotation2d targetElevation;
+
+            var currentAzimuth = parameters.turretState.azimuth;
+            var currentElevation = parameters.turretState.elevation;
+
+            targetAzimuth = currentAzimuth;
+            targetElevation = currentElevation;
+
+            if (parameters.turretState.isNoteLoaded()) {
+                /*
+                 * Azimuth Calculation
+                 */
+                targetAzimuth = targetAzimuthFunction.apply(parameters);
+                targetAzimuth = TurretUtils.calculateTargetAzimuthWithinLimits(targetAzimuth, currentAzimuth,
+                        lowerLimit_azimuthDegrees,
+                        upperLimit_azimuthDegrees);
+
+                /*
+                 * Elevation Calculation
+                 */
+                targetElevation = RobotContainer.isTiltForcedFlat()
+                        ? new Rotation2d()
+                        : targetElevationFunction.apply(parameters);
+                targetElevation = Rotation2d.fromDegrees(MathUtils.applyUpperAndLowerLimit(targetElevation.getDegrees(),
+                        lowerLimit_elevationDegrees, upperLimit_elevationDegrees));
+
+                /*
+                 * Error Calculation
+                 */
+
+                var azimuthError = targetAzimuth.minus(currentAzimuth);
+                var elevationError = targetElevation.minus(currentElevation);
+                var shooterError = parameters.turretState.shooterMotorClosedLoopError;
+
+                if ((MathUtils.withinTolerance(azimuthError, azimuthTolerance)
+                        && MathUtils.withinTolerance(elevationError, elevationTolerance)
+                        && MathUtils.withinTolerance(shooterError, shooterTolerance)
+                        && allowShootWhenAimedSupplier.get())
+                        || parameters.turretState.currentlyShooting) {
+                    rollerOn = true;
+                }
+
+            }
+
+            parameters.turretState.currentlyShooting = rollerOn;
+
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerShootPercentOut : 0);
+            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
+            tiltMotor.setControl(new MotionMagicVoltage(targetElevation.getRotations()));
+
+            return StatusCode.OK;
+        }
+
+        public ControlTurret withTargetAzimuthFunction(
+                Function<TurretControlRequestParameters, Rotation2d> targetAzimuthFunction) {
+            this.targetAzimuthFunction = targetAzimuthFunction;
             return this;
         }
+
+        public ControlTurret withTargetElevationFunction(
+                Function<TurretControlRequestParameters, Rotation2d> targetElevationFunction) {
+            this.targetElevationFunction = targetElevationFunction;
+            return this;
+        }
+
+        public ControlTurret withAllowShootWhenAimedSupplier(Supplier<Boolean> allowShootWhenAimedSupplier) {
+            this.allowShootWhenAimedSupplier = allowShootWhenAimedSupplier;
+            return this;
+        }
+
     }
 
     public class AimForSpeaker implements TurretRequest {
@@ -111,8 +198,9 @@ public interface TurretRequest {
                 var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
                 var distanceToGoal = virtualGoalLocationDisplacement.getNorm();
                 targetAzimuth = rotationToGoal.minus(robotOrientation);
-                targetAzimuth = TurretUtils.calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
-                        upperLimitDegrees);
+                targetAzimuth = TurretUtils.calculateTargetAzimuthWithinLimits(targetAzimuth, currentAzimuth,
+                        lowerLimit_azimuthDegrees,
+                        upperLimit_azimuthDegrees);
                 var rotateError = targetAzimuth.minus(currentAzimuth);
                 if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()) {
                     outputTilt = tiltFunction.apply(distanceToGoal);
@@ -181,8 +269,9 @@ public interface TurretRequest {
 
             if (parameters.turretState.isNoteLoaded()) {
                 targetAzimuth = rotationSupplier.get().minus(robotOrientation);
-                targetAzimuth = TurretUtils.calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
-                        upperLimitDegrees);
+                targetAzimuth = TurretUtils.calculateTargetAzimuthWithinLimits(targetAzimuth, currentAzimuth,
+                        lowerLimit_azimuthDegrees,
+                        upperLimit_azimuthDegrees);
                 var rotateError = targetAzimuth.minus(currentAzimuth);
                 if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()) {
                     outputTilt = tilt;
@@ -254,8 +343,9 @@ public interface TurretRequest {
 
             if (parameters.turretState.isNoteLoaded()) {
                 targetAzimuth = rotationSupplier.get().minus(robotOrientation);
-                targetAzimuth = TurretUtils.calculateTargetAzimuth(targetAzimuth, currentAzimuth, lowerLimitDegrees,
-                        upperLimitDegrees);
+                targetAzimuth = TurretUtils.calculateTargetAzimuthWithinLimits(targetAzimuth, currentAzimuth,
+                        lowerLimit_azimuthDegrees,
+                        upperLimit_azimuthDegrees);
                 var azimuthError = targetAzimuth.minus(currentAzimuth);
                 if (Math.abs(azimuthError.getDegrees()) <= tolerance.getDegrees()) {
                     outputTilt = tilt;
@@ -303,72 +393,6 @@ public interface TurretRequest {
             this.deployTriggerSupplier = deployTriggerSupplier;
             return this;
         }
-    }
-
-    public class CalibrateShooter implements TurretRequest {
-        private Rotation2d tolerance = Rotation2d.fromDegrees(1);
-        private double rollerPercentOut;
-        private Rotation2d tiltTolerance = Rotation2d.fromDegrees(1);
-        private double shooterTolerance;
-
-        public CalibrateShooter() {
-            SmartDashboard.putNumber("Tilt Degrees", 0);
-        }
-
-        @Override
-        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
-                TalonSRX rollerMotor) {
-            var currentAzimuth = parameters.turretState.azimuth;
-            var rollerOn = false;
-            var outputTilt = new Rotation2d();
-            var targetAzimuth = currentAzimuth;
-            var currentElevation = parameters.turretState.elevation;
-            var shooterError = parameters.turretState.shooterMotorClosedLoopError;
-
-            if (parameters.turretState.isNoteLoaded()) {
-                targetAzimuth = new Rotation2d();
-                var rotateError = targetAzimuth.minus(currentAzimuth);
-                if (Math.abs(rotateError.getDegrees()) <= tolerance.getDegrees()) {
-                    var checkTilt = Rotation2d.fromDegrees(SmartDashboard.getNumber("Tilt Degrees", 0));
-                    if (checkTilt.getDegrees() < -50 || checkTilt.getDegrees() > 50)
-                        outputTilt = checkTilt;
-                    var tiltError = outputTilt.minus(currentElevation);
-                    if (Math.abs(tiltError.getDegrees()) <= tiltTolerance.getDegrees()
-                            && Math.abs(shooterError) <= shooterTolerance) {
-                        rollerOn = true;
-                        parameters.turretState.currentlyShooting = true;
-                    }
-
-                }
-            }
-
-            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);
-            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
-            tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
-
-            return StatusCode.OK;
-        }
-
-        public CalibrateShooter withRotateTolerance(Rotation2d tolerance) {
-            this.tolerance = tolerance;
-            return this;
-        }
-
-        public CalibrateShooter withTiltTolerance(Rotation2d tiltTolerance) {
-            this.tiltTolerance = tiltTolerance;
-            return this;
-        }
-
-        public CalibrateShooter withRollerOutput(double percentOut) {
-            this.rollerPercentOut = percentOut;
-            return this;
-        }
-
-        public CalibrateShooter withShooterTolerance(double shooterTolerance) {
-            this.shooterTolerance = shooterTolerance;
-            return this;
-        }
-
     }
 
     public class ShootFromSubwoofer implements TurretRequest {
