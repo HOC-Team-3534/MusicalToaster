@@ -40,12 +40,9 @@ import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
 import frc.robot.subsystems.turret.Turret;
-import frc.robot.subsystems.turret.TurretRequest.AimForSpeaker;
-import frc.robot.subsystems.turret.TurretRequest.AimWithRotation;
+import frc.robot.subsystems.turret.TurretRequest.ControlTurret;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
 import frc.robot.subsystems.turret.TurretRequest.JustRoller;
-import frc.robot.subsystems.turret.TurretRequest.ScoreAmp;
-import frc.robot.subsystems.turret.TurretRequest.ShootFromSubwoofer;
 import frc.robot.utils.ControllerUtils;
 
 /**
@@ -82,51 +79,46 @@ public class RobotContainer {
 	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
 			.withRollerOutput(-1.0)
 			.withTilt(Rotation2d.fromDegrees(40));
-	private final static AimForSpeaker aimForSpeaker = new AimForSpeaker()
-			.withRollerOutput(-0.75)
-			.withTiltFunction((distance) -> {
-				// var degrees = 1.9365 * Math.pow(distance, 2) - 18.46 * distance + 67.525;
+	private final static ControlTurret aimForSpeaker = new ControlTurret()
+			.withTargetAzimuthFunction((turretState) -> {
+				var robotOrientation = getPoseRotation().orElse(new Rotation2d());
+				var virtualGoalLocationDisplacement = turretState.virtualGoalLocationDisplacement;
+				var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
+				return rotationToGoal.minus(robotOrientation);
+			})
+			.withTargetElevationFunction((turretState) -> {
+				var virtualGoalLocationDisplacement = turretState.virtualGoalLocationDisplacement;
+				var distance = virtualGoalLocationDisplacement.getNorm();
+
 				var heightDifferenceInches = 60;
 				if (distance > Units.feetToMeters(13.0))
 					heightDifferenceInches += 2;
 				if (distance > 5.25)
 					heightDifferenceInches += 1;
-				var degrees = Rotation2d.fromRadians(Math.atan(Units.inchesToMeters(60.0) / distance)).getDegrees();
-				if (degrees < 0)
-					degrees = 0;
-				if (degrees > 50)
-					degrees = 50;
+				var degrees = Rotation2d.fromRadians(Math.atan(Units.inchesToMeters(heightDifferenceInches) / distance))
+						.getDegrees();
 				return Rotation2d.fromDegrees(degrees);
 			})
-			.withShooterTolerance(5.0);// TODO Find distance table
-	private final static ScoreAmp scoreAmp = new ScoreAmp()
-			.withRotation(() -> Rotation2d.fromDegrees(270))
-			.withRollerOutput(-0.6)
-			.withTilt(Rotation2d.fromDegrees(-30))
-			.withDeployTrigger(() -> operatorController.getHID().getYButton());// TODO Find the actualy tilt for aiming
-																				// for amp
-	private final static ShootFromSubwoofer shootFromSubwoofer = new ShootFromSubwoofer()
-			.withRollerPercent(-1.0)
-			.withRotation(new Rotation2d())
-			.withTilt(() -> {
+			.withAllowShootWhenAimedSupplier(() -> isValidShootPosition());
+	private final static ControlTurret scoreAmp = new ControlTurret()
+			.withTargetAzimuthFunction((turretState) -> Rotation2d.fromDegrees(270))
+			.withTargetElevationFunction((turretState) -> Rotation2d.fromDegrees(30))
+			.withAllowShootWhenAimedSupplier(() -> operatorController.getHID().getYButton());
+	private final static ControlTurret shootStraightForward = new ControlTurret()
+			.withTargetAzimuthFunction((turretState) -> new Rotation2d())
+			.withTargetElevationFunction((turretState) -> {
 				var degrees = SmartDashboard.getNumber("Tilt", 48);
-				if (degrees < 0)
-					degrees = 0;
-				if (degrees > 50)
-					degrees = 50;
-
 				return Rotation2d.fromDegrees(degrees);
 			})
-			.withShooterTolerance(5.0);
-	private final static AimWithRotation aimForSteal = new AimWithRotation()
-			.withRotation(() -> {
-				Rotation2d targetAzimuth = DriverStation.getAlliance().get().equals(Alliance.Blue)
+			.withAllowShootWhenAimedSupplier(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
+	private final static ControlTurret aimForSteal = new ControlTurret()
+			.withTargetAzimuthFunction((turretState) -> {
+				Rotation2d targetAzimuth = DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Blue)
 						? Rotation2d.fromDegrees(180)
 						: new Rotation2d();
 				return targetAzimuth.minus(getPoseRotation().orElse(new Rotation2d()));
 			})
-			.withRollerOutput(0.25)
-			.withTilt(Rotation2d.fromDegrees(10));// TODO Find the actualy tilt for aiming for amp
+			.withTargetElevationFunction((turretState) -> Rotation2d.fromDegrees(10));
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
@@ -323,17 +315,6 @@ public class RobotContainer {
 						.map((intake) -> intake.applyRequest(() -> runExtake))
 						.orElse(Commands.none()));
 
-		var justRoller = new JustRoller();
-
-		var shooterAmpPercentage = (new ShooterRequest.ControlShooterPercentage()).withPercentOut(0.2);
-		var shooterTestingVelocity = (new ShooterRequest.ControlShooter().withVelocity(80));
-
-		// TGR.ShootManually.tgr()
-		// .whileTrue(Turret.getInstance()
-		// .map((turret) -> turret.applyRequest(() -> justRoller, () ->
-		// shooterTestingVelocity))
-		// .orElse(Commands.none()));
-
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
@@ -367,8 +348,7 @@ public class RobotContainer {
 		return Turret.getInstance().map((turret) -> {
 			return turret.applyRequest(() -> {
 				var type = shooterTypeSupplier.get();
-				if (!getRobotState().noteLoaded
-						|| (type.equals(ShooterType.Speaker) && !isValidShootPosition()))
+				if (!getRobotState().noteLoaded)
 					return indexFromIntake;
 				switch (type) {
 					case Amp:
@@ -376,10 +356,7 @@ public class RobotContainer {
 					case Speaker:
 						return aimForSpeaker;
 					case Subwoofer:
-						// return shootFromSubwoofer
-						// .withReadyToShoot(() -> operatorController.getHID().getRightTriggerAxis() >
-						// 0.15);
-						return shootFromSubwoofer.withReadyToShoot(() -> true);
+						return shootStraightForward;
 					case Steal:
 						return aimForSteal;
 					default:
@@ -465,8 +442,6 @@ public class RobotContainer {
 		// ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
 		// ClimbDown(operatorController.b().and(() ->
 		// !EnabledDebugModes.testingClimber)),
-
-		ShootManually(operatorController.leftTrigger(0.15)),
 
 		// Below are debugging actions
 
