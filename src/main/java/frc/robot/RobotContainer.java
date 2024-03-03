@@ -91,14 +91,14 @@ public class RobotContainer {
 	private final static ControlTurret scoreAmp = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(270)))
 			.withTargetElevationFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(30)))
-			.withAllowShootWhenAimedSupplier(() -> operatorController.getHID().getYButton());
+			.withAllowShootWhenAimedSupplier(() -> BTN.AmpLetItRip.get());
 	private final static ControlTurret shootStraightForward = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
 				var degrees = SmartDashboard.getNumber("Tilt", 48);
 				return Optional.of(Rotation2d.fromDegrees(degrees));
 			})
-			.withAllowShootWhenAimedSupplier(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
+			.withAllowShootWhenAimedSupplier(() -> BTN.SubwooferLetItRip.get());
 	private final static ControlTurret aimForSteal = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> getPoseRotation()
 					.flatMap(robotRotation -> DriverStation.getAlliance().map(alliance -> {
@@ -267,7 +267,10 @@ public class RobotContainer {
 		TGR.Intake.tgr()
 				.whileTrue(Intake.getInstance()
 						.map((intake) -> intake
-								.applyRequest(() -> getRobotState().isNoteInRobot() ? stopIntake : runIntake))
+								.applyRequest(
+										() -> !getRobotState().isNoteInRobot() || getRobotState().isActivelyGrabbing()
+												? runIntake
+												: stopIntake))
 						.orElse(Commands.none()));
 		TGR.Extake.tgr()
 				.whileTrue(Intake.getInstance()
@@ -371,7 +374,9 @@ public class RobotContainer {
 
 	public enum BTN {
 		TiltFlat(() -> driverController.getHID().getAButton()),
-		Creep(() -> driverController.getHID().getLeftBumper());
+		Creep(() -> driverController.getHID().getLeftBumper()),
+		SubwooferLetItRip(() -> operatorController.getHID().getRightTriggerAxis() > 0.15),
+		AmpLetItRip(() -> operatorController.getHID().getYButton());
 
 		Supplier<Boolean> buttonSupplier;
 
