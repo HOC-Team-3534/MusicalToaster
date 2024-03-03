@@ -1,7 +1,6 @@
 package frc.robot.utils.shooting;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 
 public class GoalFinalEquation {
 	Translation2d robotPosition, goalPosition, robotVelocity;
@@ -16,8 +15,8 @@ public class GoalFinalEquation {
 		return this;
 	}
 
-	public GoalFinalEquation withRobotVelocity(ChassisSpeeds robotVelocity) {
-		this.robotVelocity = new Translation2d(robotVelocity.vxMetersPerSecond, robotVelocity.vyMetersPerSecond);
+	public GoalFinalEquation withRobotVelocity(Translation2d robotVelocity) {
+		this.robotVelocity = robotVelocity;
 		return this;
 	}
 

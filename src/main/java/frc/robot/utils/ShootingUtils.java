@@ -5,14 +5,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.utils.shooting.GoalFinalEquation;
 import frc.robot.utils.shooting.ShootWhileMovingSolver;
 
 public class ShootingUtils {
 
     static Supplier<Translation2d> goalPositionSupplier;
-    static Supplier<ChassisSpeeds> robotSpeedsSupplier;
+    static Supplier<Translation2d> robotSpeedsSupplier;
     static Supplier<Translation2d> robotPositionSupplier;
 
     static ShootWhileMovingSolver shootWhileMovingSolver;
@@ -20,7 +19,7 @@ public class ShootingUtils {
     static final GoalFinalEquation goalFinalEquation = new GoalFinalEquation();
 
     public static void configureShootWhileMoving(Supplier<Translation2d> goalPositionSupplier,
-            Supplier<ChassisSpeeds> robotSpeedsSupplier, Supplier<Translation2d> robotPositionSupplier,
+            Supplier<Translation2d> robotSpeedsSupplier, Supplier<Translation2d> robotPositionSupplier,
             Function<Translation2d, Double> timeOfFlightEquation) {
         ShootingUtils.goalPositionSupplier = goalPositionSupplier;
         ShootingUtils.robotSpeedsSupplier = robotSpeedsSupplier;

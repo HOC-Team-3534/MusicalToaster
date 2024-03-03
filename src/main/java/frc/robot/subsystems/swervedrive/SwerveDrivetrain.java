@@ -1,9 +1,12 @@
 package frc.robot.subsystems.swervedrive;
 
+import org.opencv.core.Point;
+
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstants;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.numbers.N1;
@@ -39,6 +42,13 @@ public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.Swerve
 
     public ChassisSpeeds getChassisSpeeds() {
         return this.getKinematics().toChassisSpeeds(this.getState().ModuleStates);
+    }
+
+    public ChassisSpeeds getFieldRelativeChassisSpeeds() {
+        var speeds = getChassisSpeeds();
+        var rotated = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
+                .rotateBy(this.getState().Pose.getRotation());
+        return new ChassisSpeeds(rotated.getX(), rotated.getY(), speeds.omegaRadiansPerSecond);
     }
 
     public RobotCentricity getChosenRobotCentricity() {

@@ -159,17 +159,18 @@ public class Turret extends SubsystemBase {
         var redGoal = new Translation2d(Units.feetToMeters(54.75) - Units.inchesToMeters(9),
                 Units.inchesToMeters(218.64));
 
-        ShootingUtils.configureShootWhileMoving(() -> {
-            if (DriverStation.getAlliance().isEmpty())
-                return blueGoal;
-            return DriverStation.getAlliance().get().equals(Alliance.Blue)
-                    ? blueGoal
-                    : redGoal;
-        }, () -> CommandSwerveDrivetrain.getInstance().map((drivetrain) -> drivetrain.getChassisSpeeds())
-                .orElse(new ChassisSpeeds()),
-                () -> RobotContainer.getPose().map((drivetrain) -> drivetrain.getTranslation())
-                        .orElse(new Translation2d()),
-                (vector) -> timeOfFlightEquation.get(vector.getNorm()));
+        ShootingUtils
+                .configureShootWhileMoving(
+                        () -> DriverStation.getAlliance()
+                                .map(alliance -> alliance.equals(Alliance.Blue) ? blueGoal : redGoal).orElse(blueGoal),
+                        () -> CommandSwerveDrivetrain.getInstance()
+                                .map(drivetrain -> {
+                                    var speeds = drivetrain.getFieldRelativeChassisSpeeds();
+                                    return new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+                                }).orElse(new Translation2d()),
+                        () -> RobotContainer.getPose()
+                                .map((drivetrain) -> drivetrain.getTranslation()).orElse(new Translation2d()),
+                        (vector) -> timeOfFlightEquation.get(vector.getNorm()));
     }
 
     @Override
