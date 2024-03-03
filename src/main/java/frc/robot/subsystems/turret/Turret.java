@@ -45,15 +45,13 @@ public class Turret extends SubsystemBase {
     private static final boolean enabled = true;
     private static Turret INSTANCE;
 
-    private Supplier<Boolean> hardSetNoteInRobotSupplier;
-
-    public static Optional<Turret> createInstance(Supplier<Boolean> hardSetNoteInRobotSupplier) {
+    public static Optional<Turret> createInstance() {
         if (INSTANCE != null) {
             return Optional.of(INSTANCE);
         }
         if (!enabled)
-            return Optional.ofNullable(null);
-        INSTANCE = new Turret(hardSetNoteInRobotSupplier);
+            return Optional.empty();
+        INSTANCE = new Turret();
         return Optional.of(INSTANCE);
     }
 
@@ -61,8 +59,7 @@ public class Turret extends SubsystemBase {
         return Optional.ofNullable(INSTANCE);
     }
 
-    private Turret(
-            Supplier<Boolean> hardSetNoteInRobotSupplier) {
+    private Turret() {
         super();
         /*
          * Device instantiation
@@ -173,7 +170,6 @@ public class Turret extends SubsystemBase {
                 () -> RobotContainer.getPose().map((drivetrain) -> drivetrain.getTranslation())
                         .orElse(new Translation2d()),
                 (vector) -> timeOfFlightEquation.get(vector.getNorm()));
-        this.hardSetNoteInRobotSupplier = hardSetNoteInRobotSupplier;
     }
 
     @Override
@@ -194,19 +190,10 @@ public class Turret extends SubsystemBase {
         var rollerOn = Math.abs(rollerMotor.getMotorOutputPercent()) > 0.01;
 
         if (!m_cachedState.noteLoaded && sensor.get() && rollerOn && !m_cachedState.currentlyShooting) {
-            m_cachedState.noteLoaded = true;
-            m_cachedState.noteLoadedTimer.restart();
-            m_cachedState.noteUnloadedTimer.stop();
+            m_cachedState.setNoteLoaded();
         }
 
-        if (m_cachedState.currentlyShooting && rollerOn) {
-            m_cachedState.noteUnloadedTimer.restart();
-        }
-
-        if (m_cachedState.noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {
-            m_cachedState.noteLoaded = false;
-            m_cachedState.noteUnloadedTimer.reset();
-        }
+        m_cachedState.resetNoteLoadedAfterTimerUponShooting();
 
         m_cachedState.rotateClosedLoopError = Rotation2d
                 .fromRotations(rotateMotor.getClosedLoopReference().getValueAsDouble()
@@ -219,24 +206,15 @@ public class Turret extends SubsystemBase {
         m_cachedState.shooterMotorClosedLoopError = rightShooterMotor.getClosedLoopError()
                 .getValueAsDouble();
 
-        try {
-            m_cachedState.virtualGoalLocationDisplacement = ShootingUtils
-                    .findVirtualGoalDisplacementFromRobot(0.005, 20, 5);
-        } catch (Exception e) {
-            e.printStackTrace();
-            m_cachedState.virtualGoalLocationDisplacement = null;
-        }
+        m_cachedState.virtualGoalLocationDisplacement = ShootingUtils
+                .findVirtualGoalDisplacementFromRobot(0.005, 20, 5);
 
         if (!rollerOn) {
-            RobotContainer.setActivelyGrabbing(false);
+            RobotContainer.getRobotState().setActivelyGrabbing(false);
         }
 
-        RobotContainer.setNoteLoaded(m_cachedState.isNoteLoaded());
+        RobotContainer.getRobotState().setNoteLoaded(m_cachedState.isNoteLoaded());
 
-        m_cachedState.currentlyShooting = false;
-        if (hardSetNoteInRobotSupplier.get()) {
-            m_cachedState.noteLoaded = true;
-        }
         m_requestParameters.turretState = m_cachedState;
 
         turretTelemetry.telemetrize(m_cachedState);
@@ -255,34 +233,59 @@ public class Turret extends SubsystemBase {
     }
 
     public class TurretState {
-        public Rotation2d azimuth;
+        Rotation2d azimuth;
 
-        public double rawAzimuthEncoderCounts;
+        double rawAzimuthEncoderCounts;
 
-        public Rotation2d azimuthFromMotor;
+        Rotation2d azimuthFromMotor;
 
-        public Rotation2d elevation;
+        Rotation2d elevation;
 
-        public double rawElevationRotations;
+        double rawElevationRotations;
 
-        private boolean noteLoaded;
+        boolean noteLoaded;
 
-        private Timer noteLoadedTimer = new Timer();
+        Timer noteLoadedTimer = new Timer();
 
-        private Timer noteUnloadedTimer = new Timer();
+        Timer noteUnloadedTimer = new Timer();
 
-        public Translation2d virtualGoalLocationDisplacement;
+        Optional<Translation2d> virtualGoalLocationDisplacement;
 
-        public Rotation2d rotateClosedLoopError;
+        Rotation2d rotateClosedLoopError;
 
-        public Rotation2d tiltClosedLoopError;
+        Rotation2d tiltClosedLoopError;
 
-        public double shooterMotorClosedLoopError;
+        double shooterMotorClosedLoopError;
 
-        public boolean currentlyShooting;
+        boolean currentlyShooting;
 
         public boolean isNoteLoaded() {
             return noteLoaded && noteLoadedTimer.hasElapsed(delayNoteLoadedSeconds);
+        }
+
+        public void setNoteLoaded() {
+            this.noteLoaded = true;
+            this.noteLoadedTimer.restart();
+        }
+
+        public void resetNoteLoaded() {
+            noteLoaded = false;
+            noteUnloadedTimer.reset();
+            noteUnloadedTimer.stop();
+        }
+
+        public void resetNoteLoadedAfterTimerUponShooting() {
+            if (currentlyShooting && noteUnloadedTimer.get() == 0) {
+                noteUnloadedTimer.restart();
+            }
+
+            if (noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {
+                resetNoteLoaded();
+            }
+        }
+
+        public Optional<Translation2d> getVirtualGoalLocationDisplacement() {
+            return virtualGoalLocationDisplacement;
         }
 
     }

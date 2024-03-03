@@ -55,7 +55,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
             return Optional.of(INSTANCE);
         }
         if (!enabled)
-            return Optional.ofNullable(null);
+            return Optional.empty();
         INSTANCE = new CommandSwerveDrivetrain(driveTrainConstants, odometryStandardDeviation, visionStandardDeviation,
                 maxSpeed, holoConfig, modules);
         return Optional.of(INSTANCE);

@@ -43,7 +43,7 @@ public class PhotonVisionCamera extends SubsystemBase {
             return Optional.of(INSTANCE);
         }
         if (!enabled)
-            return Optional.ofNullable(null);
+            return Optional.empty();
         INSTANCE = new PhotonVisionCamera();
         return Optional.of(INSTANCE);
     }

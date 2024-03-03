@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -35,11 +36,11 @@ import frc.robot.subsystems.camera.PhotonVisionCamera;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
-import frc.robot.subsystems.swervedrive.FieldCentricWithProperDeadband;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
 import frc.robot.subsystems.turret.Turret;
+import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.TurretRequest.ControlTurret;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
 import frc.robot.subsystems.turret.TurretRequest.JustRoller;
@@ -59,13 +60,7 @@ public class RobotContainer {
 
 	private static final CommandXboxController driverController = new CommandXboxController(0);
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
-	static SlewRateLimiter slewRateLimiterX = new SlewRateLimiter(2.5);
-	static SlewRateLimiter slewRateLimiterY = new SlewRateLimiter(2.5);
-	static SlewRateLimiter slewRateLimiterRotation = new SlewRateLimiter(2.5);
-	private final static FieldCentricWithProperDeadband drive = new FieldCentricWithProperDeadband()
-			.withDeadband(Constants.ROBOT.getMaxSpeedat12V() * 0.15).withRotationalDeadband(MaxAngularRate * 0.15)
-			.withMaxSpeed(Constants.ROBOT.getMaxSpeedat12V()).withMaxAngularSpeed(MaxAngularRate)
-			.withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+	private final static FieldCentric drive = new FieldCentric();
 
 	// private final static ControlClimber climberUp = new
 	// ControlClimber().withVoltage(0.5).withClimberReversed(false);
@@ -80,45 +75,44 @@ public class RobotContainer {
 			.withRollerOutput(-1.0)
 			.withTilt(Rotation2d.fromDegrees(40));
 	private final static ControlTurret aimForSpeaker = new ControlTurret()
-			.withTargetAzimuthFunction((turretState) -> {
-				var robotOrientation = getPoseRotation().orElse(new Rotation2d());
-				var virtualGoalLocationDisplacement = turretState.virtualGoalLocationDisplacement;
-				var rotationToGoal = virtualGoalLocationDisplacement.getAngle();
-				return rotationToGoal.minus(robotOrientation);
-			})
-			.withTargetElevationFunction((turretState) -> {
-				var virtualGoalLocationDisplacement = turretState.virtualGoalLocationDisplacement;
-				var distance = virtualGoalLocationDisplacement.getNorm();
+			.withTargetAzimuthFunction(turretState -> getPoseRotation()
+					.flatMap(robotRotation -> turretState.getVirtualGoalLocationDisplacement()
+							.map(displacementToGoal -> displacementToGoal.getAngle().minus(robotRotation))))
+			.withTargetElevationFunction(
+					(turretState) -> turretState.getVirtualGoalLocationDisplacement().map((displacementToGoal) -> {
+						var distance = displacementToGoal.getNorm();
 
-				var heightDifferenceInches = 60;
-				if (distance > Units.feetToMeters(13.0))
-					heightDifferenceInches += 2;
-				if (distance > 5.25)
-					heightDifferenceInches += 1;
-				var degrees = Rotation2d.fromRadians(Math.atan(Units.inchesToMeters(heightDifferenceInches) / distance))
-						.getDegrees();
-				return Rotation2d.fromDegrees(degrees);
-			})
+						var heightDifferenceInches = 60;
+						if (distance > Units.feetToMeters(13.0))
+							heightDifferenceInches += 2;
+						if (distance > 5.25)
+							heightDifferenceInches += 1;
+						var degrees = Rotation2d
+								.fromRadians(Math.atan(Units.inchesToMeters(heightDifferenceInches) / distance))
+								.getDegrees();
+						return Rotation2d.fromDegrees(degrees);
+					}))
 			.withAllowShootWhenAimedSupplier(() -> isValidShootPosition());
 	private final static ControlTurret scoreAmp = new ControlTurret()
-			.withTargetAzimuthFunction((turretState) -> Rotation2d.fromDegrees(270))
-			.withTargetElevationFunction((turretState) -> Rotation2d.fromDegrees(30))
+			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(270)))
+			.withTargetElevationFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(30)))
 			.withAllowShootWhenAimedSupplier(() -> operatorController.getHID().getYButton());
 	private final static ControlTurret shootStraightForward = new ControlTurret()
-			.withTargetAzimuthFunction((turretState) -> new Rotation2d())
+			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
 				var degrees = SmartDashboard.getNumber("Tilt", 48);
-				return Rotation2d.fromDegrees(degrees);
+				return Optional.of(Rotation2d.fromDegrees(degrees));
 			})
 			.withAllowShootWhenAimedSupplier(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
 	private final static ControlTurret aimForSteal = new ControlTurret()
-			.withTargetAzimuthFunction((turretState) -> {
-				Rotation2d targetAzimuth = DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Blue)
-						? Rotation2d.fromDegrees(180)
-						: new Rotation2d();
-				return targetAzimuth.minus(getPoseRotation().orElse(new Rotation2d()));
-			})
-			.withTargetElevationFunction((turretState) -> Rotation2d.fromDegrees(10));
+			.withTargetAzimuthFunction((turretState) -> getPoseRotation()
+					.flatMap(robotRotation -> DriverStation.getAlliance().map(alliance -> {
+						var targetAzimuth = alliance.equals(Alliance.Blue)
+								? Rotation2d.fromDegrees(180)
+								: new Rotation2d();
+						return targetAzimuth.minus(robotRotation);
+					})))
+			.withTargetElevationFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(10)));
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
@@ -129,13 +123,40 @@ public class RobotContainer {
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
 
-	private static ReadWriteLock m_stateLock = new ReentrantReadWriteLock();
 	private static RobotState m_robotState = new RobotState();
 
 	public static class RobotState {
-		public int grabNoteIndex = -1;
-		public boolean activelyGrabbing;
-		public boolean noteLoaded;
+		int grabNoteIndex = -1;
+		boolean activelyGrabbing;
+		boolean noteLoaded;
+
+		public boolean isActivelyGrabbing() {
+			return this.activelyGrabbing;
+		}
+
+		public void setActivelyGrabbing(boolean activelyGrabbing) {
+			this.activelyGrabbing = activelyGrabbing;
+		}
+
+		public boolean isNoteLoaded() {
+			return this.noteLoaded;
+		}
+
+		public void setNoteLoaded(boolean noteLoaded) {
+			this.noteLoaded = noteLoaded;
+		}
+
+		public int getGrabNoteIndex() {
+			return this.grabNoteIndex;
+		}
+
+		public void setGrabNoteIndex(int grabNoteIndex) {
+			this.grabNoteIndex = grabNoteIndex;
+		}
+	}
+
+	public static RobotState getRobotState() {
+		return m_robotState;
 	}
 
 	/**
@@ -143,36 +164,46 @@ public class RobotContainer {
 	 * commands.
 	 */
 	public static void initialize() {
+		// instantiate subsystems must be called first
+		// TODO Move to Robot.java?
+		instantiateSubsystems();
 
-		Constants.ROBOT.getDrivetrain();
-		Turret.createInstance(() -> operatorController.getHID().getStartButton());
-		Intake.createInstance(() -> driverController.getHID().getBackButton());
-
-		PhotonVisionCamera.createInstance();
+		defineDefaultCommands();
 
 		// Configure the trigger bindings
 		configureBindings();
 
-		SmartDashboard.putNumber("Tilt", 48.0);
+		SmartDashboard.putNumber("Tilt", 48.0); // TODO Move somewhere else?
 
+		if (Utils.isSimulation()) { // TODO Do we need to set the pose if simulation if we arent really focused on
+									// simulation?
+			CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
+					.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90))));
+		}
+
+		createAutonomousChoosers();
+	}
+
+	private static void instantiateSubsystems() {
+		Constants.ROBOT.getDrivetrain();
+		Turret.createInstance();
+		Intake.createInstance(() -> driverController.getHID().getBackButton());
+		PhotonVisionCamera.createInstance();
+	}
+
+	private static void defineDefaultCommands() {
 		CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
 			drivetrain.setDefaultCommand(
 					drivetrain.applyRequest(
 							() -> drive
 									.withVelocityX(
-											// Drive forward with negative Y (forward)
-											-driverController.getLeftY()
-													* Constants.ROBOT.getMaxSpeedat12V()
-													* getCoordinateSystemInversionDriving())
+											AXS.Drive_ForwardBackward.getAxis()
+													* Constants.ROBOT.getMaxSpeedat12V())
 									.withVelocityY(
-											// Drive left with negative X (left)
-											-driverController.getLeftX()
-													* Constants.ROBOT.getMaxSpeedat12V()
-													* getCoordinateSystemInversionDriving())
+											AXS.Drive_LeftRight.getAxis()
+													* Constants.ROBOT.getMaxSpeedat12V())
 									.withRotationalRate(
-											// Drive counterclockwise with negative X (left)
-											-driverController.getRightX() * MaxAngularRate)
-									.withCreepEnabled(driverController.getHID().getLeftBumper())));
+											AXS.Drive_Rotation.getAxis() * MaxAngularRate)));
 		});
 
 		Intake.getInstance().ifPresent((intake) -> intake.setDefaultCommand(
@@ -183,17 +214,9 @@ public class RobotContainer {
 
 		Turret.getInstance().ifPresent((turret) -> turret.setDefaultCommand(
 				turret.applyRequest(() -> indexFromIntake, () -> shooterOff)));
+	}
 
-		// var idle = new TurretRequest.Idle();
-
-		// turret.setDefaultCommand(turret.applyRequest(() -> idle, () -> shooterOff));
-
-		if (Utils.isSimulation()) {
-			CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
-					.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90))));
-		}
-
-		// Show Status of Subsystems on Dashboard
+	public static void createAutonomousChoosers() {
 		for (int i = 0; i < 5; i++) {
 			noteHiearchyChoosers[i] = newNoteHiearchyChooser();
 			SmartDashboard.putData("Note Hiearchy " + (i + 1), noteHiearchyChoosers[i]);
@@ -216,17 +239,9 @@ public class RobotContainer {
 		SendableChooser<Autos.AutoNotes> noteHiearchy = new SendableChooser<>();
 
 		noteHiearchy.setDefaultOption("None", null);
-		noteHiearchy.addOption("Blue Note 1", Autos.AutoNotes.BlueNote1);
-		noteHiearchy.addOption("Blue Note 2", Autos.AutoNotes.BlueNote2);
-		noteHiearchy.addOption("Blue Note 3", Autos.AutoNotes.BlueNote3);
-		noteHiearchy.addOption("Center Note 4", Autos.AutoNotes.MiddleNote4);
-		noteHiearchy.addOption("Center Note 5", Autos.AutoNotes.MiddleNote5);
-		noteHiearchy.addOption("Center Note 6", Autos.AutoNotes.MiddleNote6);
-		noteHiearchy.addOption("Center Note 7", Autos.AutoNotes.MiddleNote7);
-		noteHiearchy.addOption("Center Note 8", Autos.AutoNotes.MiddleNote8);
-		noteHiearchy.addOption("Red Note 9", Autos.AutoNotes.RedNote9);
-		noteHiearchy.addOption("Red Note 10", Autos.AutoNotes.RedNote10);
-		noteHiearchy.addOption("Red Note 11", Autos.AutoNotes.RedNote11);
+		for (Autos.AutoNotes note : Autos.AutoNotes.values()) {
+			noteHiearchy.addOption(note.name(), note);
+		}
 
 		return noteHiearchy;
 	}
@@ -244,58 +259,6 @@ public class RobotContainer {
 		return getRobotState().activelyGrabbing;
 	}
 
-	public static RobotState getRobotState() {
-		try {
-			m_stateLock.readLock().lock();
-
-			return m_robotState;
-		} finally {
-			m_stateLock.readLock().unlock();
-		}
-	}
-
-	public static void setActivelyGrabbing(boolean activelyGrabbing) {
-		try {
-			m_stateLock.writeLock().lock();
-
-			m_robotState.activelyGrabbing = activelyGrabbing;
-		} finally {
-			m_stateLock.writeLock().unlock();
-		}
-	}
-
-	public static void setNoteLoaded(boolean noteLoaded) {
-		try {
-			m_stateLock.writeLock().lock();
-
-			m_robotState.noteLoaded = noteLoaded;
-		} finally {
-			m_stateLock.writeLock().unlock();
-		}
-	}
-
-	public static void setGrabNoteIndex(int grabNoteIndex) {
-		try {
-			m_stateLock.writeLock().lock();
-
-			m_robotState.grabNoteIndex = grabNoteIndex;
-		} finally {
-			m_stateLock.writeLock().unlock();
-		}
-	}
-
-	/**
-	 * Use this method to define your trigger->command mappings. Triggers can be
-	 * created via the
-	 * {@link Trigger#Trigger(java.util.function.BooleanSupplier)} constructor
-	 * with an arbitrary predicate, or via the named factories in
-	 * {@link edu.wpi.first.wpilibj2.command.button.CommandGenericHID}'s
-	 * subclasses for {@link CommandXboxController
-	 * Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller
-	 * PS4} controllers or
-	 * {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
-	 * joysticks}.
-	 */
 	private static void configureBindings() {
 		TGR.Characterize.tgr().whileTrue(CommandSwerveDrivetrain.getInstance()
 				.map((drivetrain) -> drivetrain.characterizeDrive(1.0, 4.0))
@@ -341,44 +304,26 @@ public class RobotContainer {
 	}
 
 	public enum ShooterType {
-		Speaker, Amp, Steal, Subwoofer
+		Speaker(aimForSpeaker, shooterSpeaker),
+		Amp(scoreAmp, shooterAmp),
+		Steal(aimForSteal, shooterSteal),
+		Subwoofer(shootStraightForward, shootSubwoofer);
+
+		TurretRequest turretRequest;
+		ShooterRequest shooterRequest;
+
+		ShooterType(TurretRequest turretRequest, ShooterRequest shooterRequest) {
+			this.turretRequest = turretRequest;
+			this.shooterRequest = shooterRequest;
+		}
 	}
 
 	public static Command getShootCommand(Supplier<ShooterType> shooterTypeSupplier) {
 		return Turret.getInstance().map((turret) -> {
-			return turret.applyRequest(() -> {
-				var type = shooterTypeSupplier.get();
-				if (!getRobotState().noteLoaded)
-					return indexFromIntake;
-				switch (type) {
-					case Amp:
-						return scoreAmp;
-					case Speaker:
-						return aimForSpeaker;
-					case Subwoofer:
-						return shootStraightForward;
-					case Steal:
-						return aimForSteal;
-					default:
-						return indexFromIntake;
-
-				}
-			}, () -> {
-				var type = shooterTypeSupplier.get();
-				switch (type) {
-					case Amp:
-						return shooterAmp;
-					case Speaker:
-						return shooterSpeaker;
-					case Steal:
-						return shooterSteal;
-					case Subwoofer:
-						return shootSubwoofer;
-					default:
-						return shooterSpeaker;
-
-				}
-			});
+			var type = shooterTypeSupplier.get();
+			return turret.applyRequest(
+					() -> getRobotState().noteLoaded ? type.turretRequest : indexFromIntake,
+					() -> type.shooterRequest);
 		}).orElse(Commands.none());
 	}
 
@@ -396,7 +341,7 @@ public class RobotContainer {
 	}
 
 	public static boolean isTiltForcedFlat() {
-		return driverController.getHID().getAButton();
+		return BTN.TiltFlat.get();
 	}
 
 	static final Translation2d DriveStraightForwardLine = FIELD_DIMENSIONS.CENTER_OF_FIELD
@@ -431,6 +376,21 @@ public class RobotContainer {
 		return Autos.getDynamicAutonomous(positions);
 	}
 
+	public enum BTN {
+		TiltFlat(() -> driverController.getHID().getAButton()),
+		Creep(() -> driverController.getHID().getLeftBumper());
+
+		Supplier<Boolean> buttonSupplier;
+
+		BTN(Supplier<Boolean> buttonSupplier) {
+			this.buttonSupplier = buttonSupplier;
+		}
+
+		public boolean get() {
+			return buttonSupplier.get();
+		}
+	}
+
 	public enum TGR {
 		ResetFieldRelative(driverController.start()), // TODO should we having this?
 		Intake(driverController.rightTrigger(0.15)),
@@ -459,24 +419,49 @@ public class RobotContainer {
 	}
 
 	public enum AXS {
-		Drive_ForwardBackward(
-				() -> slewRateLimiterX.calculate(-ControllerUtils.modifyAxis(driverController.getLeftY()))),
-		Drive_LeftRight(() -> slewRateLimiterY.calculate(-ControllerUtils.modifyAxis(driverController.getLeftX()))),
-		Drive_Rotation(
-				() -> slewRateLimiterRotation.calculate(-ControllerUtils.modifyAxis(driverController.getRightX())));
+		Drive_ForwardBackward(() -> driverController.getLeftY(), 2.5, true),
+		Drive_LeftRight(() -> driverController.getLeftX(), 2.5, true),
+		Drive_Rotation(() -> driverController.getRightX(), 2.5);
 
-		Callable<Double> callable;
+		Supplier<Double> supplier;
+		Optional<SlewRateLimiter> slewRateLimiter = Optional.empty();
+		static double deadband = 0.10;
+		boolean allianceInvert;
 
-		AXS(Callable<Double> callable) {
-			this.callable = callable;
+		AXS(Supplier<Double> supplier, double rate, boolean allianceInvert) {
+			this(supplier, rate);
+			this.allianceInvert = allianceInvert;
+		}
+
+		AXS(Supplier<Double> supplier, boolean allianceInvert) {
+			this(supplier);
+			this.allianceInvert = allianceInvert;
+		}
+
+		AXS(Supplier<Double> supplier, double rate) {
+			this(supplier);
+			this.slewRateLimiter = Optional.of(new SlewRateLimiter(rate));
+		}
+
+		AXS(Supplier<Double> supplier) {
+			this.supplier = () -> ControllerUtils.modifyAxis(-supplier.get(), deadband, getCreepScale())
+					* (allianceInvert ? getAllianceInversion() : 1);
 		}
 
 		public double getAxis() {
-			try {
-				return callable.call().doubleValue();
-			} catch (Exception ex) {
-				return 0.0;
-			}
+			return applyRateLimit(supplier.get());
+		}
+
+		private double applyRateLimit(double value) {
+			return slewRateLimiter.map(limiter -> limiter.calculate(value)).orElse(value);
+		}
+
+		public static int getAllianceInversion() {
+			return DriverStation.getAlliance().map(alliance -> alliance.equals(Alliance.Red) ? -1 : 1).orElse(1);
+		}
+
+		public static double getCreepScale() {
+			return BTN.Creep.get() ? 0.25 : 1;
 		}
 	}
 }

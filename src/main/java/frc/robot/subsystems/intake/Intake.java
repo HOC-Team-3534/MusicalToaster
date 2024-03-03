@@ -34,7 +34,7 @@ public class Intake extends SubsystemBase {
             return Optional.of(INSTANCE);
         }
         if (!enabled)
-            return Optional.ofNullable(null);
+            return Optional.empty();
         INSTANCE = new Intake(resetNoteSupplier);
         return Optional.of(INSTANCE);
     }
@@ -105,9 +105,9 @@ public class Intake extends SubsystemBase {
             }
         }
 
-        RobotContainer.setGrabNoteIndex(grabNoteIndex);
+        RobotContainer.getRobotState().setGrabNoteIndex(grabNoteIndex);
 
-        var noteLoaded = RobotContainer.getRobotState().noteLoaded;
+        var noteLoaded = RobotContainer.getRobotState().isNoteLoaded();
 
         if (!prevNoteLoaded && noteLoaded && grabNoteIndex != -1) {
             m_cachedState.noteInPosition[grabNoteIndex] = false;

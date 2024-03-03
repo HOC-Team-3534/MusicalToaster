@@ -1,5 +1,6 @@
 package frc.robot.utils;
 
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -28,25 +29,22 @@ public class ShootingUtils {
         shootWhileMovingSolver = new ShootWhileMovingSolver(timeOfFlightEquation);
     }
 
-    public static Translation2d findVirtualGoalDisplacementFromRobot(double maxError, double maxIterations,
-            double maxTimeOfFlight)
-            throws Exception {
-        var goalFinalEquation = getGoalFinalEquation();
-        if (goalFinalEquation == null)
-            return null;
-        return shootWhileMovingSolver.findSolution(getGoalFinalEquation(), maxError, maxIterations, maxTimeOfFlight)
-                .getGoalFinalCalculated();
+    public static Optional<Translation2d> findVirtualGoalDisplacementFromRobot(double maxError, double maxIterations,
+            double maxTimeOfFlight) {
+        return getGoalFinalEquation().map((goalEquation) -> shootWhileMovingSolver
+                .findSolution(goalEquation, maxError, maxIterations, maxTimeOfFlight)
+                .getGoalFinalCalculated());
     }
 
-    static GoalFinalEquation getGoalFinalEquation() throws Exception {
-        if (goalPositionSupplier == null || robotPositionSupplier == null || robotPositionSupplier == null) {
-            throw new Exception("Configure Shoot While Moving before calling findVirtualGoalToAimFor");
-        }
+    static Optional<GoalFinalEquation> getGoalFinalEquation() {
+        if (goalPositionSupplier == null || robotPositionSupplier == null || robotPositionSupplier == null)
+            return Optional.empty();
+
         var goalPosition = goalPositionSupplier.get();
         if (goalPosition == null)
-            return null;
-        return goalFinalEquation.withGoalPosition(goalPositionSupplier.get())
-                .withRobotPosition(robotPositionSupplier.get()).withRobotVelocity(robotSpeedsSupplier.get());
+            return Optional.empty();
+        return Optional.of(goalFinalEquation.withGoalPosition(goalPositionSupplier.get())
+                .withRobotPosition(robotPositionSupplier.get()).withRobotVelocity(robotSpeedsSupplier.get()));
     }
 
 }

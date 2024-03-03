@@ -1,5 +1,6 @@
 package frc.robot.subsystems.turret;
 
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -44,7 +45,7 @@ public interface TurretRequest {
                 TalonSRX rollerMotor) {
             parameters.turretState.currentlyShooting = false;
 
-            int index = RobotContainer.getRobotState().grabNoteIndex;
+            int index = RobotContainer.getRobotState().getGrabNoteIndex();
             var currentAzimuth = parameters.turretState.azimuth;
             var currentElevation = parameters.turretState.elevation;
             var rollerOn = false;
@@ -66,7 +67,7 @@ public interface TurretRequest {
 
                 if (MathUtils.withinTolerance(azimuthError, azimuthTolerance)
                         && MathUtils.withinTolerance(elevationError, elevationTolerance)) {
-                    RobotContainer.setActivelyGrabbing(true);
+                    RobotContainer.getRobotState().setActivelyGrabbing(true);
                     rollerOn = true;
                 }
             }
@@ -91,55 +92,55 @@ public interface TurretRequest {
     public class ControlTurret implements TurretRequest {
 
         // Given parameters and rotation of robot, determine rotation of turret
-        Function<TurretState, Rotation2d> targetAzimuthFunction;
-        Function<TurretState, Rotation2d> targetElevationFunction;
+        Function<TurretState, Optional<Rotation2d>> targetAzimuthFunction;
+        Function<TurretState, Optional<Rotation2d>> targetElevationFunction;
         Supplier<Boolean> allowShootWhenAimedSupplier = () -> true;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
             boolean rollerOn = false;
-            Rotation2d targetAzimuth;
-            Rotation2d targetElevation;
+            Optional<Rotation2d> targetAzimuth = Optional.empty();
+            Optional<Rotation2d> targetElevation = Optional.empty();
 
             var currentAzimuth = parameters.turretState.azimuth;
             var currentElevation = parameters.turretState.elevation;
-
-            targetAzimuth = currentAzimuth;
-            targetElevation = currentElevation;
 
             if (parameters.turretState.isNoteLoaded()) {
                 /*
                  * Azimuth Calculation
                  */
-                targetAzimuth = targetAzimuthFunction.apply(parameters.turretState);
-                targetAzimuth = TurretUtils.calculateTargetAzimuthWithinLimits(targetAzimuth, currentAzimuth,
-                        lowerLimit_azimuthDegrees,
-                        upperLimit_azimuthDegrees);
+                targetAzimuthFunction.apply(parameters.turretState).map(
+                        target -> TurretUtils.calculateTargetAzimuthWithinLimits(target, currentAzimuth,
+                                lowerLimit_azimuthDegrees,
+                                upperLimit_azimuthDegrees));
 
                 /*
                  * Elevation Calculation
                  */
-                targetElevation = RobotContainer.isTiltForcedFlat()
-                        ? new Rotation2d()
-                        : targetElevationFunction.apply(parameters.turretState);
-                targetElevation = Rotation2d.fromDegrees(MathUtils.applyUpperAndLowerLimit(targetElevation.getDegrees(),
-                        lowerLimit_elevationDegrees, upperLimit_elevationDegrees));
+                targetElevation = targetElevationFunction.apply(parameters.turretState).map(
+                        target -> RobotContainer.isTiltForcedFlat()
+                                ? new Rotation2d()
+                                : Rotation2d.fromDegrees(MathUtils.applyUpperAndLowerLimit(target.getDegrees(),
+                                        lowerLimit_elevationDegrees, upperLimit_elevationDegrees)));
 
                 /*
                  * Error Calculation
                  */
 
-                var azimuthError = targetAzimuth.minus(currentAzimuth);
-                var elevationError = targetElevation.minus(currentElevation);
-                var shooterError = parameters.turretState.shooterMotorClosedLoopError;
+                if (targetAzimuth.isPresent() && targetElevation.isPresent()) {
 
-                if ((MathUtils.withinTolerance(azimuthError, azimuthTolerance)
-                        && MathUtils.withinTolerance(elevationError, elevationTolerance)
-                        && MathUtils.withinTolerance(shooterError, shooterTolerance)
-                        && allowShootWhenAimedSupplier.get())
-                        || parameters.turretState.currentlyShooting) {
-                    rollerOn = true;
+                    var azimuthError = targetAzimuth.get().minus(currentAzimuth);
+                    var elevationError = targetElevation.get().minus(currentElevation);
+                    var shooterError = parameters.turretState.shooterMotorClosedLoopError;
+
+                    if ((MathUtils.withinTolerance(azimuthError, azimuthTolerance)
+                            && MathUtils.withinTolerance(elevationError, elevationTolerance)
+                            && MathUtils.withinTolerance(shooterError, shooterTolerance)
+                            && allowShootWhenAimedSupplier.get())
+                            || parameters.turretState.currentlyShooting) {
+                        rollerOn = true;
+                    }
                 }
 
             }
@@ -147,20 +148,20 @@ public interface TurretRequest {
             parameters.turretState.currentlyShooting = rollerOn;
 
             rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerShootPercentOut : 0);
-            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
-            tiltMotor.setControl(new MotionMagicVoltage(targetElevation.getRotations()));
+            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.orElse(currentAzimuth).getRotations()));
+            tiltMotor.setControl(new MotionMagicVoltage(targetElevation.orElse(new Rotation2d()).getRotations()));
 
             return StatusCode.OK;
         }
 
         public ControlTurret withTargetAzimuthFunction(
-                Function<TurretState, Rotation2d> targetAzimuthFunction) {
+                Function<TurretState, Optional<Rotation2d>> targetAzimuthFunction) {
             this.targetAzimuthFunction = targetAzimuthFunction;
             return this;
         }
 
         public ControlTurret withTargetElevationFunction(
-                Function<TurretState, Rotation2d> targetElevationFunction) {
+                Function<TurretState, Optional<Rotation2d>> targetElevationFunction) {
             this.targetElevationFunction = targetElevationFunction;
             return this;
         }
