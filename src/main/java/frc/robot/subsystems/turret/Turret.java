@@ -297,4 +297,8 @@ public class Turret extends SubsystemBase {
         m_cachedState.resetNoteLoaded();
     }
 
+    public void setNoteLoaded() {
+        m_cachedState.setNoteLoaded();
+    }
+
 }

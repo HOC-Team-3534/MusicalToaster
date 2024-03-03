@@ -350,6 +350,8 @@ public class RobotContainer {
 	 * @return the command to run in autonomous
 	 */
 	public static Command getAutonomousCommand() {
+		Turret.getInstance().ifPresent(turret -> turret.setNoteLoaded());
+
 		AutoPositionList positions = new AutoPositionList();
 		for (int i = 0; i < noteHiearchyChoosers.length && i < shootOrStealChoosers.length; i++) {
 			var note = noteHiearchyChoosers[i].getSelected();
