@@ -24,18 +24,16 @@ public class Intake extends SubsystemBase {
     protected IntakeRequest m_requestToApply = new IntakeRequest.Idle();
     protected IntakeControlRequestParameters m_requestParameters = new IntakeControlRequestParameters();
 
-    private final Supplier<Boolean> resetNoteSupplier;
-
     private static final boolean enabled = true;
     private static Intake INSTANCE;
 
-    public static Optional<Intake> createInstance(Supplier<Boolean> resetNoteSupplier) {
+    public static Optional<Intake> createInstance() {
         if (INSTANCE != null) {
             return Optional.of(INSTANCE);
         }
         if (!enabled)
             return Optional.empty();
-        INSTANCE = new Intake(resetNoteSupplier);
+        INSTANCE = new Intake();
         return Optional.of(INSTANCE);
     }
 
@@ -43,7 +41,7 @@ public class Intake extends SubsystemBase {
         return Optional.ofNullable(INSTANCE);
     }
 
-    private Intake(Supplier<Boolean> resetNoteSupplier) {
+    private Intake() {
         frontBackMotor = new TalonSRX(19);
         leftRightMotor = new TalonSRX(20);
         leftRightMotor.setInverted(true);
@@ -51,8 +49,6 @@ public class Intake extends SubsystemBase {
         for (int i = 0; i < sensors.length; i++) {
             sensors[i] = new ProximitySensorInput(i);
         }
-
-        this.resetNoteSupplier = resetNoteSupplier;
     }
 
     public enum IntakeDirection {
@@ -72,32 +68,25 @@ public class Intake extends SubsystemBase {
 
     @Override
     public void periodic() {
-        var fbPerc = frontBackMotor.getMotorOutputPercent();
-        var lrPerc = leftRightMotor.getMotorOutputPercent();
-        double percs[] = { fbPerc, lrPerc, fbPerc, lrPerc };
+        var fbOn = Math.abs(frontBackMotor.getMotorOutputPercent()) > 0;
+        var lrOn = Math.abs(leftRightMotor.getMotorOutputPercent()) > 0;
+        boolean on[] = { fbOn, lrOn, fbOn, lrOn };
 
-        for (int i = 0; i < percs.length; i++) {
-            m_cachedState.intakeDirection[i] = IntakeDirection.getDirection(percs[i]);
-        }
-
-        for (int i = 0; i < sensors.length; i++) {
-            /*
-             * If the note is not already marked in position
-             * and the note is seen while the motor is running in
-             * set note in position to true and reset the delay timer
-             */
-            if (!m_cachedState.seeingNote[i]
-                    && sensors[i].get()) {
+        for (int i = 0; i < sensors.length && i < on.length; i++) {
+            if (!m_cachedState.seeingNote[i] && sensors[i].get() && on[i]
+                    && !RobotContainer.getRobotState().isActivelyGrabbing())
                 m_cachedState.noteInPosition[i] = true;
-            }
 
             m_cachedState.seeingNote[i] = sensors[i].get();
-
-            if (resetNoteSupplier.get()) {
-                m_cachedState.noteInPosition[i] = false;
-            }
         }
-        var grabNoteIndex = -1;
+
+        var noteLoaded = RobotContainer.getRobotState().isNoteLoaded();
+        var grabNoteIndex = RobotContainer.getRobotState().getGrabNoteIndex();
+        if (!prevNoteLoaded && noteLoaded && grabNoteIndex != -1)
+            m_cachedState.noteInPosition[grabNoteIndex] = false;
+        prevNoteLoaded = noteLoaded;
+
+        grabNoteIndex = -1;
         for (int i = 0; i < m_cachedState.noteInPosition.length; i++) {
             if (m_cachedState.noteInPosition[i]) {
                 grabNoteIndex = i;
@@ -106,14 +95,6 @@ public class Intake extends SubsystemBase {
         }
 
         RobotContainer.getRobotState().setGrabNoteIndex(grabNoteIndex);
-
-        var noteLoaded = RobotContainer.getRobotState().isNoteLoaded();
-
-        if (!prevNoteLoaded && noteLoaded && grabNoteIndex != -1) {
-            m_cachedState.noteInPosition[grabNoteIndex] = false;
-        }
-
-        prevNoteLoaded = noteLoaded;
 
         intakeTelemetry.telemeterize(m_cachedState);
 
@@ -131,20 +112,31 @@ public class Intake extends SubsystemBase {
     }
 
     public class IntakeState {
-        public IntakeState() {
-            for (int i = 0; i < intakeDirection.length; i++) {
-                intakeDirection[i] = IntakeDirection.Off;
-            }
-        }
 
         // 0 is Front, 1 is Left, Back is 2, Right is 3
-        public boolean seeingNote[] = new boolean[4];
+        boolean seeingNote[] = new boolean[4];
 
-        public boolean noteInPosition[] = new boolean[4];
+        boolean noteInPosition[] = new boolean[4];
 
-        public IntakeDirection intakeDirection[] = new IntakeDirection[4];
+        public boolean[] getSeeingNote() {
+            return seeingNote;
+        }
+
+        public boolean[] getNoteInPosition() {
+            return noteInPosition;
+        }
+
+        public void resetAllNoteInPosition() {
+            for (int i = 0; i < noteInPosition.length; i++) {
+                noteInPosition[i] = false;
+            }
+        }
     }
 
     final IntakeState m_cachedState = new IntakeState();
+
+    public void resetAllNoteInPosition() {
+        m_cachedState.resetAllNoteInPosition();
+    }
 
 }

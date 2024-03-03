@@ -4,13 +4,9 @@
 package frc.robot;
 
 import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -43,7 +39,6 @@ import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.TurretRequest.ControlTurret;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
-import frc.robot.subsystems.turret.TurretRequest.JustRoller;
 import frc.robot.utils.ControllerUtils;
 
 /**
@@ -153,6 +148,10 @@ public class RobotContainer {
 		public void setGrabNoteIndex(int grabNoteIndex) {
 			this.grabNoteIndex = grabNoteIndex;
 		}
+
+		public boolean isNoteInRobot() {
+			return grabNoteIndex != -1 || noteLoaded;
+		}
 	}
 
 	public static RobotState getRobotState() {
@@ -187,7 +186,7 @@ public class RobotContainer {
 	private static void instantiateSubsystems() {
 		Constants.ROBOT.getDrivetrain();
 		Turret.createInstance();
-		Intake.createInstance(() -> driverController.getHID().getBackButton());
+		Intake.createInstance();
 		PhotonVisionCamera.createInstance();
 	}
 
@@ -208,7 +207,7 @@ public class RobotContainer {
 
 		Intake.getInstance().ifPresent((intake) -> intake.setDefaultCommand(
 				intake.applyRequest(
-						() -> isActivelyIndexingFromIntake()
+						() -> getRobotState().isActivelyGrabbing()
 								? runIntake
 								: stopIntake)));
 
@@ -255,10 +254,6 @@ public class RobotContainer {
 		return shootOrSteal;
 	}
 
-	public static boolean isActivelyIndexingFromIntake() {
-		return getRobotState().activelyGrabbing;
-	}
-
 	private static void configureBindings() {
 		TGR.Characterize.tgr().whileTrue(CommandSwerveDrivetrain.getInstance()
 				.map((drivetrain) -> drivetrain.characterizeDrive(1.0, 4.0))
@@ -271,7 +266,8 @@ public class RobotContainer {
 
 		TGR.Intake.tgr()
 				.whileTrue(Intake.getInstance()
-						.map((intake) -> intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake))
+						.map((intake) -> intake
+								.applyRequest(() -> getRobotState().isNoteInRobot() ? stopIntake : runIntake))
 						.orElse(Commands.none()));
 		TGR.Extake.tgr()
 				.whileTrue(Intake.getInstance()
@@ -282,6 +278,13 @@ public class RobotContainer {
 		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
+		TGR.ResetNoteinRobot.tgr().onTrue(Commands.run(() -> {
+			getRobotState().setGrabNoteIndex(-1);
+			getRobotState().setNoteLoaded(false);
+			Intake.getInstance().ifPresent(intake -> intake.resetAllNoteInPosition());
+			Turret.getInstance().ifPresent(turret -> turret.resetNoteLoaded());
+		}));
+
 		// TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
 		// TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
 
@@ -289,18 +292,8 @@ public class RobotContainer {
 
 	public static Command getIntakeAutonomouslyCommand() {
 		return Intake.getInstance()
-				.map((intake) -> intake.applyRequest(() -> isNoteInRobot() ? stopIntake : runIntake))
+				.map((intake) -> intake.applyRequest(() -> getRobotState().isNoteInRobot() ? stopIntake : runIntake))
 				.orElse(Commands.none());
-	}
-
-	public static boolean isNoteInRobot() {
-		var state = getRobotState();
-		return state.grabNoteIndex != -1 || state.noteLoaded;
-	}
-
-	public static int getCoordinateSystemInversionDriving() {
-		var alliance = DriverStation.getAlliance();
-		return alliance.isPresent() && alliance.get().equals(Alliance.Red) ? -1 : 1;
 	}
 
 	public enum ShooterType {
@@ -403,6 +396,7 @@ public class RobotContainer {
 		// ClimbDown(operatorController.b().and(() ->
 		// !EnabledDebugModes.testingClimber)),
 
+		ResetNoteinRobot(driverController.back()),
 		// Below are debugging actions
 
 		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled));

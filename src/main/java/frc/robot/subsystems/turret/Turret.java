@@ -292,4 +292,8 @@ public class Turret extends SubsystemBase {
 
     final TurretState m_cachedState = new TurretState();
 
+    public void resetNoteLoaded() {
+        m_cachedState.resetNoteLoaded();
+    }
+
 }
