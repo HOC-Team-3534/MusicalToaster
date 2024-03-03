@@ -12,7 +12,6 @@ import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -208,7 +207,7 @@ public class Turret extends SubsystemBase {
                 .getValueAsDouble();
 
         m_cachedState.virtualGoalLocationDisplacement = ShootingUtils
-                .findVirtualGoalDisplacementFromRobot(0.005, 20, 5);
+                .findVirtualGoalDisplacementFromRobot(0.005, 20, 2);
 
         if (!rollerOn) {
             RobotContainer.getRobotState().setActivelyGrabbing(false);

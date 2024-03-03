@@ -7,9 +7,12 @@ import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 public class RobotLiterals {
     private final SwerveDrivetrainLiterals swerveDrivetrainLiterals;
     private final DriveCharacterizationLiterals driveCharacterizationLiterals;
+    private final CameraLiterals cameraLiterals;
 
-    public RobotLiterals(SwerveDrivetrainLiterals swerveDrivetrainLiterals) {
+    public RobotLiterals(SwerveDrivetrainLiterals swerveDrivetrainLiterals, CameraLiterals cameraLiterals) {
         this.swerveDrivetrainLiterals = swerveDrivetrainLiterals;
+        this.cameraLiterals = cameraLiterals;
+
         this.driveCharacterizationLiterals = new DriveCharacterizationLiterals();
     }
 
@@ -23,6 +26,10 @@ public class RobotLiterals {
 
     public double getMaxSpeedAutonomous() {
         return this.swerveDrivetrainLiterals.getMaxSpeedAutonomous();
+    }
+
+    public CameraLiterals getCameraLiterals() {
+        return this.cameraLiterals;
     }
 
     public DriveCharacterizationLiterals getDriveCharacterizationLiterals() {
