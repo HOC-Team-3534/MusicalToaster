@@ -26,6 +26,8 @@ public class PhotonVisionCameraTelemetry {
 
     private final DoublePublisher robotToTargetYaw = table.getDoubleTopic("Robot To Target Yaw").publish();
 
+    private final DoublePublisher timeSinceUpdated = table.getDoubleTopic("Pose Time Since Updated").publish();
+
     public void telemetrize(CameraState state) {
         if (state.aprilTagsSeen != null)
             aprilTagsSeen.set(state.aprilTagsSeen);
@@ -39,6 +41,8 @@ public class PhotonVisionCameraTelemetry {
             });
         }
         // roll x pitch y yaw z
+
+        timeSinceUpdated.set(state.lastTimeUpdated.get());
 
         var transformPose = state.robotToTarget;
         if (transformPose != null) {

@@ -11,6 +11,7 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
@@ -70,9 +71,11 @@ public class PhotonVisionCamera extends SubsystemBase {
                 var pitch = Rotation2d.fromRadians(m_cachedState.robotToTarget.getRotation().getY());
 
                 if (!ambiguityOutOfRange && MathUtils.withinTolerance(pitch, Rotation2d.fromDegrees(2))) {
-                    if (Constants.EnabledDebugModes.updatePoseWithVisionEnabled)
+                    if (Constants.EnabledDebugModes.updatePoseWithVisionEnabled) {
                         CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
                                 .addVisionMeasurement(estimate.estimatedPose.toPose2d(), estimate.timestampSeconds));
+                        m_cachedState.lastTimeUpdated.restart();
+                    }
 
                     for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
                         m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
@@ -84,9 +87,15 @@ public class PhotonVisionCamera extends SubsystemBase {
     }
 
     public class CameraState {
+
+        CameraState() {
+            lastTimeUpdated.restart();
+        }
+
         public Transform3d robotToTarget;
         public Pose3d robotFieldPose;
         public long[] aprilTagsSeen = new long[2];
+        public Timer lastTimeUpdated = new Timer();
     }
 
     final CameraState m_cachedState = new CameraState();
