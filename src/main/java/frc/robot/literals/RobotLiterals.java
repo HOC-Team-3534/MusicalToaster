@@ -8,10 +8,15 @@ public class RobotLiterals {
     private final SwerveDrivetrainLiterals swerveDrivetrainLiterals;
     private final DriveCharacterizationLiterals driveCharacterizationLiterals;
     private final CameraLiterals cameraLiterals;
+    private final TurretTalonConfigLiterals turretTalonConfigLiterals;
 
-    public RobotLiterals(SwerveDrivetrainLiterals swerveDrivetrainLiterals, CameraLiterals cameraLiterals) {
+    public RobotLiterals(
+            SwerveDrivetrainLiterals swerveDrivetrainLiterals,
+            CameraLiterals cameraLiterals,
+            TurretTalonConfigLiterals turretTalonConfigLiterals) {
         this.swerveDrivetrainLiterals = swerveDrivetrainLiterals;
         this.cameraLiterals = cameraLiterals;
+        this.turretTalonConfigLiterals = turretTalonConfigLiterals;
 
         this.driveCharacterizationLiterals = new DriveCharacterizationLiterals();
     }
@@ -30,6 +35,10 @@ public class RobotLiterals {
 
     public CameraLiterals getCameraLiterals() {
         return this.cameraLiterals;
+    }
+
+    public TurretTalonConfigLiterals getTurretTalonConfigLiterals() {
+        return this.turretTalonConfigLiterals;
     }
 
     public DriveCharacterizationLiterals getDriveCharacterizationLiterals() {

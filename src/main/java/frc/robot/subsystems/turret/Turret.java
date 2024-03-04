@@ -18,6 +18,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 import frc.robot.RobotContainer;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
@@ -35,7 +36,7 @@ public class Turret extends SubsystemBase {
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
     final static double delayNoteLoadedSeconds = 0.1;
-    final static double delayNoteUnloadedSeconds = 1.0;
+    final static double delayNoteUnloadedSeconds = 2.0;
 
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
@@ -71,53 +72,6 @@ public class Turret extends SubsystemBase {
         sensor = new ProximitySensorInput(4);
 
         /*
-         * Rotate Motor Configuration
-         */
-        TalonFXConfiguration cfgRotate = new TalonFXConfiguration();
-
-        cfgRotate.MotionMagic.MotionMagicCruiseVelocity = 0.75;
-        cfgRotate.MotionMagic.MotionMagicAcceleration = 0.15;
-        cfgRotate.MotionMagic.MotionMagicJerk = 20;
-
-        cfgRotate.Slot0.kP = 120;
-        cfgRotate.Slot0.kV = 13.29;// TODO Tune these values
-        cfgRotate.Slot0.kS = 0.1763;
-        cfgRotate.Slot0.kD = 2.0;
-
-        cfgRotate.Feedback.SensorToMechanismRatio = 125;
-
-        /*
-         * Tilt Motor Configuration
-         */
-        TalonFXConfiguration cfgTilt = new TalonFXConfiguration();
-
-        cfgTilt.MotionMagic.MotionMagicCruiseVelocity = 0.85;
-        cfgTilt.MotionMagic.MotionMagicAcceleration = 1.0;
-        cfgTilt.MotionMagic.MotionMagicJerk = 10;
-
-        cfgTilt.Slot0.kP = 10;
-        cfgTilt.Slot0.kV = 32.55;// TODO Tune these values
-        cfgTilt.Slot0.kS = 0.13;
-
-        cfgTilt.Feedback.SensorToMechanismRatio = 300;
-
-        /*
-         * Shooter Motor Configuration
-         */
-
-        TalonFXConfiguration cfgShooter = new TalonFXConfiguration();
-
-        cfgShooter.Slot0.kP = 5;
-        cfgShooter.Slot0.kI = 0;
-        cfgShooter.Slot0.kA = 0.0115;
-        cfgShooter.Slot0.kV = 0.0230234;
-        cfgShooter.Slot0.kS = 1.5289;
-
-        cfgShooter.Feedback.SensorToMechanismRatio = 1;
-
-        cfgShooter.CurrentLimits.SupplyCurrentLimit = 30;
-
-        /*
          * Function for configuring motor
          */
         BiConsumer<TalonFX, TalonFXConfiguration> configureMotor = (talon, config) -> {
@@ -135,10 +89,12 @@ public class Turret extends SubsystemBase {
         /*
          * Apply configurations to motor using above configureMotor BiConsumer
          */
-        configureMotor.accept(rotateMotor, cfgRotate);
-        configureMotor.accept(tiltMotor, cfgTilt);
-        configureMotor.accept(leftShooterMotor, cfgShooter);
-        configureMotor.accept(rightShooterMotor, cfgShooter);
+        var configs = Constants.ROBOT.getTurretTalonConfigLiterals();
+        configureMotor.accept(rotateMotor, configs.getRotateConfig());
+        configureMotor.accept(tiltMotor, configs.getTiltConfig());
+        var shooterConfig = configs.getShooterConfig();
+        configureMotor.accept(leftShooterMotor, shooterConfig);
+        configureMotor.accept(rightShooterMotor, shooterConfig);
 
         rightShooterMotor.setInverted(true);
         leftShooterMotor.setInverted(false);
@@ -259,6 +215,8 @@ public class Turret extends SubsystemBase {
 
         boolean currentlyShooting;
 
+        boolean unloadedTimerStarted = false;
+
         public boolean isNoteLoaded() {
             return noteLoaded && noteLoadedTimer.hasElapsed(delayNoteLoadedSeconds);
         }
@@ -270,13 +228,15 @@ public class Turret extends SubsystemBase {
 
         public void resetNoteLoaded() {
             noteLoaded = false;
-            noteUnloadedTimer.reset();
             noteUnloadedTimer.stop();
+            noteUnloadedTimer.reset();
+            unloadedTimerStarted = false;
         }
 
         public void resetNoteLoadedAfterTimerUponShooting() {
-            if (currentlyShooting && noteUnloadedTimer.get() == 0) {
+            if (currentlyShooting && !unloadedTimerStarted) {
                 noteUnloadedTimer.restart();
+                unloadedTimerStarted = true;
             }
 
             if (noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {

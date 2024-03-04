@@ -17,10 +17,11 @@ public class ControllerUtils {
     public static double modifyAxis(double value, double deadband, double scale) {
         // Deadband
         value = deadband(value, deadband);
-
-        value *= scale;
         // Square the axis
         value = Math.copySign(value * value, value);
+
+        value *= scale;
+
         return value;
     }
 

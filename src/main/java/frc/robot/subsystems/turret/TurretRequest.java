@@ -34,7 +34,7 @@ public interface TurretRequest {
     static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
     static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(1);
     static final double shooterTolerance = 5.0;
-    static final double rollerShootPercentOut = -0.75;
+    static final double rollerShootPercentOut = -1.0;
 
     public class IndexFromIntake implements TurretRequest {
         private Rotation2d tilt;
@@ -110,7 +110,7 @@ public interface TurretRequest {
                 /*
                  * Azimuth Calculation
                  */
-                targetAzimuthFunction.apply(parameters.turretState).map(
+                targetAzimuth = targetAzimuthFunction.apply(parameters.turretState).map(
                         target -> TurretUtils.calculateTargetAzimuthWithinLimits(target, currentAzimuth,
                                 lowerLimit_azimuthDegrees,
                                 upperLimit_azimuthDegrees));

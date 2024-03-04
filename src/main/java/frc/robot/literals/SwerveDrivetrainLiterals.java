@@ -197,7 +197,7 @@ public class SwerveDrivetrainLiterals {
 
                 var HoloConfig = new HolonomicPathFollowerConfig(
                                 new PIDConstants(10), new PIDConstants(10),
-                                4, rotateRadius,
+                                getMaxSpeedAt12V(), rotateRadius,
                                 new ReplanningConfig());
 
                 return CommandSwerveDrivetrain.createInstance(DrivetrainConstants,

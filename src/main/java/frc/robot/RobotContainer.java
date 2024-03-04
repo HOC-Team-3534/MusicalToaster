@@ -95,7 +95,7 @@ public class RobotContainer {
 	private final static ControlTurret shootStraightForward = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
-				var degrees = SmartDashboard.getNumber("Tilt", 48);
+				var degrees = SmartDashboard.getNumber("Tilt", 46);
 				return Optional.of(Rotation2d.fromDegrees(degrees));
 			})
 			.withAllowShootWhenAimedSupplier(() -> BTN.SubwooferLetItRip.get());
@@ -172,7 +172,7 @@ public class RobotContainer {
 		// Configure the trigger bindings
 		configureBindings();
 
-		SmartDashboard.putNumber("Tilt", 48.0); // TODO Move somewhere else?
+		SmartDashboard.putNumber("Tilt", 46.0); // TODO Move somewhere else?
 
 		if (Utils.isSimulation()) { // TODO Do we need to set the pose if simulation if we arent really focused on
 									// simulation?
@@ -273,12 +273,12 @@ public class RobotContainer {
 												: stopIntake))
 						.orElse(Commands.none()));
 		TGR.Extake.tgr()
-				.whileTrue(Intake.getInstance()
-						.map((intake) -> {
-							intake.resetAllNoteInPosition();
-							return intake.applyRequest(() -> runExtake);
-						})
-						.orElse(Commands.none()));
+				.whileTrue(Commands.parallel(Intake.getInstance()
+						.map((intake) -> intake.applyRequest(() -> runExtake))
+						.orElse(Commands.none()),
+						Commands.run(() -> {
+							Intake.getInstance().ifPresent((intake) -> intake.resetAllNoteInPosition());
+						})));
 
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
@@ -423,11 +423,11 @@ public class RobotContainer {
 	}
 
 	public enum AXS {
-		Drive_ForwardBackward(() -> driverController.getLeftY(), 2.5, true),
-		Drive_LeftRight(() -> driverController.getLeftX(), 2.5, true),
-		Drive_Rotation(() -> driverController.getRightX(), 2.5);
+		Drive_ForwardBackward(() -> driverController.getLeftY(), true),
+		Drive_LeftRight(() -> driverController.getLeftX(), true),
+		Drive_Rotation(() -> driverController.getRightX());
 
-		Supplier<Double> supplier;
+		final Supplier<Double> supplier;
 		Optional<SlewRateLimiter> slewRateLimiter = Optional.empty();
 		boolean allianceInvert;
 

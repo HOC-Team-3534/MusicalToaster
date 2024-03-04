@@ -9,11 +9,13 @@ import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
+import frc.robot.utils.MathUtils;
 
 public class PhotonVisionCamera extends SubsystemBase {
 
@@ -23,7 +25,7 @@ public class PhotonVisionCamera extends SubsystemBase {
 
     final PhotonPoseEstimator photonPoseEstimator;
 
-    private static final boolean enabled = false;
+    private static final boolean enabled = true;
     private static PhotonVisionCamera INSTANCE;
 
     public static Optional<PhotonVisionCamera> createInstance() {
@@ -57,18 +59,26 @@ public class PhotonVisionCamera extends SubsystemBase {
 
             if (estimatedPose.isPresent()) {
                 var estimate = estimatedPose.get();
-                var targetId = estimate.targetsUsed.get(0).getFiducialId();
 
+                var targetId = estimate.targetsUsed.get(0).getFiducialId();
                 var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
 
-                CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
-                        .addVisionMeasurement(estimate.estimatedPose.toPose2d(), estimate.timestampSeconds));
+                var ambiguityOutOfRange = estimate.targetsUsed.get(0).getPoseAmbiguity() > 0.02;
 
                 m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
-                for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
-                    m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
+
+                var pitch = Rotation2d.fromRadians(m_cachedState.robotToTarget.getRotation().getY());
+
+                if (!ambiguityOutOfRange && MathUtils.withinTolerance(pitch, Rotation2d.fromDegrees(2))) {
+                    if (Constants.EnabledDebugModes.updatePoseWithVisionEnabled)
+                        CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
+                                .addVisionMeasurement(estimate.estimatedPose.toPose2d(), estimate.timestampSeconds));
+
+                    for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
+                        m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
+                    }
+                    photonVisionCameraTelemetry.telemetrize(m_cachedState);
                 }
-                photonVisionCameraTelemetry.telemetrize(m_cachedState);
             }
         });
     }
