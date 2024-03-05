@@ -78,7 +78,7 @@ public final class Constants {
                         Units.inchesToMeters(13.5),
                         0,
                         Units.inchesToMeters(8.75),
-                        Rotation2d.fromDegrees(-11.5));
+                        Rotation2d.fromDegrees(-12));
 
         private static RobotLiterals TBOT = new RobotLiterals(TBOT_SWERVE_LITERALS, TBOT_CAMERA_LITERALS,
                         new TBOT_TurretTalonConfigLiterals());
