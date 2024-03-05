@@ -35,7 +35,7 @@ public class Turret extends SubsystemBase {
 
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
-    final static double delayNoteLoadedSeconds = 0.1;
+    final static double delayNoteLoadedSeconds = 0.05;
     final static double delayNoteUnloadedSeconds = 2.0;
 
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
