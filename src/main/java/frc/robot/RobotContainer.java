@@ -6,6 +6,10 @@ package frc.robot;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import javax.sound.sampled.Control;
+
+import org.opencv.core.TickMeter;
+
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
 
@@ -29,6 +33,9 @@ import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
 import frc.robot.subsystems.camera.PhotonVisionCamera;
+import frc.robot.subsystems.climber.Climber;
+import frc.robot.subsystems.climber.ClimberRequest;
+import frc.robot.subsystems.climber.ClimberRequest.ControlClimber;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
@@ -57,10 +64,8 @@ public class RobotContainer {
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
 	private final static FieldCentric drive = new FieldCentric();
 
-	// private final static ControlClimber climberUp = new
-	// ControlClimber().withVoltage(0.5).withClimberReversed(false);
-	// private final static ControlClimber climberDown = new
-	// ControlClimber().withVoltage(0.5).withClimberReversed(true);
+	private final static ControlClimber climb = new ControlClimber().withVoltage(0.3);
+	private final static ClimberRequest.Idle climberOff = new ClimberRequest.Idle();
 
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
 	private final static ControlIntake runExtake = new ControlIntake().withIntakePercent(-1.0);
@@ -86,12 +91,8 @@ public class RobotContainer {
 								.fromRadians(Math.atan(Units.inchesToMeters(heightDifferenceInches) / distance))
 								.getDegrees();
 						return Rotation2d.fromDegrees(degrees);
-					}))
-			.withAllowShootWhenAimedSupplier(() -> isValidShootPosition());
-	private final static ControlTurret scoreAmp = new ControlTurret()
-			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(270)))
-			.withTargetElevationFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(30)))
-			.withAllowShootWhenAimedSupplier(() -> BTN.AmpLetItRip.get());
+					}));
+
 	private final static ControlTurret shootStraightForward = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
@@ -108,9 +109,12 @@ public class RobotContainer {
 						return targetAzimuth.minus(robotRotation);
 					})))
 			.withTargetElevationFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(10)));
+	private final static ControlTurret prepareForClimbTurret = new ControlTurret()
+			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(90)))
+			.withTargetElevationFunction((turretState) -> Optional.of(new Rotation2d()))
+			.withAllowShootWhenAimedSupplier(() -> false);
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
-	private final static ControlShooter shooterAmp = new ControlShooter().withVelocity(20);// TODO Find these valuess
 	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
@@ -124,6 +128,7 @@ public class RobotContainer {
 		int grabNoteIndex = -1;
 		boolean activelyGrabbing;
 		boolean noteLoaded;
+		boolean climbing;
 
 		public boolean isActivelyGrabbing() {
 			return this.activelyGrabbing;
@@ -151,6 +156,18 @@ public class RobotContainer {
 
 		public boolean isNoteInRobot() {
 			return grabNoteIndex != -1 || noteLoaded;
+		}
+
+		public void setClimbing() {
+			this.climbing = true;
+		}
+
+		public void resetClimbing() {
+			this.climbing = false;
+		}
+
+		public boolean isClimbing() {
+			return this.climbing;
 		}
 	}
 
@@ -188,6 +205,7 @@ public class RobotContainer {
 		Turret.createInstance();
 		Intake.createInstance();
 		PhotonVisionCamera.createInstance();
+		Climber.createInstance();
 	}
 
 	private static void defineDefaultCommands() {
@@ -212,7 +230,10 @@ public class RobotContainer {
 								: stopIntake)));
 
 		Turret.getInstance().ifPresent((turret) -> turret.setDefaultCommand(
-				turret.applyRequest(() -> indexFromIntake, () -> shooterOff)));
+				turret.applyRequest(() -> getRobotState().isClimbing() ? prepareForClimbTurret : indexFromIntake,
+						() -> shooterOff)));
+
+		Climber.getInstance().ifPresent(climber -> climber.setDefaultCommand(climber.applyRequest(() -> climberOff)));
 	}
 
 	public static void createAutonomousChoosers() {
@@ -259,11 +280,6 @@ public class RobotContainer {
 				.map((drivetrain) -> drivetrain.characterizeDrive(1.0, 4.0))
 				.orElse(Commands.none()));
 
-		// reset the field-centric heading on left bumper press
-		TGR.ResetFieldRelative.tgr().onTrue(CommandSwerveDrivetrain.getInstance()
-				.map((drivetrain) -> drivetrain.runOnce(() -> drivetrain.seedFieldRelative()))
-				.orElse(Commands.none()));
-
 		TGR.Intake.tgr()
 				.whileTrue(Intake.getInstance()
 						.map((intake) -> intake
@@ -281,7 +297,6 @@ public class RobotContainer {
 						})));
 
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
-		// TGR.PrepareScoreAmp.tgr().whileTrue(getShootCommand(() -> ShooterType.Amp));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
 		TGR.ResetNoteinRobot.tgr().onTrue(Commands.run(() -> {
@@ -291,8 +306,11 @@ public class RobotContainer {
 			Turret.getInstance().ifPresent(turret -> turret.resetNoteLoaded());
 		}));
 
-		// TGR.ClimbUp.tgr().whileTrue(climber.applyRequest(() -> climberUp));
-		// TGR.ClimbDown.tgr().whileTrue(climber.applyRequest(() -> climberDown));
+		TGR.Climb.tgr().whileTrue(
+				Climber.getInstance().map(climber -> climber.applyRequest(() -> {
+					getRobotState().setClimbing();
+					return climb;
+				})).orElse(Commands.none()));
 
 	}
 
@@ -304,7 +322,6 @@ public class RobotContainer {
 
 	public enum ShooterType {
 		Speaker(aimForSpeaker, shooterSpeaker),
-		Amp(scoreAmp, shooterAmp),
 		Steal(aimForSteal, shooterSteal),
 		Subwoofer(shootStraightForward, shootSubwoofer);
 
@@ -380,8 +397,7 @@ public class RobotContainer {
 	public enum BTN {
 		TiltFlat(() -> driverController.getHID().getAButton()),
 		Creep(() -> driverController.getHID().getLeftBumper()),
-		SubwooferLetItRip(() -> operatorController.getHID().getRightTriggerAxis() > 0.15),
-		AmpLetItRip(() -> operatorController.getHID().getYButton());
+		SubwooferLetItRip(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
 
 		Supplier<Boolean> buttonSupplier;
 
@@ -395,26 +411,25 @@ public class RobotContainer {
 	}
 
 	public enum TGR {
-		ResetFieldRelative(driverController.start()), // TODO should we having this?
-		Intake(driverController.rightTrigger(0.15)),
-		ShootSpeaker(driverController.x()),
-		Extake(driverController.rightBumper()),
-		PrepareScoreAmp(driverController.b()),
-		DeployInAmp(driverController.y()),
-		PrepareShootForSubwoofer(operatorController.x()),
-		// ClimbUp(operatorController.a().and(() -> !EnabledDebugModes.testingClimber)),
-		// ClimbDown(operatorController.b().and(() ->
-		// !EnabledDebugModes.testingClimber)),
+		Intake(driverController.rightTrigger(0.15), false),
+		ShootSpeaker(driverController.x(), true),
+		Extake(driverController.rightBumper(), false),
+		PrepareShootForSubwoofer(operatorController.x(), true),
+		Climb(operatorController.start().and(() -> driverController.getHID().getStartButton()), false),
 
-		ResetNoteinRobot(driverController.back()),
+		ResetNoteinRobot(driverController.back(), false),
 		// Below are debugging actions
 
-		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled));
+		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled), false);
 
 		Trigger trigger;
 
-		TGR(Trigger trigger) {
-			this.trigger = trigger;
+		TGR(Supplier<Boolean> booleanSupplier, boolean blockedByClimbing) {
+			this(new Trigger(() -> booleanSupplier.get()), blockedByClimbing);
+		}
+
+		TGR(Trigger trigger, boolean blockedByClimbing) {
+			this.trigger = blockedByClimbing ? trigger.and(() -> !getRobotState().isClimbing()) : trigger;
 		}
 
 		public Trigger tgr() {

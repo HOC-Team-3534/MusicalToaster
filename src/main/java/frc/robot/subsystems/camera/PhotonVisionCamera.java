@@ -64,13 +64,13 @@ public class PhotonVisionCamera extends SubsystemBase {
                 var targetId = estimate.targetsUsed.get(0).getFiducialId();
                 var targetPose = aprilTagFieldLayout.getTagPose(targetId).get();
 
-                var ambiguityOutOfRange = estimate.targetsUsed.get(0).getPoseAmbiguity() > 0.02;
+                var ambiguityOutOfRange = estimate.targetsUsed.get(0).getPoseAmbiguity() > 0.2;
 
                 m_cachedState.robotToTarget = targetPose.minus(estimate.estimatedPose);
 
                 var pitch = Rotation2d.fromRadians(m_cachedState.robotToTarget.getRotation().getY());
 
-                if (!ambiguityOutOfRange && MathUtils.withinTolerance(pitch, Rotation2d.fromDegrees(2))) {
+                if (!ambiguityOutOfRange && MathUtils.withinTolerance(pitch, Rotation2d.fromDegrees(5))) {
                     if (Constants.EnabledDebugModes.updatePoseWithVisionEnabled) {
                         CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
                                 .addVisionMeasurement(estimate.estimatedPose.toPose2d(), estimate.timestampSeconds));
@@ -80,8 +80,9 @@ public class PhotonVisionCamera extends SubsystemBase {
                     for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
                         m_cachedState.aprilTagsSeen[i] = estimate.targetsUsed.get(i).getFiducialId();
                     }
-                    photonVisionCameraTelemetry.telemetrize(m_cachedState);
                 }
+
+                photonVisionCameraTelemetry.telemetrize(m_cachedState);
             }
         });
     }
