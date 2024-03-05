@@ -217,6 +217,8 @@ public class Turret extends SubsystemBase {
 
         boolean unloadedTimerStarted = false;
 
+        protected double currentRotateAccel = 0;
+
         public boolean isNoteLoaded() {
             return noteLoaded && noteLoadedTimer.hasElapsed(delayNoteLoadedSeconds);
         }

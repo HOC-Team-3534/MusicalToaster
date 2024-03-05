@@ -10,9 +10,9 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.climber.ClimberRequest.ControlClimberRequestParameters;
-import frc.robot.subsystems.intake.Intake;
 
 public class Climber extends SubsystemBase {
+
     TalonFX climberMotor;
 
     final double UpdateFrequency = 50.0;
@@ -41,6 +41,8 @@ public class Climber extends SubsystemBase {
 
         TalonFXConfiguration cfgClimber = new TalonFXConfiguration();
 
+        cfgClimber.Feedback.SensorToMechanismRatio = 125;
+
         StatusCode statusClimber = StatusCode.StatusCodeNotInitialized;
 
         for (int i = 0; i < 5; i++)
@@ -58,11 +60,13 @@ public class Climber extends SubsystemBase {
 
     private void setControl(ClimberRequest request) {
         m_requestToApply = request;
+        m_requestToApply.apply(m_requestParameters, climberMotor);
     }
 
     @Override
     public void periodic() {
-        super.periodic();
+        m_cachedState.climberPosition = climberMotor.getPosition().getValueAsDouble();
+        m_requestParameters.climberState = m_cachedState;
     }
 
     public class ClimberState {

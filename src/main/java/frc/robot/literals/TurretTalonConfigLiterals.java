@@ -20,10 +20,9 @@ public interface TurretTalonConfigLiterals {
             cfg.MotionMagic.MotionMagicAcceleration = 0.35;
             cfg.MotionMagic.MotionMagicJerk = 20;
 
-            cfg.Slot0.kP = 120;
+            cfg.Slot0.kP = 60;
             cfg.Slot0.kV = 13.906;
             cfg.Slot0.kS = 0.164;
-            cfg.Slot0.kD = 24.0;
 
             cfg.Feedback.SensorToMechanismRatio = 125;
 

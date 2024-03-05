@@ -96,7 +96,7 @@ public class RobotContainer {
 	private final static ControlTurret shootStraightForward = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
-				var degrees = SmartDashboard.getNumber("Tilt", 46);
+				var degrees = SmartDashboard.getNumber("Tilt", 50);
 				return Optional.of(Rotation2d.fromDegrees(degrees));
 			})
 			.withAllowShootWhenAimedSupplier(() -> BTN.SubwooferLetItRip.get());
@@ -189,7 +189,7 @@ public class RobotContainer {
 		// Configure the trigger bindings
 		configureBindings();
 
-		SmartDashboard.putNumber("Tilt", 46.0); // TODO Move somewhere else?
+		SmartDashboard.putNumber("Tilt", 50.0); // TODO Move somewhere else?
 
 		if (Utils.isSimulation()) { // TODO Do we need to set the pose if simulation if we arent really focused on
 									// simulation?
