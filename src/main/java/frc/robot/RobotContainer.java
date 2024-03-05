@@ -299,7 +299,7 @@ public class RobotContainer {
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
-		TGR.ResetNoteinRobot.tgr().onTrue(Commands.run(() -> {
+		TGR.ResetNoteinRobot.tgr().onTrue(Commands.runOnce(() -> {
 			getRobotState().setGrabNoteIndex(-1);
 			getRobotState().setNoteLoaded(false);
 			Intake.getInstance().ifPresent(intake -> intake.resetAllNoteInPosition());
