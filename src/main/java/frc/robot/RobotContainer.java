@@ -85,6 +85,7 @@ public class RobotContainer {
 						var b = -33.784;
 						var c = 106;
 						var degrees = a * Math.pow(distance, 2) + b * distance + c;
+						SmartDashboard.putNumber("Distance from Goal", distance);
 						return Rotation2d.fromDegrees(degrees);
 					}));
 
