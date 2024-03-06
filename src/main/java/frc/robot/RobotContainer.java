@@ -42,10 +42,12 @@ import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
+import frc.robot.subsystems.turret.Turret.TurretState;
 import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.TurretRequest.ControlTurret;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
+import frc.robot.subsystems.turret.TurretRequest.JustRoller;
 import frc.robot.utils.ControllerUtils;
 
 /**
@@ -105,6 +107,10 @@ public class RobotContainer {
 						return targetAzimuth.minus(robotRotation);
 					})))
 			.withTargetElevationFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(10)));
+	private final static JustRoller reloadNote = new JustRoller()
+			.withRollerPercent(0.5)
+			.withTilt(Rotation2d.fromDegrees(30))
+			.withTurnOnRollerSupplier(() -> BTN.ReloadNoteActivate.get());
 	private final static ControlTurret prepareForClimbTurret = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(90)))
 			.withTargetElevationFunction((turretState) -> Optional.of(new Rotation2d()))
@@ -295,6 +301,8 @@ public class RobotContainer {
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
+		TGR.ReloadNote.tgr().whileTrue(getShootCommand(() -> ShooterType.ReloadNote));
+
 		TGR.ResetNoteinRobot.tgr().onTrue(Commands.runOnce(() -> {
 			getRobotState().setGrabNoteIndex(-1);
 			getRobotState().setNoteLoaded(false);
@@ -323,7 +331,8 @@ public class RobotContainer {
 	public enum ShooterType {
 		Speaker(aimForSpeaker, shooterSpeaker),
 		Steal(aimForSteal, shooterSteal),
-		Subwoofer(shootStraightForward, shootSubwoofer);
+		Subwoofer(shootStraightForward, shootSubwoofer),
+		ReloadNote(reloadNote, shooterOff);
 
 		TurretRequest turretRequest;
 		ShooterRequest shooterRequest;
@@ -395,9 +404,10 @@ public class RobotContainer {
 	}
 
 	public enum BTN {
-		TiltFlat(() -> driverController.getHID().getAButton()),
+		TiltFlat(() -> driverController.getHID().getLeftBumper() || operatorController.getHID().getBButton()),
 		Creep(() -> driverController.getHID().getLeftBumper()),
-		SubwooferLetItRip(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
+		SubwooferLetItRip(() -> operatorController.getHID().getRightBumper()),
+		ReloadNoteActivate(() -> SubwooferLetItRip.get());
 
 		Supplier<Boolean> buttonSupplier;
 
@@ -412,10 +422,11 @@ public class RobotContainer {
 
 	public enum TGR {
 		Intake(driverController.rightTrigger(0.15), false),
-		ShootSpeaker(driverController.x(), true),
+		ShootSpeaker(operatorController.rightTrigger(0.15), true),
 		Extake(driverController.rightBumper(), false),
 		PrepareShootForSubwoofer(operatorController.x(), true),
 		Climb(operatorController.start().and(() -> driverController.getHID().getStartButton()), false),
+		ReloadNote(operatorController.back(), true),
 
 		ResetNoteinRobot(driverController.back(), false),
 		// Below are debugging actions

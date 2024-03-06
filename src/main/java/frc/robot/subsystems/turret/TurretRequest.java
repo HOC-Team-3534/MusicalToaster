@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.ctre.phoenix.ParamEnum;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
@@ -219,16 +220,47 @@ public interface TurretRequest {
 
     public class JustRoller implements TurretRequest {
 
-        VoltageOut rotateOut = new VoltageOut(0);
-        VoltageOut tiltOut = new VoltageOut(0);
+        Rotation2d tilt;
+        double rollerOutput;
+        Supplier<Boolean> turnOnRollerOnceReadySupplier = () -> true;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
-            rotateMotor.setControl(rotateOut);
-            tiltMotor.setControl(tiltOut);
-            rollerMotor.set(ControlMode.PercentOutput, rollerShootPercentOut);
+            parameters.turretState.currentlyShooting = false;
+
+            boolean rollerOn = false;
+            Rotation2d targetElevation = tilt;
+
+            targetElevation = Rotation2d.fromDegrees(MathUtils.applyUpperAndLowerLimit(targetElevation.getDegrees(),
+                    lowerLimit_elevationDegrees, upperLimit_elevationDegrees));
+
+            var currentAzimuth = parameters.turretState.azimuth;
+            var currentElevation = parameters.turretState.elevation;
+            if (MathUtils.withinTolerance(targetElevation, currentElevation) && turnOnRollerOnceReadySupplier.get()) {
+                rollerOn = true;
+                parameters.turretState.setNoteLoaded();
+            }
+            rotateMotor.setControl(new MotionMagicVoltage(currentAzimuth.getDegrees()));
+            tiltMotor.setControl(new MotionMagicVoltage(targetElevation.getRotations()));
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerShootPercentOut : 0);
             return StatusCode.OK;
+
+        }
+
+        public JustRoller withTilt(Rotation2d tilt) {
+            this.tilt = tilt;
+            return this;
+        }
+
+        public JustRoller withRollerPercent(double rollerOutput) {
+            this.rollerOutput = rollerOutput;
+            return this;
+        }
+
+        public JustRoller withTurnOnRollerSupplier(Supplier<Boolean> turnOnRollerWhenReadySupplier) {
+            this.turnOnRollerOnceReadySupplier = turnOnRollerWhenReadySupplier;
+            return this;
         }
 
     }
