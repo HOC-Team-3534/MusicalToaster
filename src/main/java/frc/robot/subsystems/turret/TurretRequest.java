@@ -30,8 +30,8 @@ public interface TurretRequest {
     static final double lowerLimit_azimuthDegrees = -240;
     static final double upperLimit_azimuthDegrees = 240;
 
-    static final double lowerLimit_elevationDegrees = -35;
-    static final double upperLimit_elevationDegrees = 67;
+    static final double lowerLimit_elevationDegrees = -50;
+    static final double upperLimit_elevationDegrees = 50;
 
     static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
     static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(90);
