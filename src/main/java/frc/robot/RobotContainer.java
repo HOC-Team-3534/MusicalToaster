@@ -81,15 +81,10 @@ public class RobotContainer {
 			.withTargetElevationFunction(
 					(turretState) -> turretState.getVirtualGoalLocationDisplacement().map((displacementToGoal) -> {
 						var distance = displacementToGoal.getNorm();
-
-						var heightDifferenceInches = 60;
-						if (distance > Units.feetToMeters(13.0))
-							heightDifferenceInches += 2;
-						if (distance > 5.25)
-							heightDifferenceInches += 1;
-						var degrees = Rotation2d
-								.fromRadians(Math.atan(Units.inchesToMeters(heightDifferenceInches) / distance))
-								.getDegrees();
+						var a = 4.7337;
+						var b = -33.784;
+						var c = 106;
+						var degrees = a * Math.pow(distance, 2) + b * distance + c;
 						return Rotation2d.fromDegrees(degrees);
 					}));
 
