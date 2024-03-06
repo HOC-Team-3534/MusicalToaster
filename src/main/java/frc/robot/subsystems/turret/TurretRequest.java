@@ -7,7 +7,6 @@ import java.util.function.Supplier;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
-import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -30,11 +29,12 @@ public interface TurretRequest {
     static final double lowerLimit_azimuthDegrees = -240;
     static final double upperLimit_azimuthDegrees = 240;
 
-    static final double lowerLimit_elevationDegrees = -50;
-    static final double upperLimit_elevationDegrees = 50;
+    static final double lowerLimit_elevationDegrees = -35;
+    static final double upperLimit_elevationDegrees = 67;
 
     static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
-    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(1);
+    static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(90);
+    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(0.5);
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
 
@@ -71,7 +71,7 @@ public interface TurretRequest {
                 var azimuthError = targetAzimuth.minus(currentAzimuth);
                 var elevationError = outputTilt.minus(currentElevation);
 
-                if (MathUtils.withinTolerance(azimuthError, azimuthTolerance)
+                if (MathUtils.withinTolerance(azimuthError, azimuthIndexFromIntakeTolerance)
                         && MathUtils.withinTolerance(elevationError, elevationTolerance)) {
                     RobotContainer.getRobotState().setActivelyGrabbing(true);
                     rollerOn = true;
@@ -122,7 +122,7 @@ public interface TurretRequest {
             var currentAzimuth = parameters.turretState.azimuth;
             var currentElevation = parameters.turretState.elevation;
 
-            if (parameters.turretState.isNoteLoaded()) {
+            if (parameters.turretState.isNoteLoaded() || RobotContainer.getRobotState().isClimbing()) {
                 /*
                  * Azimuth Calculation
                  */

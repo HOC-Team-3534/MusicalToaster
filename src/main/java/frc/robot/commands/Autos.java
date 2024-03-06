@@ -31,25 +31,24 @@ public final class Autos {
         || Intake.getInstance().isEmpty())
       return Commands.none();
     return CommandSwerveDrivetrain.getInstance().map((drivetrain) -> {
-      return (Command) Commands
-          .runOnce(() -> drivetrain.seedFieldRelative(drivetrain.getState().Pose))
-          .andThen(
-              Commands.deadline(
-                  Commands.deferredProxy(
-                      () -> {
-                        timer.reset();
-                        return followPathToNextPositionCommand(drivetrain, positions)
-                            .until(() -> timer.get() > 0.25
-                                && !RobotContainer.getRobotState().isNoteInRobot()
-                                && currentTargetAutoPosition.isSkippable()
-                                && currentTargetAutoPosition.getType().equals(AutoPositionType.Shoot));
-                      })
-                      .repeatedly()
-                      .until(() -> positions.size() == 0)
-                      .andThen(Commands.waitSeconds(2.0)),
-                  RobotContainer.getShootCommand(
-                      () -> prevAutoPosition == null ? ShooterType.Speaker : prevAutoPosition.getShootOrStealNote()),
-                  RobotContainer.getIntakeAutonomouslyCommand()));
+      return (Command) Commands.deadline(
+          Commands.deferredProxy(
+              () -> {
+                timer.restart();
+                return followPathToNextPositionCommand(drivetrain, positions)
+                    .until(() -> timer.hasElapsed(0.25)
+                        && !RobotContainer.getRobotState().isNoteInRobot()
+                        && currentTargetAutoPosition.isSkippable()
+                        && currentTargetAutoPosition.getType().equals(AutoPositionType.Shoot));
+              })
+              .alongWith(Commands.waitUntil(() -> !RobotContainer.getRobotState().isNoteInRobot()
+                  || prevAutoPosition == null || prevAutoPosition.getType().equals(AutoPositionType.Note)))
+              .repeatedly()
+              .until(() -> positions.size() == 0)
+              .andThen(Commands.waitSeconds(2.0)),
+          RobotContainer.getShootCommand(
+              () -> prevAutoPosition == null ? ShooterType.Speaker : prevAutoPosition.getShootOrStealNote()),
+          RobotContainer.getIntakeAutonomouslyCommand());
     }).orElse(Commands.none());
   }
 

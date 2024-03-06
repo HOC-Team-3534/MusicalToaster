@@ -61,6 +61,7 @@ public class Climber extends SubsystemBase {
     private void setControl(ClimberRequest request) {
         m_requestToApply = request;
         m_requestToApply.apply(m_requestParameters, climberMotor);
+
     }
 
     @Override

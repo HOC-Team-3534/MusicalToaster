@@ -13,31 +13,37 @@ public interface ClimberRequest {
         ClimberState climberState;
     }
 
-    static final double stopRotations1 = 1.0;
-    static final double stopRotations2 = 2.0;
+    static final double stopRotations1 = 12.5;
+    static final double stopRotations2 = 20.45;
     static final double gapTime = 0.25;
 
     public StatusCode apply(ControlClimberRequestParameters parameters, TalonFX climberMotor);
 
     public class ControlClimber implements ClimberRequest {
-        double percent;
-        VoltageOut voltage = new VoltageOut(0);
+        double voltage;
+        VoltageOut voltageOut = new VoltageOut(0);
         Timer timer = new Timer();
+        boolean onPart2 = false;
 
         @Override
         public StatusCode apply(ControlClimberRequestParameters parameters, TalonFX climberMotor) {
+
             var position = parameters.climberState.climberPosition;
 
-            var climberOn = position < stopRotations1
-                    || (position >= stopRotations1 && position < stopRotations2 && timer.hasElapsed(gapTime));
+            if (position >= stopRotations1 && timer.hasElapsed(gapTime)) {
+                onPart2 = true;
+            }
 
-            climberMotor.setControl(voltage.withOutput(climberOn ? percent : 0));
+            var climberOn = position < stopRotations1
+                    || (onPart2 && position >= stopRotations1 && position < stopRotations2);
+
+            climberMotor.setControl(voltageOut.withOutput(climberOn ? voltage : 0));
             timer.restart();
             return StatusCode.OK;
         }
 
-        public ControlClimber withVoltage(double percent) {
-            this.percent = percent;
+        public ControlClimber withVoltage(double voltage) {
+            this.voltage = voltage;
             return this;
         }
 

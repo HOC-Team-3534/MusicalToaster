@@ -64,7 +64,7 @@ public class RobotContainer {
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
 	private final static FieldCentric drive = new FieldCentric();
 
-	private final static ControlClimber climb = new ControlClimber().withVoltage(0.3);
+	private final static ControlClimber climb = new ControlClimber().withVoltage(10.0);
 	private final static ClimberRequest.Idle climberOff = new ClimberRequest.Idle();
 
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
@@ -73,7 +73,7 @@ public class RobotContainer {
 
 	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
 			.withRollerOutput(-1.0)
-			.withTilt(Rotation2d.fromDegrees(40));
+			.withTilt(Rotation2d.fromDegrees(55));
 	private final static ControlTurret aimForSpeaker = new ControlTurret()
 			.withTargetAzimuthFunction(turretState -> getPoseRotation()
 					.flatMap(robotRotation -> turretState.getVirtualGoalLocationDisplacement()
@@ -96,7 +96,7 @@ public class RobotContainer {
 	private final static ControlTurret shootStraightForward = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
-				var degrees = SmartDashboard.getNumber("Tilt", 50);
+				var degrees = SmartDashboard.getNumber("Tilt", 67);
 				return Optional.of(Rotation2d.fromDegrees(degrees));
 			})
 			.withAllowShootWhenAimedSupplier(() -> BTN.SubwooferLetItRip.get());
@@ -189,7 +189,7 @@ public class RobotContainer {
 		// Configure the trigger bindings
 		configureBindings();
 
-		SmartDashboard.putNumber("Tilt", 50.0); // TODO Move somewhere else?
+		SmartDashboard.putNumber("Tilt", 67.0); // TODO Move somewhere else?
 
 		if (Utils.isSimulation()) { // TODO Do we need to set the pose if simulation if we arent really focused on
 									// simulation?
@@ -316,7 +316,11 @@ public class RobotContainer {
 
 	public static Command getIntakeAutonomouslyCommand() {
 		return Intake.getInstance()
-				.map((intake) -> intake.applyRequest(() -> getRobotState().isNoteInRobot() ? stopIntake : runIntake))
+				.map((intake) -> intake
+						.applyRequest(
+								() -> !getRobotState().isNoteInRobot() || getRobotState().isActivelyGrabbing()
+										? runIntake
+										: stopIntake))
 				.orElse(Commands.none());
 	}
 
