@@ -42,7 +42,7 @@ public final class Autos {
                         && currentTargetAutoPosition.getType().equals(AutoPositionType.Shoot));
               })
               .alongWith(Commands.waitUntil(() -> !RobotContainer.getRobotState().isNoteInRobot()
-                  || prevAutoPosition == null || prevAutoPosition.getType().equals(AutoPositionType.Note)))
+                  || prevAutoPosition == null || prevAutoPosition.getType().equals(AutoPositionType.Shoot)))
               .repeatedly()
               .until(() -> positions.size() == 0)
               .andThen(Commands.waitSeconds(2.0)),
