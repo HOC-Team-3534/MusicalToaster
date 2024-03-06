@@ -49,8 +49,8 @@ public interface TurretTalonConfigLiterals {
             cfg.Slot0.kS = 0.216898;
 
             cfg.Feedback.FeedbackRemoteSensorID = 22;
-            cfg.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemotePigeon2_Roll;
-            cfg.Feedback.SensorToMechanismRatio = 360.0;
+            cfg.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemotePigeon2_Pitch;
+            cfg.Feedback.SensorToMechanismRatio = -360.0;
 
             return cfg;
         }
