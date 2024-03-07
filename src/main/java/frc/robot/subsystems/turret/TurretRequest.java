@@ -35,7 +35,7 @@ public interface TurretRequest {
 
     static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
     static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(90);
-    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(0.5);
+    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(1.0);
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
 
@@ -241,9 +241,9 @@ public interface TurretRequest {
                 rollerOn = true;
                 parameters.turretState.setNoteLoaded();
             }
-            rotateMotor.setControl(new MotionMagicVoltage(currentAzimuth.getDegrees()));
+            rotateMotor.setControl(new MotionMagicVoltage(currentAzimuth.getRotations()));
             tiltMotor.setControl(new MotionMagicVoltage(targetElevation.getRotations()));
-            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerShootPercentOut : 0);
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerOutput : 0);
             return StatusCode.OK;
 
         }

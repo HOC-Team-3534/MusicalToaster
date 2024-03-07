@@ -109,7 +109,7 @@ public class RobotContainer {
 			.withTargetElevationFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(10)));
 	private final static JustRoller reloadNote = new JustRoller()
 			.withRollerPercent(0.5)
-			.withTilt(Rotation2d.fromDegrees(30))
+			.withTilt(Rotation2d.fromDegrees(40))
 			.withTurnOnRollerSupplier(() -> BTN.ReloadNoteActivate.get());
 	private final static ControlTurret prepareForClimbTurret = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(90)))
@@ -347,7 +347,8 @@ public class RobotContainer {
 		return Turret.getInstance().map((turret) -> {
 			var type = shooterTypeSupplier.get();
 			return turret.applyRequest(
-					() -> getRobotState().noteLoaded ? type.turretRequest : indexFromIntake,
+					() -> getRobotState().noteLoaded || type.equals(ShooterType.ReloadNote) ? type.turretRequest
+							: indexFromIntake,
 					() -> type.shooterRequest);
 		}).orElse(Commands.none());
 	}

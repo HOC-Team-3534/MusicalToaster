@@ -44,8 +44,8 @@ public final class Autos {
               .alongWith(Commands.waitUntil(() -> !RobotContainer.getRobotState().isNoteInRobot()
                   || prevAutoPosition == null || prevAutoPosition.getType().equals(AutoPositionType.Shoot)))
               .repeatedly()
-              .until(() -> positions.size() == 0 && currentTargetAutoPosition == null)
-              .andThen(Commands.waitSeconds(2.0)),
+              .until(() -> positions.size() == 0 && currentTargetAutoPosition == null),
+          // .andThen(Commands.waitSeconds(2.0)),
           RobotContainer.getShootCommand(
               () -> prevAutoPosition == null ? ShooterType.Speaker : prevAutoPosition.getShootOrStealNote()),
           RobotContainer.getIntakeAutonomouslyCommand());
@@ -70,7 +70,7 @@ public final class Autos {
 
     prevAutoPosition = currentTargetAutoPosition;
 
-    var currentTargetAutoPosition = positions.pop();
+    currentTargetAutoPosition = positions.pop();
 
     var current = drivetrain.getState().Pose.getTranslation();
 
