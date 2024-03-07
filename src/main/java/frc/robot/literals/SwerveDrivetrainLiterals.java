@@ -196,7 +196,7 @@ public class SwerveDrivetrainLiterals {
                                 .times(Units.inchesToMeters(1)).getNorm();
 
                 var HoloConfig = new HolonomicPathFollowerConfig(
-                                new PIDConstants(10), new PIDConstants(10),
+                                new PIDConstants(1), new PIDConstants(1),
                                 getMaxSpeedAt12V(), rotateRadius,
                                 new ReplanningConfig());
 

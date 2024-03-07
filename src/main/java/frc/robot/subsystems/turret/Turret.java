@@ -111,7 +111,7 @@ public class Turret extends SubsystemBase {
         rollerMotor.setSelectedSensorPosition(0);
         rollerMotor.setSensorPhase(true);
 
-        var offsetGoalFromWallInches = 0.0;
+        var offsetGoalFromWallInches = 9.0;
 
         var blueGoal = new Translation2d(Units.inchesToMeters(offsetGoalFromWallInches), Units.inchesToMeters(218.64));
         var redGoal = new Translation2d(Units.feetToMeters(54.75) - Units.inchesToMeters(offsetGoalFromWallInches),
