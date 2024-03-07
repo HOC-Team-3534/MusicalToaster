@@ -16,6 +16,7 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
+import frc.robot.subsystems.swervedrive.path.IPathPlanner;
 
 public class SwerveDrivetrainLiterals {
 
@@ -57,6 +58,11 @@ public class SwerveDrivetrainLiterals {
                 return this;
         }
 
+        public SwerveDrivetrainLiterals withPathPlanner(IPathPlanner pathPlanner) {
+                this.pathPlanner = pathPlanner;
+                return this;
+        }
+
         private Slot0Configs driveGains = new Slot0Configs()
                         .withKP(3).withKI(0).withKD(0);
 
@@ -72,6 +78,7 @@ public class SwerveDrivetrainLiterals {
                         kBackLeftEncoderOffset,
                         kBackRightEncoderOffset;
 
+        private IPathPlanner pathPlanner = new IPathPlanner.PathPlanner2024_FixedFromGUI();
         /**
          * Static
          */
@@ -205,6 +212,7 @@ public class SwerveDrivetrainLiterals {
                                 VecBuilder.fill(0.1, 0.1, 0.1),
                                 getMaxSpeedAt12V(),
                                 HoloConfig,
+                                pathPlanner,
                                 FrontLeft,
                                 FrontRight, BackLeft, BackRight);
         }
@@ -216,6 +224,10 @@ public class SwerveDrivetrainLiterals {
 
         public double getMaxSpeedAutonomous() {
                 return this.kAutonomousMaxSpeedMps;
+        }
+
+        public IPathPlanner getPathPlanner() {
+                return this.pathPlanner;
         }
 
 }

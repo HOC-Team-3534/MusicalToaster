@@ -6,6 +6,8 @@ package frc.robot.commands;
 
 import java.util.LinkedList;
 
+import com.pathplanner.lib.commands.PathPlannerAuto;
+
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -23,6 +25,14 @@ import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.Turret;
 
 public final class Autos {
+
+  public enum GUIAutos {
+    ShootAndDriveAcrossLine;
+
+    public PathPlannerAuto getPathPlannerAuto() {
+      return new PathPlannerAuto(this.name());
+    }
+  }
 
   static Timer timer = new Timer();
 

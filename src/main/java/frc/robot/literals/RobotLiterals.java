@@ -3,6 +3,7 @@ package frc.robot.literals;
 import java.util.Optional;
 
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
+import frc.robot.subsystems.swervedrive.path.IPathPlanner;
 
 public class RobotLiterals {
     private final SwerveDrivetrainLiterals swerveDrivetrainLiterals;
@@ -31,6 +32,10 @@ public class RobotLiterals {
 
     public double getMaxSpeedAutonomous() {
         return this.swerveDrivetrainLiterals.getMaxSpeedAutonomous();
+    }
+
+    public IPathPlanner getPathPlanner() {
+        return this.swerveDrivetrainLiterals.getPathPlanner();
     }
 
     public CameraLiterals getCameraLiterals() {

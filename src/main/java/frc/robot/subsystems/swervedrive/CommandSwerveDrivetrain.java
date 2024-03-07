@@ -26,7 +26,7 @@ import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
-import frc.robot.subsystems.swervedrive.path.IPathPlanner.PathPlanner2024;
+import frc.robot.subsystems.swervedrive.path.IPathPlanner;
 import frc.robot.utils.characterization.FeedForwardCharacterizationData;
 
 /**
@@ -41,7 +41,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
     FeedForwardCharacterizationData characterizationData = new FeedForwardCharacterizationData();
     double timeCharacterizing;
     double maxSpeed;
-    PathPlanner2024 pathplanner = new PathPlanner2024();
+    final IPathPlanner pathPlanner;
     private final Telemetry logger;
 
     private static final boolean enabled = true;
@@ -49,7 +49,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
 
     public static Optional<CommandSwerveDrivetrain> createInstance(SwerveDrivetrainConstants driveTrainConstants,
             Matrix<N3, N1> odometryStandardDeviation, Matrix<N3, N1> visionStandardDeviation,
-            double maxSpeed, HolonomicPathFollowerConfig holoConfig,
+            double maxSpeed, HolonomicPathFollowerConfig holoConfig, IPathPlanner pathPlanner,
             SwerveModuleConstants... modules) {
         if (INSTANCE != null) {
             return Optional.of(INSTANCE);
@@ -57,7 +57,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
         if (!enabled)
             return Optional.empty();
         INSTANCE = new CommandSwerveDrivetrain(driveTrainConstants, odometryStandardDeviation, visionStandardDeviation,
-                maxSpeed, holoConfig, modules);
+                maxSpeed, holoConfig, pathPlanner, modules);
         return Optional.of(INSTANCE);
     }
 
@@ -67,14 +67,15 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
 
     private CommandSwerveDrivetrain(SwerveDrivetrainConstants driveTrainConstants,
             Matrix<N3, N1> odometryStandardDeviation, Matrix<N3, N1> visionStandardDeviation,
-            double maxSpeed, HolonomicPathFollowerConfig holoConfig,
+            double maxSpeed, HolonomicPathFollowerConfig holoConfig, IPathPlanner pathPlanner,
             SwerveModuleConstants... modules) {
         super(driveTrainConstants,
                 odometryStandardDeviation,
                 visionStandardDeviation,
                 modules);
         this.maxSpeed = maxSpeed;
-        pathplanner.configureHolonomic(() -> this.getState().Pose, this::seedFieldRelative,
+        this.pathPlanner = pathPlanner;
+        this.pathPlanner.configureHolonomic(() -> this.getState().Pose, this::seedFieldRelative,
                 this::getChassisSpeeds,
                 speeds -> this.setControl(new SwerveRequest.ApplyChassisSpeeds().withSpeeds(speeds)), holoConfig,
                 () -> false, this);
@@ -93,11 +94,11 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
     }
 
     public Command pathfindToPose(Pose2d endPose, PathConstraints pathConstraints, double endVelocity) {
-        return pathplanner.pathfindToPose(endPose, pathConstraints, endVelocity);
+        return pathPlanner.pathfindToPose(endPose, pathConstraints, endVelocity);
     }
 
     public Command pathfindToPose(Translation2d endPosition, PathConstraints pathConstraints, double endVelocity) {
-        return pathplanner.pathfindToPose(endPosition, this::faceAnySideOfRobotInDirectionOfTravel, pathConstraints,
+        return pathPlanner.pathfindToPose(endPosition, this::faceAnySideOfRobotInDirectionOfTravel, pathConstraints,
                 endVelocity);
     }
 
@@ -128,11 +129,11 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
     public Command pathfindToPose(Translation2d endPosition,
             Function<PathPlannerTrajectory.State, Rotation2d> rotationFunction, PathConstraints pathConstraints,
             double endVelocity) {
-        return pathplanner.pathfindToPose(endPosition, rotationFunction, pathConstraints, endVelocity);
+        return pathPlanner.pathfindToPose(endPosition, rotationFunction, pathConstraints, endVelocity);
     }
 
     public Command followPath(PathPlannerPath path) {
-        return pathplanner.followPath(path);
+        return pathPlanner.followPath(path);
     }
 
     /**

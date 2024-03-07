@@ -12,6 +12,7 @@ import org.opencv.core.TickMeter;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -30,6 +31,7 @@ import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.commands.AutoPosition;
 import frc.robot.commands.AutoPosition.AutoPositionType;
+import frc.robot.commands.Autos.GUIAutos;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
 import frc.robot.subsystems.camera.PhotonVisionCamera;
@@ -41,6 +43,7 @@ import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.lights.Lights;
 import frc.robot.subsystems.lights.Lights.LightModes;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
+import frc.robot.subsystems.swervedrive.path.IPathPlanner;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
@@ -125,6 +128,8 @@ public class RobotContainer {
 
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
+
+	private static SendableChooser<Autos.GUIAutos> guiAutoChooser = new SendableChooser<>();
 
 	private static RobotState m_robotState = new RobotState();
 
@@ -244,11 +249,21 @@ public class RobotContainer {
 	}
 
 	public static void createAutonomousChoosers() {
-		for (int i = 0; i < 5; i++) {
-			noteHiearchyChoosers[i] = newNoteHiearchyChooser();
-			SmartDashboard.putData("Note Hiearchy " + (i + 1), noteHiearchyChoosers[i]);
-			shootOrStealChoosers[i] = newShootOrStealChooser();
-			SmartDashboard.putData("Shoot|Steal " + (i + 1), shootOrStealChoosers[i]);
+
+		if (Constants.ROBOT.getPathPlanner() instanceof IPathPlanner.PathPlanner2024) {
+			for (int i = 0; i < 5; i++) {
+				noteHiearchyChoosers[i] = newNoteHiearchyChooser();
+				SmartDashboard.putData("Note Hiearchy " + (i + 1), noteHiearchyChoosers[i]);
+				shootOrStealChoosers[i] = newShootOrStealChooser();
+				SmartDashboard.putData("Shoot|Steal " + (i + 1), shootOrStealChoosers[i]);
+			}
+		} else {
+			guiAutoChooser.setDefaultOption(GUIAutos.ShootAndDriveAcrossLine.toString(),
+					GUIAutos.ShootAndDriveAcrossLine);
+			for (GUIAutos auto : GUIAutos.values()) {
+				guiAutoChooser.addOption(auto.toString(), auto);
+			}
+			SmartDashboard.putData("GUI Path Planner Auto", guiAutoChooser);
 		}
 	}
 
@@ -379,12 +394,18 @@ public class RobotContainer {
 			.minus(FIELD_DIMENSIONS.OFFSET_AUTO_CROSS_LINE_FROM_CENTER)
 			.plus(new Translation2d(Units.inchesToMeters(25.0), 0));
 
-	/**
-	 * Use this to pass the autonomous command to the main {@link Robot} class.
-	 *
-	 * @return the command to run in autonomous
-	 */
 	public static Command getAutonomousCommand() {
+		if (Constants.ROBOT.getPathPlanner() instanceof IPathPlanner.PathPlanner2024)
+			return getAutonomousCommandDynamic();
+
+		return getAutonomousCommand_FixedFromGUI();
+	}
+
+	private static Command getAutonomousCommand_FixedFromGUI() {
+		return guiAutoChooser.getSelected().getPathPlannerAuto();
+	}
+
+	private static Command getAutonomousCommandDynamic() {
 		Turret.getInstance().ifPresent(turret -> turret.setNoteLoaded());
 
 		AutoPositionList positions = new AutoPositionList();
