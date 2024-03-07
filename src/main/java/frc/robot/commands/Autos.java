@@ -4,7 +4,13 @@
 
 package frc.robot.commands;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import com.pathplanner.lib.commands.PathPlannerAuto;
 
@@ -13,6 +19,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.Constants.Drive.AUTO;
@@ -26,12 +33,26 @@ import frc.robot.subsystems.turret.Turret;
 
 public final class Autos {
 
-  public enum GUIAutos {
-    ShootAndDriveAcrossLine;
+  public static List<String> listAutoFiles() {
+    try {
+      // Define the path to the directory
+      Path path = Paths.get(Filesystem.getDeployDirectory().getPath(), "pathplanner/autos");
 
-    public PathPlannerAuto getPathPlannerAuto() {
-      return new PathPlannerAuto(this.name());
+      // Use Files.list to stream the files in the directory
+      return Files.list(path)
+          .filter(Files::isRegularFile) // Filter to include only regular files
+          .map(Path::getFileName) // Get the file name
+          .map(Path::toString) // Convert Path to String
+          .filter(name -> name.endsWith(".auto")) // Filter to include only .auto files
+          .map(name -> name.replace(".auto", "")) // Replace .auto with an empty string
+          .collect(Collectors.toList()); // Collect names into a list
+    } catch (IOException e) {
+      throw new RuntimeException("Error reading auto files: " + e.getMessage(), e);
     }
+  }
+
+  public static Command getGUIAutoCommand(String autoName) {
+    return new PathPlannerAuto(autoName);
   }
 
   static Timer timer = new Timer();

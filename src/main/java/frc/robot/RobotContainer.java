@@ -34,7 +34,6 @@ import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.Constants.EnabledDebugModes;
 import frc.robot.commands.AutoPosition;
 import frc.robot.commands.AutoPosition.AutoPositionType;
-import frc.robot.commands.Autos.GUIAutos;
 import frc.robot.commands.AutoPositionList;
 import frc.robot.commands.Autos;
 import frc.robot.subsystems.camera.PhotonVisionCamera;
@@ -132,7 +131,7 @@ public class RobotContainer {
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
 
-	private static SendableChooser<Autos.GUIAutos> guiAutoChooser = new SendableChooser<>();
+	private static SendableChooser<String> guiAutoChooser = new SendableChooser<>();
 
 	private static RobotState m_robotState = new RobotState();
 
@@ -272,10 +271,10 @@ public class RobotContainer {
 				SmartDashboard.putData("Shoot|Steal " + (i + 1), shootOrStealChoosers[i]);
 			}
 		} else {
-			guiAutoChooser.setDefaultOption(GUIAutos.ShootAndDriveAcrossLine.toString(),
-					GUIAutos.ShootAndDriveAcrossLine);
-			for (GUIAutos auto : GUIAutos.values()) {
-				guiAutoChooser.addOption(auto.toString(), auto);
+			guiAutoChooser.setDefaultOption("ShootAndDriveToBottom",
+					"ShootAndDriveToBottom");
+			for (String autoName : Autos.listAutoFiles()) {
+				guiAutoChooser.addOption(autoName, autoName);
 			}
 			SmartDashboard.putData("GUI Path Planner Auto", guiAutoChooser);
 		}
@@ -416,7 +415,7 @@ public class RobotContainer {
 	}
 
 	private static Command getAutonomousCommand_FixedFromGUI() {
-		return guiAutoChooser.getSelected().getPathPlannerAuto();
+		return Autos.getGUIAutoCommand(guiAutoChooser.getSelected());
 	}
 
 	private static Command getAutonomousCommandDynamic() {
