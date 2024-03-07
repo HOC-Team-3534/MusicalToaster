@@ -6,22 +6,15 @@ package frc.robot;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import javax.naming.spi.DirStateFactory;
-import javax.sound.sampled.Control;
-
-import org.opencv.core.TickMeter;
-
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
 import com.pathplanner.lib.auto.NamedCommands;
-import com.pathplanner.lib.commands.PathPlannerAuto;
-import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.pathfinding.Pathfinding;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -51,7 +44,6 @@ import frc.robot.subsystems.swervedrive.path.IPathPlanner;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
-import frc.robot.subsystems.turret.Turret.TurretState;
 import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.TurretRequest.ControlTurret;
@@ -135,6 +127,7 @@ public class RobotContainer {
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
 
 	private static SendableChooser<String> guiAutoChooser = new SendableChooser<>();
+	private static SendableChooser<Integer> maxAutoPathsChooser = new SendableChooser<>();
 
 	private static RobotState m_robotState = new RobotState();
 
@@ -293,6 +286,11 @@ public class RobotContainer {
 				guiAutoChooser.addOption(autoName, autoName);
 			}
 			SmartDashboard.putData("GUI Path Planner Auto", guiAutoChooser);
+
+			maxAutoPathsChooser.setDefaultOption("2", 2);
+			for (int i = 1; i <= 10; i++) {
+				maxAutoPathsChooser.addOption(i + "", i);
+			}
 		}
 	}
 
@@ -415,7 +413,10 @@ public class RobotContainer {
 					: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER)
 							.getX();
 		}).orElse(true);
-		return behindAllianceLine && !isTiltForcedFlat();
+		var speeds = CommandSwerveDrivetrain.getInstance().map(drivetrain -> drivetrain.getChassisSpeeds())
+				.orElse(new ChassisSpeeds());
+		var drivingSlow = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 0.25;
+		return behindAllianceLine && !isTiltForcedFlat() && drivingSlow;
 	}
 
 	public static boolean isTiltForcedFlat() {
@@ -434,7 +435,7 @@ public class RobotContainer {
 	}
 
 	private static Command getAutonomousCommand_FixedFromGUI() {
-		return Autos.getGUIAutoCommand(guiAutoChooser.getSelected());
+		return Autos.getGUIAutoCommandNoNamedCommmands(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
 	}
 
 	private static Command getAutonomousCommandDynamic() {

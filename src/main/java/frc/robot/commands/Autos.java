@@ -10,9 +10,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import com.pathplanner.lib.commands.PathPlannerAuto;
+import com.pathplanner.lib.path.PathPlannerPath;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
@@ -53,6 +55,48 @@ public final class Autos {
 
   public static Command getGUIAutoCommand(String autoName) {
     return new PathPlannerAuto(autoName);
+  }
+
+  static boolean pathsCompleted;
+
+  public static Command getGUIAutoCommandNoNamedCommmands(String autoName, int maxAutopaths) {
+    var paths = new LinkedList<PathPlannerPath>();
+
+    var pathGroup = PathPlannerAuto.getPathGroupFromAutoFile(autoName);
+
+    for (int i = 0; i < maxAutopaths && i < pathGroup.size(); i++) {
+      paths.add(pathGroup.get(i));
+    }
+
+    if (paths.isEmpty() || CommandSwerveDrivetrain.getInstance().isEmpty() || Turret.getInstance().isEmpty()
+        || Intake.getInstance().isEmpty())
+      return Commands.none();
+    return CommandSwerveDrivetrain.getInstance().map((drivetrain) -> {
+      pathsCompleted = false;
+      return (Command) Commands.deadline(
+          Commands
+              .waitUntil(
+                  () -> !RobotContainer.getRobotState().isNoteInRobot() || !RobotContainer.isValidShootPosition())
+              .andThen(getDrivePathCommand(paths))
+              .repeatedly()
+              .until(() -> pathsCompleted),
+          RobotContainer.getShootCommand(() -> ShooterType.Speaker),
+          RobotContainer.getIntakeAutonomouslyCommand());
+    }).orElse(Commands.none());
+  }
+
+  private static Command getDrivePathCommand(LinkedList<PathPlannerPath> paths) {
+    return Commands.deferredProxy(
+        () -> {
+          try {
+            return (Command) CommandSwerveDrivetrain.getInstance()
+                .map(drivetrain -> drivetrain.followPath(paths.pop()))
+                .orElse(Commands.none());
+          } catch (NoSuchElementException e) {
+            pathsCompleted = true;
+            return Commands.none();
+          }
+        });
   }
 
   static Timer timer = new Timer();

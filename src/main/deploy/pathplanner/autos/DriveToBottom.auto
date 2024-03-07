@@ -6,15 +6,9 @@
     "data": {
       "commands": [
         {
-          "type": "named",
-          "data": {
-            "name": "ShootSpeakerUntilNotLoaded"
-          }
-        },
-        {
           "type": "path",
           "data": {
-            "pathName": "ShootAndDriveForward"
+            "pathName": "DriveToBottom"
           }
         }
       ]
