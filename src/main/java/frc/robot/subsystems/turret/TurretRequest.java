@@ -84,8 +84,9 @@ public interface TurretRequest {
                             ? rotateQuickAccel
                             : rotateSlowAccel;
             if (accelRotate != parameters.turretState.currentRotateAccel) {
-                Constants.ROBOT.getTurretTalonConfigLiterals().getRotateConfig().MotionMagic
-                        .withMotionMagicAcceleration(accelRotate);
+                var mm_config = Constants.ROBOT.getTurretTalonConfigLiterals().getRotateConfig().MotionMagic;
+                var updated_mm_config = mm_config.withMotionMagicAcceleration(accelRotate);
+                rotateMotor.getConfigurator().apply(updated_mm_config);
                 parameters.turretState.currentRotateAccel = accelRotate;
             }
 
@@ -169,8 +170,9 @@ public interface TurretRequest {
                             ? rotateQuickAccel
                             : rotateSlowAccel;
             if (accelRotate != parameters.turretState.currentRotateAccel) {
-                Constants.ROBOT.getTurretTalonConfigLiterals().getRotateConfig().MotionMagic
-                        .withMotionMagicAcceleration(accelRotate);
+                var mm_config = Constants.ROBOT.getTurretTalonConfigLiterals().getRotateConfig().MotionMagic;
+                var updated_mm_config = mm_config.withMotionMagicAcceleration(accelRotate);
+                rotateMotor.getConfigurator().apply(updated_mm_config);
                 parameters.turretState.currentRotateAccel = accelRotate;
             }
 
