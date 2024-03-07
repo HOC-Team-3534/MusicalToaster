@@ -42,10 +42,10 @@ public final class Autos {
                         && currentTargetAutoPosition.getType().equals(AutoPositionType.Shoot));
               })
               .alongWith(Commands.waitUntil(() -> !RobotContainer.getRobotState().isNoteInRobot()
-                  || prevAutoPosition == null || prevAutoPosition.getType().equals(AutoPositionType.Note)))
+                  || prevAutoPosition == null || prevAutoPosition.getType().equals(AutoPositionType.Shoot)))
               .repeatedly()
-              .until(() -> positions.size() == 0)
-              .andThen(Commands.waitSeconds(2.0)),
+              .until(() -> positions.size() == 0 && currentTargetAutoPosition == null),
+          // .andThen(Commands.waitSeconds(2.0)),
           RobotContainer.getShootCommand(
               () -> prevAutoPosition == null ? ShooterType.Speaker : prevAutoPosition.getShootOrStealNote()),
           RobotContainer.getIntakeAutonomouslyCommand());
@@ -63,12 +63,14 @@ public final class Autos {
    */
   private static Command followPathToNextPositionCommand(CommandSwerveDrivetrain drivetrain,
       LinkedList<AutoPosition> positions) {
-    if (positions.isEmpty())
+    if (positions.isEmpty()) {
+      currentTargetAutoPosition = null;
       return Commands.none();
+    }
 
     prevAutoPosition = currentTargetAutoPosition;
 
-    var currentTargetAutoPosition = positions.pop();
+    currentTargetAutoPosition = positions.pop();
 
     var current = drivetrain.getState().Pose.getTranslation();
 

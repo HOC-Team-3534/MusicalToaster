@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.ctre.phoenix.ParamEnum;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
@@ -29,12 +30,12 @@ public interface TurretRequest {
     static final double lowerLimit_azimuthDegrees = -240;
     static final double upperLimit_azimuthDegrees = 240;
 
-    static final double lowerLimit_elevationDegrees = -35;
-    static final double upperLimit_elevationDegrees = 67;
+    static final double lowerLimit_elevationDegrees = -50;
+    static final double upperLimit_elevationDegrees = 50;
 
     static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
     static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(90);
-    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(0.5);
+    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(1.0);
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
 
@@ -219,16 +220,47 @@ public interface TurretRequest {
 
     public class JustRoller implements TurretRequest {
 
-        VoltageOut rotateOut = new VoltageOut(0);
-        VoltageOut tiltOut = new VoltageOut(0);
+        Rotation2d tilt;
+        double rollerOutput;
+        Supplier<Boolean> turnOnRollerOnceReadySupplier = () -> true;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
                 TalonSRX rollerMotor) {
-            rotateMotor.setControl(rotateOut);
-            tiltMotor.setControl(tiltOut);
-            rollerMotor.set(ControlMode.PercentOutput, rollerShootPercentOut);
+            parameters.turretState.currentlyShooting = false;
+
+            boolean rollerOn = false;
+            Rotation2d targetElevation = tilt;
+
+            targetElevation = Rotation2d.fromDegrees(MathUtils.applyUpperAndLowerLimit(targetElevation.getDegrees(),
+                    lowerLimit_elevationDegrees, upperLimit_elevationDegrees));
+
+            var currentAzimuth = parameters.turretState.azimuth;
+            var currentElevation = parameters.turretState.elevation;
+            if (MathUtils.withinTolerance(targetElevation, currentElevation) && turnOnRollerOnceReadySupplier.get()) {
+                rollerOn = true;
+                parameters.turretState.setNoteLoaded();
+            }
+            rotateMotor.setControl(new MotionMagicVoltage(currentAzimuth.getRotations()));
+            tiltMotor.setControl(new MotionMagicVoltage(targetElevation.getRotations()));
+            rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerOutput : 0);
             return StatusCode.OK;
+
+        }
+
+        public JustRoller withTilt(Rotation2d tilt) {
+            this.tilt = tilt;
+            return this;
+        }
+
+        public JustRoller withRollerPercent(double rollerOutput) {
+            this.rollerOutput = rollerOutput;
+            return this;
+        }
+
+        public JustRoller withTurnOnRollerSupplier(Supplier<Boolean> turnOnRollerWhenReadySupplier) {
+            this.turnOnRollerOnceReadySupplier = turnOnRollerWhenReadySupplier;
+            return this;
         }
 
     }

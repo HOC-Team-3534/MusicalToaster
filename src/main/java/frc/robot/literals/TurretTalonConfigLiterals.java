@@ -1,6 +1,9 @@
 package frc.robot.literals;
 
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
+
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public interface TurretTalonConfigLiterals {
 
@@ -20,7 +23,7 @@ public interface TurretTalonConfigLiterals {
             cfg.MotionMagic.MotionMagicAcceleration = 0.35;
             cfg.MotionMagic.MotionMagicJerk = 20;
 
-            cfg.Slot0.kP = 60;
+            cfg.Slot0.kP = 40;
             cfg.Slot0.kV = 13.906;
             cfg.Slot0.kS = 0.164;
 
@@ -31,6 +34,28 @@ public interface TurretTalonConfigLiterals {
 
         @Override
         public TalonFXConfiguration getTiltConfig() {
+            return getTiltConfigWithPigeon();
+        }
+
+        private TalonFXConfiguration getTiltConfigWithPigeon() {
+            TalonFXConfiguration cfg = new TalonFXConfiguration();
+
+            cfg.MotionMagic.MotionMagicCruiseVelocity = 0.85;
+            cfg.MotionMagic.MotionMagicAcceleration = 1.0;
+            cfg.MotionMagic.MotionMagicJerk = 10;
+
+            cfg.Slot0.kP = 100;
+            cfg.Slot0.kV = 32.0713;
+            cfg.Slot0.kS = 0.216898;
+
+            cfg.Feedback.FeedbackRemoteSensorID = 22;
+            cfg.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemotePigeon2_Pitch;
+            cfg.Feedback.SensorToMechanismRatio = -1.0;
+
+            return cfg;
+        }
+
+        private TalonFXConfiguration getTiltConfigWithoutPigeon() {
             TalonFXConfiguration cfg = new TalonFXConfiguration();
 
             cfg.MotionMagic.MotionMagicCruiseVelocity = 0.85;

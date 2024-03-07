@@ -42,10 +42,12 @@ import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
 import frc.robot.subsystems.turret.ShooterRequest.Idle;
+import frc.robot.subsystems.turret.Turret.TurretState;
 import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.TurretRequest.ControlTurret;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
+import frc.robot.subsystems.turret.TurretRequest.JustRoller;
 import frc.robot.utils.ControllerUtils;
 
 /**
@@ -64,7 +66,7 @@ public class RobotContainer {
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
 	private final static FieldCentric drive = new FieldCentric();
 
-	private final static ControlClimber climb = new ControlClimber().withVoltage(10.0);
+	private final static ControlClimber climb = new ControlClimber().withVoltage(12.0);
 	private final static ClimberRequest.Idle climberOff = new ClimberRequest.Idle();
 
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
@@ -73,7 +75,7 @@ public class RobotContainer {
 
 	private final static IndexFromIntake indexFromIntake = new IndexFromIntake()
 			.withRollerOutput(-1.0)
-			.withTilt(Rotation2d.fromDegrees(55));
+			.withTilt(Rotation2d.fromDegrees(40));
 	private final static ControlTurret aimForSpeaker = new ControlTurret()
 			.withTargetAzimuthFunction(turretState -> getPoseRotation()
 					.flatMap(robotRotation -> turretState.getVirtualGoalLocationDisplacement()
@@ -81,9 +83,9 @@ public class RobotContainer {
 			.withTargetElevationFunction(
 					(turretState) -> turretState.getVirtualGoalLocationDisplacement().map((displacementToGoal) -> {
 						var distance = displacementToGoal.getNorm();
-						var a = 4.7337;
-						var b = -33.784;
-						var c = 106;
+						var a = 2.582;
+						var b = -24.096;
+						var c = 81.35;
 						var degrees = a * Math.pow(distance, 2) + b * distance + c;
 						SmartDashboard.putNumber("Distance from Goal", distance);
 						return Rotation2d.fromDegrees(degrees);
@@ -92,7 +94,7 @@ public class RobotContainer {
 	private final static ControlTurret shootStraightForward = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
-				var degrees = SmartDashboard.getNumber("Tilt", 67);
+				var degrees = SmartDashboard.getNumber("Tilt", 48);
 				return Optional.of(Rotation2d.fromDegrees(degrees));
 			})
 			.withAllowShootWhenAimedSupplier(() -> BTN.SubwooferLetItRip.get());
@@ -105,6 +107,10 @@ public class RobotContainer {
 						return targetAzimuth.minus(robotRotation);
 					})))
 			.withTargetElevationFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(10)));
+	private final static JustRoller reloadNote = new JustRoller()
+			.withRollerPercent(0.5)
+			.withTilt(Rotation2d.fromDegrees(40))
+			.withTurnOnRollerSupplier(() -> BTN.ReloadNoteActivate.get());
 	private final static ControlTurret prepareForClimbTurret = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(90)))
 			.withTargetElevationFunction((turretState) -> Optional.of(new Rotation2d()))
@@ -185,7 +191,7 @@ public class RobotContainer {
 		// Configure the trigger bindings
 		configureBindings();
 
-		SmartDashboard.putNumber("Tilt", 67.0); // TODO Move somewhere else?
+		SmartDashboard.putNumber("Tilt", 48.0); // TODO Move somewhere else?
 
 		if (Utils.isSimulation()) { // TODO Do we need to set the pose if simulation if we arent really focused on
 									// simulation?
@@ -295,6 +301,8 @@ public class RobotContainer {
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 
+		TGR.ReloadNote.tgr().whileTrue(getShootCommand(() -> ShooterType.ReloadNote));
+
 		TGR.ResetNoteinRobot.tgr().onTrue(Commands.runOnce(() -> {
 			getRobotState().setGrabNoteIndex(-1);
 			getRobotState().setNoteLoaded(false);
@@ -323,7 +331,8 @@ public class RobotContainer {
 	public enum ShooterType {
 		Speaker(aimForSpeaker, shooterSpeaker),
 		Steal(aimForSteal, shooterSteal),
-		Subwoofer(shootStraightForward, shootSubwoofer);
+		Subwoofer(shootStraightForward, shootSubwoofer),
+		ReloadNote(reloadNote, shooterOff);
 
 		TurretRequest turretRequest;
 		ShooterRequest shooterRequest;
@@ -338,7 +347,8 @@ public class RobotContainer {
 		return Turret.getInstance().map((turret) -> {
 			var type = shooterTypeSupplier.get();
 			return turret.applyRequest(
-					() -> getRobotState().noteLoaded ? type.turretRequest : indexFromIntake,
+					() -> getRobotState().noteLoaded || type.equals(ShooterType.ReloadNote) ? type.turretRequest
+							: indexFromIntake,
 					() -> type.shooterRequest);
 		}).orElse(Commands.none());
 	}
@@ -395,9 +405,10 @@ public class RobotContainer {
 	}
 
 	public enum BTN {
-		TiltFlat(() -> driverController.getHID().getAButton()),
-		Creep(() -> driverController.getHID().getLeftBumper()),
-		SubwooferLetItRip(() -> operatorController.getHID().getRightTriggerAxis() > 0.15);
+		TiltFlat(() -> driverController.getHID().getLeftBumper() || operatorController.getHID().getBButton()),
+		Creep(() -> driverController.getHID().getLeftTriggerAxis() > 0.15),
+		SubwooferLetItRip(() -> operatorController.getHID().getRightBumper()),
+		ReloadNoteActivate(() -> SubwooferLetItRip.get());
 
 		Supplier<Boolean> buttonSupplier;
 
@@ -412,10 +423,11 @@ public class RobotContainer {
 
 	public enum TGR {
 		Intake(driverController.rightTrigger(0.15), false),
-		ShootSpeaker(driverController.x(), true),
+		ShootSpeaker(operatorController.rightTrigger(0.15), true),
 		Extake(driverController.rightBumper(), false),
 		PrepareShootForSubwoofer(operatorController.x(), true),
 		Climb(operatorController.start().and(() -> driverController.getHID().getStartButton()), false),
+		ReloadNote(operatorController.back(), true),
 
 		ResetNoteinRobot(driverController.back(), false),
 		// Below are debugging actions

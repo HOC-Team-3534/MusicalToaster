@@ -41,7 +41,7 @@ public class Climber extends SubsystemBase {
 
         TalonFXConfiguration cfgClimber = new TalonFXConfiguration();
 
-        cfgClimber.Feedback.SensorToMechanismRatio = 125;
+        cfgClimber.Feedback.SensorToMechanismRatio = 75;
 
         StatusCode statusClimber = StatusCode.StatusCodeNotInitialized;
 
