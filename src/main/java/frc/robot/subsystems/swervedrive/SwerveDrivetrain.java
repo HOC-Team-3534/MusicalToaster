@@ -11,6 +11,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -37,7 +38,13 @@ public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.Swerve
      * @return Kinematics of the drivetrain
      */
     public SwerveDriveKinematics getKinematics() {
-        return m_kinematics;
+        try {
+            m_stateLock.readLock().lock();
+
+            return m_kinematics;
+        } finally {
+            m_stateLock.readLock().unlock();
+        }
     }
 
     public ChassisSpeeds getChassisSpeeds() {

@@ -57,6 +57,7 @@ public class Robot extends TimedRobot {
     // and running subsystem periodic() methods. This must be called from the
     // robot's periodic
     // block in order for anything in the Command-based framework to work.
+
     CommandScheduler.getInstance().run();
 
     // if (m_gcTimer.advanceIfElapsed(5.0)) {
@@ -76,7 +77,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void disabledPeriodic() {
-
+    RobotContainer.publishAutoTrajectoriesOnField();
   }
 
   /**
@@ -96,6 +97,7 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
+    RobotContainer.publishCurrentTrajectoryOnField();
   }
 
   @Override

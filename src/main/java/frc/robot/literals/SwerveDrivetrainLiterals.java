@@ -208,8 +208,8 @@ public class SwerveDrivetrainLiterals {
                                 new ReplanningConfig());
 
                 return CommandSwerveDrivetrain.createInstance(DrivetrainConstants,
-                                VecBuilder.fill(0.1, 0.1, 0.1),
-                                VecBuilder.fill(0.1, 0.1, 0.1),
+                                VecBuilder.fill(0.01, 0.01, 0.1),
+                                VecBuilder.fill(0.01, 0.01, 0.1),
                                 getMaxSpeedAt12V(),
                                 HoloConfig,
                                 pathPlanner,

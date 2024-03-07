@@ -61,20 +61,24 @@ public final class Autos {
   static boolean goingToShootNoteFromCenter;
   static boolean justSkippedPathToShoot;
 
-  public static Command getGUIAutoCommandNoNamedCommmands(String autoName, int maxAutopaths) {
+  public static LinkedList<PathPlannerPath> getAutoPaths(String autoName, int maxAutopaths) {
     var paths = new LinkedList<PathPlannerPath>();
-
     var pathGroup = PathPlannerAuto.getPathGroupFromAutoFile(autoName);
-
     for (int i = 0; i < maxAutopaths && i < pathGroup.size(); i++) {
       paths.add(pathGroup.get(i));
     }
+    return paths;
+  }
 
-    if (paths.isEmpty() || CommandSwerveDrivetrain.getInstance().isEmpty() || Turret.getInstance().isEmpty()
+  public static Command getGUIAutoCommandNoNamedCommmands(LinkedList<PathPlannerPath> paths) {
+
+    if (CommandSwerveDrivetrain.getInstance().isEmpty() || Turret.getInstance().isEmpty()
         || Intake.getInstance().isEmpty())
       return Commands.none();
     return CommandSwerveDrivetrain.getInstance().map((drivetrain) -> {
       pathsCompleted = false;
+      justSkippedPathToShoot = false;
+      currentPath = null;
       return (Command) Commands.deadline(
           /*
            * Step 1 :
@@ -127,10 +131,16 @@ public final class Autos {
                       .withTimeout(1.0))
               .repeatedly()
               .until(() -> pathsCompleted)
-              .andThen(Commands.waitSeconds(2.0)),
+              .andThen(Commands.waitSeconds(3.0)),
           RobotContainer.getShootCommand(() -> ShooterType.Speaker),
           RobotContainer.getIntakeAutonomouslyCommand());
     }).orElse(Commands.none());
+  }
+
+  static PathPlannerPath currentPath;
+
+  public static PathPlannerPath getCurrentPath() {
+    return currentPath;
   }
 
   private static Command getDrivePathCommand(LinkedList<PathPlannerPath> paths) {
@@ -138,10 +148,14 @@ public final class Autos {
         () -> {
           try {
             return (Command) CommandSwerveDrivetrain.getInstance()
-                .map(drivetrain -> drivetrain.followPath(paths.pop()))
+                .map(drivetrain -> {
+                  currentPath = paths.pop();
+                  return drivetrain.followPath(paths.pop());
+                })
                 .orElse(Commands.none());
           } catch (NoSuchElementException e) {
             pathsCompleted = true;
+            currentPath = null;
             return Commands.none();
           }
         });

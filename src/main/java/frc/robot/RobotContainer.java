@@ -3,20 +3,30 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+
+import javax.swing.text.html.Option;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
 import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.PathPlannerTrajectory;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -50,6 +60,7 @@ import frc.robot.subsystems.turret.TurretRequest.ControlTurret;
 import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
 import frc.robot.subsystems.turret.TurretRequest.JustRoller;
 import frc.robot.utils.ControllerUtils;
+import frc.robot.utils.SmartDashboardUtils;
 
 /**
  * This class is where the bulk of the robot should be declared. Since
@@ -214,7 +225,7 @@ public class RobotContainer {
 		if (Utils.isSimulation()) { // TODO Do we need to set the pose if simulation if we arent really focused on
 									// simulation?
 			CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
-					.seedFieldRelative(new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90))));
+					.seedFieldRelative(new Pose2d(new Translation2d(0, 0), Rotation2d.fromDegrees(90))));
 		}
 
 		createAutonomousChoosers();
@@ -227,7 +238,8 @@ public class RobotContainer {
 		Constants.ROBOT.getDrivetrain();
 		Turret.createInstance();
 		Intake.createInstance();
-		PhotonVisionCamera.createInstance();
+		if (RobotBase.isReal())
+			PhotonVisionCamera.createInstance();
 		Climber.createInstance();
 		Lights.createInstance();
 	}
@@ -280,8 +292,8 @@ public class RobotContainer {
 				SmartDashboard.putData("Shoot|Steal " + (i + 1), shootOrStealChoosers[i]);
 			}
 		} else {
-			guiAutoChooser.setDefaultOption("ShootAndDriveToBottom",
-					"ShootAndDriveToBottom");
+			guiAutoChooser.setDefaultOption("DriveToBottom",
+					"DriveToBottom");
 			for (String autoName : Autos.listAutoFiles()) {
 				guiAutoChooser.addOption(autoName, autoName);
 			}
@@ -291,6 +303,7 @@ public class RobotContainer {
 			for (int i = 1; i <= 20; i++) {
 				maxAutoPathsChooser.addOption(i + "", i);
 			}
+			SmartDashboard.putData("GUI Auto Max Paths To Follow", maxAutoPathsChooser);
 		}
 	}
 
@@ -435,7 +448,8 @@ public class RobotContainer {
 	}
 
 	private static Command getAutonomousCommand_FixedFromGUI() {
-		return Autos.getGUIAutoCommandNoNamedCommmands(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
+		var paths = Autos.getAutoPaths(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
+		return Autos.getGUIAutoCommandNoNamedCommmands(paths);
 	}
 
 	private static Command getAutonomousCommandDynamic() {
@@ -461,6 +475,94 @@ public class RobotContainer {
 			});
 		}
 		return Autos.getDynamicAutonomous(positions);
+	}
+
+	static String selectedAuto = "";
+	static double selectedMaxAutoPaths;
+	static LinkedList<PathPlannerPath> autoPaths;
+	static int pathIndexOnField;
+	static double totalTimeCurrentTrajectory;
+	static Timer trajectoryOnFieldTimer = new Timer();
+	static Trajectory visualizedTrajectory;
+
+	public static void publishAutoTrajectoriesOnField() {
+		if (!selectedAuto.equals(guiAutoChooser.getSelected())
+				|| selectedMaxAutoPaths != maxAutoPathsChooser.getSelected()) {
+			selectedAuto = guiAutoChooser.getSelected();
+			selectedMaxAutoPaths = maxAutoPathsChooser.getSelected();
+
+			autoPaths = Autos.getAutoPaths(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
+			pathIndexOnField = 0;
+			trajectoryOnFieldTimer.restart();
+			updateTrajectory();
+		}
+
+		if (autoPaths.size() > 0) {
+
+			if (trajectoryOnFieldTimer.advanceIfElapsed(totalTimeCurrentTrajectory)) {
+				pathIndexOnField++;
+				if (pathIndexOnField >= autoPaths.size())
+					pathIndexOnField = 0;
+
+				updateTrajectory();
+			}
+		}
+	}
+
+	private static void updateTrajectory() {
+		var trajectory = getDisplayTrajectory(autoPaths.get(pathIndexOnField));
+		totalTimeCurrentTrajectory = trajectory.getTotalTimeSeconds();
+		visualizedTrajectory = getWPILIBTrajectory(trajectory);
+		CommandSwerveDrivetrain.getInstance().ifPresent(drivetrain -> {
+			drivetrain.getField().getObject("traj").setTrajectory(visualizedTrajectory);
+		});
+	}
+
+	static Optional<PathPlannerPath> currentDisplayedPath = Optional.empty();
+	static boolean wasEmptyLastCheck;
+
+	static Trajectory autoTrajectory;
+
+	public static void publishCurrentTrajectoryOnField() {
+		autoTrajectory = null;
+
+		if (currentDisplayedPath.isEmpty() || currentDisplayedPath.get() != Autos.getCurrentPath()) {
+			currentDisplayedPath = Optional.ofNullable(Autos.getCurrentPath());
+
+			currentDisplayedPath.ifPresentOrElse(path -> {
+				autoTrajectory = getWPILIBTrajectory(getDisplayTrajectory(path));
+				wasEmptyLastCheck = false;
+			}, () -> {
+				if (!wasEmptyLastCheck) {
+					autoTrajectory = new Trajectory();
+					wasEmptyLastCheck = true;
+				}
+			});
+		}
+
+		if (autoTrajectory != null) {
+			CommandSwerveDrivetrain.getInstance().ifPresent(drivetrain -> {
+				drivetrain.getField().getObject("traj").setTrajectory(autoTrajectory);
+			});
+		}
+	}
+
+	private static PathPlannerTrajectory getDisplayTrajectory(PathPlannerPath path) {
+		var alliancePath = DriverStation.getAlliance()
+				.map(alliance -> alliance.equals(Alliance.Red) ? path.flipPath() : path).orElse(path);
+		return alliancePath.getTrajectory(new ChassisSpeeds(),
+				alliancePath.getPreviewStartingHolonomicPose().getRotation());
+	}
+
+	private static Trajectory getWPILIBTrajectory(PathPlannerTrajectory trajectory) {
+
+		List<Trajectory.State> states = trajectory.getStates().stream()
+				.map(state -> new Trajectory.State(state.timeSeconds, state.velocityMps, state.accelerationMpsSq,
+						SmartDashboardUtils.getPose2dForField2d(state.getTargetHolonomicPose()),
+						state.curvatureRadPerMeter))
+				.toList();
+
+		return new Trajectory(states);
 	}
 
 	public enum BTN {
