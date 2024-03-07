@@ -22,8 +22,10 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.subsystems.swervedrive.path.IPathPlanner;
@@ -78,7 +80,7 @@ public class CommandSwerveDrivetrain extends SwerveDrivetrain implements Subsyst
         this.pathPlanner.configureHolonomic(() -> this.getState().Pose, this::seedFieldRelative,
                 this::getChassisSpeeds,
                 speeds -> this.setControl(new SwerveRequest.ApplyChassisSpeeds().withSpeeds(speeds)), holoConfig,
-                () -> false, this);
+                () -> DriverStation.getAlliance().map(alliance -> alliance.equals(Alliance.Red)).orElse(false), this);
 
         if (Utils.isSimulation()) {
             startSimThread();

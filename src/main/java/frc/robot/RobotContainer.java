@@ -12,7 +12,10 @@ import org.opencv.core.TickMeter;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
+import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.PathPlannerAuto;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.pathfinding.Pathfinding;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -207,6 +210,9 @@ public class RobotContainer {
 		}
 
 		createAutonomousChoosers();
+
+		if (Constants.ROBOT.getPathPlanner() instanceof IPathPlanner.PathPlanner2024_FixedFromGUI)
+			registerNamedCommands();
 	}
 
 	private static void instantiateSubsystems() {
@@ -216,6 +222,14 @@ public class RobotContainer {
 		PhotonVisionCamera.createInstance();
 		Climber.createInstance();
 		Lights.createInstance();
+	}
+
+	private static void registerNamedCommands() {
+		var shootCommand = getShootCommand(() -> ShooterType.Speaker).until(() -> !getRobotState().isNoteInRobot());
+		var intakeCommand = getIntakeAutonomouslyCommand().until(() -> getRobotState().isNoteLoaded());
+
+		NamedCommands.registerCommand("ShootSpeakerUntilNotLoaded", shootCommand);
+		NamedCommands.registerCommand("IntakeUntilLoaded", intakeCommand);
 	}
 
 	private static void defineDefaultCommands() {
