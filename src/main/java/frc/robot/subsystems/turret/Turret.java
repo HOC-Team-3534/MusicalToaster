@@ -133,6 +133,10 @@ public class Turret extends SubsystemBase {
 
     @Override
     public void periodic() {
+        if (RobotContainer.getRobotState().isResetingClimber()) {
+            rollerMotor.setSelectedSensorPosition(Rotation2d.fromDegrees(90).getRotations() * 1440.0);
+        }
+
         m_cachedState.rawAzimuthEncoderCounts = rollerMotor.getSelectedSensorPosition();
 
         m_cachedState.azimuth = Rotation2d.fromRotations(m_cachedState.rawAzimuthEncoderCounts / 1440.0);

@@ -6,6 +6,7 @@ package frc.robot;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import javax.naming.spi.DirStateFactory;
 import javax.sound.sampled.Control;
 
 import org.opencv.core.TickMeter;
@@ -40,6 +41,7 @@ import frc.robot.subsystems.camera.PhotonVisionCamera;
 import frc.robot.subsystems.climber.Climber;
 import frc.robot.subsystems.climber.ClimberRequest;
 import frc.robot.subsystems.climber.ClimberRequest.ControlClimber;
+import frc.robot.subsystems.climber.ClimberRequest.ResetClimber;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.lights.Lights;
@@ -74,6 +76,7 @@ public class RobotContainer {
 	private final static FieldCentric drive = new FieldCentric();
 
 	private final static ControlClimber climb = new ControlClimber().withVoltage(12.0);
+	private final static ResetClimber resetClimber = new ResetClimber();
 	private final static ClimberRequest.Idle climberOff = new ClimberRequest.Idle();
 
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
@@ -140,6 +143,7 @@ public class RobotContainer {
 		boolean activelyGrabbing;
 		boolean noteLoaded;
 		boolean climbing;
+		boolean resetingClimber;
 
 		public boolean isActivelyGrabbing() {
 			return this.activelyGrabbing;
@@ -179,6 +183,18 @@ public class RobotContainer {
 
 		public boolean isClimbing() {
 			return this.climbing;
+		}
+
+		public void setResetingClimber() {
+			this.resetingClimber = true;
+		}
+
+		public void resetResetingClimber() {
+			this.resetingClimber = false;
+		}
+
+		public boolean isResetingClimber() {
+			return this.resetingClimber;
 		}
 	}
 
@@ -349,6 +365,9 @@ public class RobotContainer {
 					return climb;
 				})).orElse(Commands.none()));
 
+		TGR.ResetClimber.tgr().whileTrue(
+				Climber.getInstance().map(climber -> climber.applyRequest(() -> resetClimber)).orElse(Commands.none()));
+
 	}
 
 	public static Command getIntakeAutonomouslyCommand() {
@@ -447,7 +466,8 @@ public class RobotContainer {
 		TiltFlat(() -> driverController.getHID().getLeftBumper() || operatorController.getHID().getBButton()),
 		Creep(() -> driverController.getHID().getLeftTriggerAxis() > 0.15),
 		SubwooferLetItRip(() -> operatorController.getHID().getRightBumper()),
-		ReloadNoteActivate(() -> SubwooferLetItRip.get());
+		ReloadNoteActivate(() -> SubwooferLetItRip.get()),
+		ResetClimber(() -> driverController.getHID().getPOV() == 180 && TiltFlat.get());
 
 		Supplier<Boolean> buttonSupplier;
 
@@ -471,7 +491,8 @@ public class RobotContainer {
 		ResetNoteinRobot(driverController.back(), false),
 		// Below are debugging actions
 
-		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled), false);
+		Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled), false),
+		ResetClimber(new Trigger(() -> BTN.ResetClimber.get()).and(() -> !DriverStation.isFMSAttached()), false);
 
 		Trigger trigger;
 
