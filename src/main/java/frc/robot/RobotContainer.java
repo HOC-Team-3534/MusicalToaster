@@ -38,6 +38,8 @@ import frc.robot.subsystems.climber.ClimberRequest;
 import frc.robot.subsystems.climber.ClimberRequest.ControlClimber;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
+import frc.robot.subsystems.lights.Lights;
+import frc.robot.subsystems.lights.Lights.LightModes;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.ShooterRequest;
 import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
@@ -208,6 +210,7 @@ public class RobotContainer {
 		Intake.createInstance();
 		PhotonVisionCamera.createInstance();
 		Climber.createInstance();
+		Lights.createInstance();
 	}
 
 	private static void defineDefaultCommands() {
@@ -236,6 +239,8 @@ public class RobotContainer {
 						() -> shooterOff)));
 
 		Climber.getInstance().ifPresent(climber -> climber.setDefaultCommand(climber.applyRequest(() -> climberOff)));
+
+		Lights.getInstance().ifPresent(lights -> lights.setDefaultCommand(lights.applyLightMode(LightModes.Default)));
 	}
 
 	public static void createAutonomousChoosers() {
