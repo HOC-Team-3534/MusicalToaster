@@ -58,6 +58,8 @@ public final class Autos {
   }
 
   static boolean pathsCompleted;
+  static boolean goingToShootNoteFromCenter;
+  static boolean justSkippedPathToShoot;
 
   public static Command getGUIAutoCommandNoNamedCommmands(String autoName, int maxAutopaths) {
     var paths = new LinkedList<PathPlannerPath>();
@@ -74,12 +76,58 @@ public final class Autos {
     return CommandSwerveDrivetrain.getInstance().map((drivetrain) -> {
       pathsCompleted = false;
       return (Command) Commands.deadline(
+          /*
+           * Step 1 :
+           * 
+           * Wait Until Note is Shot OR "going"/"heading" to shoot note closer to speaker
+           * fromc center line
+           * In order to be considering going to shoot the note from center line, the
+           * robot must be too far way to shoot
+           * AND the previous path can not have been skipped, meaning that the prior note
+           * from center was not picked up.
+           * 
+           * NOTE: isValidShootPosition takes into account the robots velocity. If the
+           * robot is moving and this is checked, it may cause issues. Right now, when
+           * this is checked, the robot should not be following a path, so it should work
+           * 
+           * Step 2 :
+           * Drive and Intake. Skip if going to shoot Note from center but the robot did
+           * not pick up the prior note from the center
+           * 
+           * Step 3 :
+           * Wait for the robot to intake the note, unless the robot just shot the note it
+           * picked up from the center because there is no note at the shoot position
+           * 
+           * This is repeated until all the paths are removed from the list of paths to
+           * follow
+           * A bit of time at the end is waited upon so that the robot can shoot the last
+           * note
+           * before the command ends because driving ended
+           * 
+           * Shooting and Intaking:
+           * All the while driving,
+           * intake is running if there is not a note in the robot,
+           * shoot speaker is aiming and attempting to shoot if there is a note loaded in
+           * the turret and the shoot position is valid, which accounts for robot speed
+           * and it must be going slow or stopped in or to shoot
+           */
           Commands
               .waitUntil(
-                  () -> !RobotContainer.getRobotState().isNoteInRobot() || !RobotContainer.isValidShootPosition())
-              .andThen(getDrivePathCommand(paths))
+                  () -> {
+                    goingToShootNoteFromCenter = !RobotContainer.isValidShootPosition() && !justSkippedPathToShoot;
+                    return !RobotContainer.getRobotState().isNoteInRobot() || goingToShootNoteFromCenter;
+                  })
+              .andThen(getDrivePathCommand(paths).until(() -> {
+                justSkippedPathToShoot = !RobotContainer.getRobotState().isNoteInRobot()
+                    && goingToShootNoteFromCenter;
+                return justSkippedPathToShoot;
+              }))
+              .andThen(
+                  Commands.waitUntil(() -> RobotContainer.getRobotState().isNoteInRobot() || goingToShootNoteFromCenter)
+                      .withTimeout(1.0))
               .repeatedly()
-              .until(() -> pathsCompleted),
+              .until(() -> pathsCompleted)
+              .andThen(Commands.waitSeconds(2.0)),
           RobotContainer.getShootCommand(() -> ShooterType.Speaker),
           RobotContainer.getIntakeAutonomouslyCommand());
     }).orElse(Commands.none());

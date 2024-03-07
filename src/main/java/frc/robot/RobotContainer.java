@@ -287,8 +287,8 @@ public class RobotContainer {
 			}
 			SmartDashboard.putData("GUI Path Planner Auto", guiAutoChooser);
 
-			maxAutoPathsChooser.setDefaultOption("2", 2);
-			for (int i = 1; i <= 10; i++) {
+			maxAutoPathsChooser.setDefaultOption("20", 20);
+			for (int i = 1; i <= 20; i++) {
 				maxAutoPathsChooser.addOption(i + "", i);
 			}
 		}
