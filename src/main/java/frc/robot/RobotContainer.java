@@ -66,7 +66,7 @@ public class RobotContainer {
 	private static final CommandXboxController operatorController = new CommandXboxController(1);
 	private final static FieldCentric drive = new FieldCentric();
 
-	private final static ControlClimber climb = new ControlClimber().withVoltage(10.0);
+	private final static ControlClimber climb = new ControlClimber().withVoltage(12.0);
 	private final static ClimberRequest.Idle climberOff = new ClimberRequest.Idle();
 
 	private final static ControlIntake runIntake = new ControlIntake().withIntakePercent(1.0);
@@ -406,7 +406,7 @@ public class RobotContainer {
 
 	public enum BTN {
 		TiltFlat(() -> driverController.getHID().getLeftBumper() || operatorController.getHID().getBButton()),
-		Creep(() -> driverController.getHID().getLeftBumper()),
+		Creep(() -> driverController.getHID().getLeftTriggerAxis() > 0.15),
 		SubwooferLetItRip(() -> operatorController.getHID().getRightBumper()),
 		ReloadNoteActivate(() -> SubwooferLetItRip.get());
 
