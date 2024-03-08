@@ -35,12 +35,12 @@ public interface TurretRequest {
 
     static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
     static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(90);
-    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(1.0);
+    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(3.0);
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
 
     static final double rotateQuickAccel = 0.45;
-    static final double rotateSlowAccel = 0.15;
+    static final double rotateSlowAccel = 0.45;
     static final double slowAccelRange = 25.0;
 
     public class IndexFromIntake implements TurretRequest {
@@ -124,7 +124,8 @@ public interface TurretRequest {
             var currentAzimuth = parameters.turretState.azimuth;
             var currentElevation = parameters.turretState.elevation;
 
-            if (parameters.turretState.isNoteLoaded() || RobotContainer.getRobotState().isClimbing()) {
+            if (parameters.turretState.isNoteLoaded() || RobotContainer.getRobotState().isClimbing()
+                    || RobotContainer.getRobotState().isExtaking()) {
                 /*
                  * Azimuth Calculation
                  */

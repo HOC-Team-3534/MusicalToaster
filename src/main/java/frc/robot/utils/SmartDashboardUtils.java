@@ -9,7 +9,10 @@ public class SmartDashboardUtils {
     static final double FIELD2D_SCALE = 0.96;
 
     public static Pose2d getPose2dForField2d(Pose2d pose) {
-        return new Pose2d(pose.getTranslation().times(FIELD2D_SCALE).plus(FIELD2D_OFFSET), pose.getRotation());
+        return pose;
+        // return new
+        // Pose2d(pose.getTranslation().times(FIELD2D_SCALE).plus(FIELD2D_OFFSET),
+        // pose.getRotation());
     }
 
 }

@@ -37,7 +37,7 @@ public class Turret extends SubsystemBase {
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
     final static double delayNoteLoadedSeconds = 0.05;
-    final static double delayNoteUnloadedSeconds = 2.0;
+    final static double delayNoteUnloadedSeconds = 1.0;
 
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
@@ -255,6 +255,10 @@ public class Turret extends SubsystemBase {
 
         public Optional<Translation2d> getVirtualGoalLocationDisplacement() {
             return virtualGoalLocationDisplacement;
+        }
+
+        public Rotation2d getCurrentAzimuth() {
+            return this.azimuth;
         }
 
     }
