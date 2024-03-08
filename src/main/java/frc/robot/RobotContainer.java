@@ -122,8 +122,8 @@ public class RobotContainer {
 			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(-20.0)));
 
 	private final static ShooterRequest.Idle shooterOff = new ShooterRequest.Idle();
-	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(80);// TODO Find these
-	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
+	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(65);// TODO Find these
+	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(65);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 	private final static ControlShooter shooterExtake = new ControlShooter().withVelocity(15);
 
