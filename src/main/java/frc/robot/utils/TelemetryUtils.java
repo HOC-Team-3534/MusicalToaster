@@ -14,7 +14,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
 public class TelemetryUtils {
 
-    static Optional<PathPlannerPath> displayedPath;
+    static Optional<PathPlannerPath> displayedPath = Optional.empty();
 
     public static Optional<Trajectory> getTrajectoryIfChanged(Supplier<Optional<PathPlannerPath>> currentPathSupplier) {
         var currentPath = currentPathSupplier.get();

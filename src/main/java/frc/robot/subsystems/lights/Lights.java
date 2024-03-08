@@ -8,7 +8,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Lights extends SubsystemBase {
 
-    Spark blinkin = new Spark(0);
+    static Spark blinkin = new Spark(0);
 
     private static final boolean enabled = true;
     private static Lights INSTANCE;
@@ -20,6 +20,7 @@ public class Lights extends SubsystemBase {
         if (!enabled)
             return Optional.empty();
         INSTANCE = new Lights();
+        blinkin.set(LightModes.Default.value);
         return Optional.of(INSTANCE);
     }
 
