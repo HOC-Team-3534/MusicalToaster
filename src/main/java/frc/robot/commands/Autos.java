@@ -119,7 +119,8 @@ public final class Autos {
           Commands
               .waitUntil(
                   () -> {
-                    goingToShootNoteFromCenter = !RobotContainer.isValidShootPosition() && !justSkippedPathToShoot;
+                    goingToShootNoteFromCenter = RobotContainer.isBeyondWing()
+                        && !justSkippedPathToShoot;
                     return !RobotContainer.getRobotState().isNoteInRobot() || goingToShootNoteFromCenter;
                   })
               .andThen(getDrivePathCommand(paths).until(() -> {

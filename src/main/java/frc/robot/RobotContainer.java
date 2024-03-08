@@ -102,7 +102,8 @@ public class RobotContainer {
 						var degrees = a * Math.pow(distance, 2) + b * distance + c;
 						SmartDashboard.putNumber("Distance from Goal", distance);
 						return Rotation2d.fromDegrees(degrees);
-					}));
+					}))
+			.withAllowShootWhenAimedSupplier(() -> isValidShootPosition());
 
 	private final static ControlTurret shootStraightForward = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
@@ -445,7 +446,18 @@ public class RobotContainer {
 	}
 
 	public static boolean isValidShootPosition() {
-		var behindAllianceLine = getPose().map((pose) -> {
+		var speeds = CommandSwerveDrivetrain.getInstance().map(drivetrain -> drivetrain.getChassisSpeeds())
+				.orElse(new ChassisSpeeds());
+		var drivingSlow = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 0.25;
+		return isWithinWingAKABehindAllianceLine() && !isTiltForcedFlat() && drivingSlow;
+	}
+
+	public static boolean isBeyondWing() {
+		return !isWithinWingAKABehindAllianceLine();
+	}
+
+	public static boolean isWithinWingAKABehindAllianceLine() {
+		return getPose().map((pose) -> {
 			var x = pose.getX();
 			var alliance = DriverStation.getAlliance().get();
 			return alliance.equals(Alliance.Blue)
@@ -454,10 +466,6 @@ public class RobotContainer {
 					: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER)
 							.getX();
 		}).orElse(true);
-		var speeds = CommandSwerveDrivetrain.getInstance().map(drivetrain -> drivetrain.getChassisSpeeds())
-				.orElse(new ChassisSpeeds());
-		var drivingSlow = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 0.25;
-		return behindAllianceLine && !isTiltForcedFlat() && drivingSlow;
 	}
 
 	public static boolean isTiltForcedFlat() {
@@ -476,13 +484,13 @@ public class RobotContainer {
 	}
 
 	private static Command getAutonomousCommand_FixedFromGUI() {
-		Turret.getInstance().ifPresent(turret -> turret.setNoteLoaded());
+		Turret.getInstance().ifPresent(turret -> turret.setNoteLoadedNoDelay());
 		var paths = Autos.getAutoPaths(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
 		return Autos.getGUIAutoCommandNoNamedCommmands(paths);
 	}
 
 	private static Command getAutonomousCommandDynamic() {
-		Turret.getInstance().ifPresent(turret -> turret.setNoteLoaded());
+		Turret.getInstance().ifPresent(turret -> turret.setNoteLoadedNoDelay());
 
 		AutoPositionList positions = new AutoPositionList();
 		for (int i = 0; i < noteHiearchyChoosers.length && i < shootOrStealChoosers.length; i++) {

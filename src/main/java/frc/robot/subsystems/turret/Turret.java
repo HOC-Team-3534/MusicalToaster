@@ -226,6 +226,8 @@ public class Turret extends SubsystemBase {
 
         protected double currentRotateAccel = 0;
 
+        double delayNoteLoadedSeconds = Turret.delayNoteLoadedSeconds;
+
         public boolean isNoteLoaded() {
             return noteLoaded && noteLoadedTimer.hasElapsed(delayNoteLoadedSeconds);
         }
@@ -233,6 +235,12 @@ public class Turret extends SubsystemBase {
         public void setNoteLoaded() {
             this.noteLoaded = true;
             this.noteLoadedTimer.restart();
+            delayNoteLoadedSeconds = Turret.delayNoteLoadedSeconds;
+        }
+
+        public void setNoteLoadedNoDelay() {
+            setNoteLoaded();
+            delayNoteLoadedSeconds = 0;
         }
 
         public void resetNoteLoaded() {
@@ -271,6 +279,10 @@ public class Turret extends SubsystemBase {
 
     public void setNoteLoaded() {
         m_cachedState.setNoteLoaded();
+    }
+
+    public void setNoteLoadedNoDelay() {
+        m_cachedState.setNoteLoadedNoDelay();
     }
 
 }
