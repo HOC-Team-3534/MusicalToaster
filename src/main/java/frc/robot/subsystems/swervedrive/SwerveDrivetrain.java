@@ -1,6 +1,8 @@
 package frc.robot.subsystems.swervedrive;
 
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrainConstants;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveModule;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModuleConstants;
 
 import edu.wpi.first.math.Matrix;
@@ -31,6 +33,31 @@ public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.Swerve
         centricityChooser.addOption("Robot Centric", RobotCentricity.RobotCentric.toString());
         SmartDashboard.putData("Centricity Chooser", centricityChooser);
         poseUpdatedTimer.start();
+        for (SwerveModule module : getModules()) {
+            var drive = module.getDriveMotor();
+            var steer = module.getSteerMotor();
+
+            CurrentLimitsConfigs currentLimitsConfigs = new CurrentLimitsConfigs();
+            drive.getConfigurator().refresh(currentLimitsConfigs);
+
+            currentLimitsConfigs
+                    .withStatorCurrentLimit(40.0)
+                    .withStatorCurrentLimitEnable(true);
+
+            drive.getConfigurator().apply(currentLimitsConfigs);
+
+            steer.getConfigurator().refresh(currentLimitsConfigs);
+
+            currentLimitsConfigs
+                    .withStatorCurrentLimit(20.0)
+                    .withStatorCurrentLimitEnable(true);
+
+            steer.getConfigurator().apply(currentLimitsConfigs);
+        }
+    }
+
+    public SwerveModule[] getModules() {
+        return this.Modules;
     }
 
     @Override
