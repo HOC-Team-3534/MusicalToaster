@@ -65,9 +65,9 @@ public class ControllerInputs {
     }
 
     public enum AXS {
-        Drive_ForwardBackward(() -> driverController.getLeftY(), 1.2, true),
-        Drive_LeftRight(() -> driverController.getLeftX(), 1.2, true),
-        Drive_Rotation(() -> driverController.getRightX(), 1.2);
+        Drive_ForwardBackward(() -> driverController.getLeftY(), true),
+        Drive_LeftRight(() -> driverController.getLeftX(), true),
+        Drive_Rotation(() -> driverController.getRightX());
 
         final Supplier<Double> supplier;
         Optional<SlewRateLimiter> slewRateLimiter = Optional.empty();
