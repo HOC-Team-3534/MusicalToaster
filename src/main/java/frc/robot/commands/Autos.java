@@ -98,7 +98,11 @@ public final class Autos {
            * UPDATE: isValidShootPosition was not the problem, but for clarity, since we
            * only care about the position of the robot in this case, its better to have
            * a dedicated function to determine the region the robot is in for pathing
-           * purposes
+           * purposes. The real issue we had was IsNoteinRobot, because with a delayTimer
+           * in Turret, it would pass right through the waitUntil, allowing the robot to
+           * begin moving before it had shot the note it had becuase it thought it didn't
+           * have a note yet.
+           * 
            * 
            * Step 2 :
            * Drive and Intake. Skip if going to shoot Note from center but the robot did
