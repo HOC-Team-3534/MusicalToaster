@@ -211,8 +211,6 @@ public class RobotContainer {
 						() -> shooterOff)));
 
 		Climber.getInstance().ifPresent(climber -> climber.setDefaultCommand(climber.applyRequest(() -> climberOff)));
-
-		Lights.getInstance().ifPresent(lights -> lights.setDefaultCommand(lights.applyLightMode(LightModes.Default)));
 	}
 
 	public static void createAutonomousChoosers() {
@@ -306,10 +304,12 @@ public class RobotContainer {
 				Climber.getInstance().map(climber -> climber.applyRequest(() -> resetClimber)).orElse(Commands.none()));
 
 		new Trigger(() -> getRobotState().isNoteInRobot()).whileTrue(Lights.getInstance().map(lights -> {
-			var lightMode = DriverStation.getAlliance()
-					.map(alliance -> alliance.equals(Alliance.Red) ? LightModes.StrobeRed : LightModes.StrobeBlue);
-			return lights.applyLightMode(lightMode.orElse(LightModes.StrobeBlue));
+			return lights.applyLightMode(LightModes.SolidGreen);
 		}).orElse(Commands.none()));
+
+		TGR.AmpLights.tgr()
+				.whileTrue(Lights.getInstance().map(lights -> lights.applyLightMode(LightModes.SolidYellow))
+						.orElse(Commands.none()));
 
 	}
 

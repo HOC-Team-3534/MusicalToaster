@@ -75,10 +75,10 @@ public final class Constants {
                         .withRobotDimensions(21.5, 21.5);
 
         static CameraLiterals CBOT_CAMERA_LITERALS = new CameraLiterals(
-                        Units.inchesToMeters(13.5),
+                        Units.inchesToMeters(7.5),
                         0,
                         Units.inchesToMeters(8.75),
-                        Rotation2d.fromDegrees(-12));
+                        Rotation2d.fromDegrees(-13));
 
         private static RobotLiterals TBOT = new RobotLiterals(TBOT_SWERVE_LITERALS, TBOT_CAMERA_LITERALS,
                         new TBOT_TurretTalonConfigLiterals());

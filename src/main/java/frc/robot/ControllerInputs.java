@@ -40,6 +40,7 @@ public class ControllerInputs {
         PrepareShootForSubwoofer(operatorController.x(), true),
         Climb(operatorController.start().and(() -> driverController.getHID().getStartButton()), false),
         ReloadNote(operatorController.back(), true),
+        AmpLights(operatorController.y(), false),
 
         ResetNoteinRobot(driverController.back(), false),
         // Below are debugging actions
