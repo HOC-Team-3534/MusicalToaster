@@ -62,15 +62,6 @@ public final class Autos {
   static boolean goingToShootNoteFromCenter;
   static boolean justSkippedPathToShoot;
 
-  public static LinkedList<PathPlannerPath> getAutoPaths(String autoName, int maxAutopaths) {
-    var paths = new LinkedList<PathPlannerPath>();
-    var pathGroup = PathPlannerAuto.getPathGroupFromAutoFile(autoName);
-    for (int i = 0; i < maxAutopaths && i < pathGroup.size(); i++) {
-      paths.add(pathGroup.get(i));
-    }
-    return paths;
-  }
-
   public static Command getGUIAutoCommandNoNamedCommmands(LinkedList<PathPlannerPath> paths) {
 
     if (CommandSwerveDrivetrain.getInstance().isEmpty() || Turret.getInstance().isEmpty()

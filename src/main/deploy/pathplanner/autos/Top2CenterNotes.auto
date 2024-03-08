@@ -1,0 +1,43 @@
+{
+  "version": 1.0,
+  "startingPose": null,
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "GrabWingTopHor"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "GrabTopCenter"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "ShootTop"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Grab2ndTopCenter"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "ShootTop"
+          }
+        }
+      ]
+    }
+  },
+  "folder": null,
+  "choreoAuto": false
+}

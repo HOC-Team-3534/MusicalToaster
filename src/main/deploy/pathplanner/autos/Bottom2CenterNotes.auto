@@ -1,0 +1,55 @@
+{
+  "version": 1.0,
+  "startingPose": null,
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "GrabWingBottom"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "GrabBottomCenter"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "ShootBottom"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Grab2ndBottomCenter"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "ShootBottom"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "GrabCenterCenterFromBottom"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "ShootBottom"
+          }
+        }
+      ]
+    }
+  },
+  "folder": null,
+  "choreoAuto": false
+}

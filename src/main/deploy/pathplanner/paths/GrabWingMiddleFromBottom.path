@@ -3,29 +3,29 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 5.506499115708644,
-        "y": 6.476092609817173
+        "x": 2.086934844340443,
+        "y": 4.098792791023527
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.075751212843368,
-        "y": 6.347273407813576
+        "x": 2.3211515752560743,
+        "y": 4.473539560488534
       },
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "GrabWingMiddleNoteHorizontally"
     },
     {
       "anchor": {
-        "x": 8.082883155780575,
-        "y": 5.773442417070284
+        "x": 2.894982565999367,
+        "y": 5.398695647605275
       },
       "prevControl": {
-        "x": 7.1928595783011815,
-        "y": 5.808574926707628
+        "x": 2.8364283832704595,
+        "y": 4.614069599037914
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Grab2ndTopCenter"
+      "linkedName": "GrabWingTopNoteVertically"
     }
   ],
   "rotationTargets": [],
@@ -39,13 +39,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 178.91907581333945,
+    "rotation": -178.451842301022,
     "rotateFast": true
   },
   "reversed": false,
-  "folder": "Center",
+  "folder": "Wing",
   "previewStartingState": {
-    "rotation": -178.31531568210355,
+    "rotation": 179.19307054489755,
     "velocity": 0
   },
   "useDefaultConstraints": true

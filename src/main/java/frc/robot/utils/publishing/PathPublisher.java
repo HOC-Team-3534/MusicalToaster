@@ -4,7 +4,6 @@ import java.util.LinkedList;
 
 import com.pathplanner.lib.path.PathPlannerPath;
 
-import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.wpilibj.Timer;
 
 public class PathPublisher {
@@ -15,6 +14,5 @@ public class PathPublisher {
     int pathIndexOnField;
     double totalTimeCurrentTrajectory;
     Timer trajectoryOnFieldTimer = new Timer();
-    Trajectory visualizedTrajectory;
 
 }
