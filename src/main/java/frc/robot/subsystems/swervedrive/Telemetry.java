@@ -9,8 +9,6 @@ import edu.wpi.first.networktables.*;
 import edu.wpi.first.wpilibj.smartdashboard.*;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
-import frc.robot.Constants;
-import frc.robot.utils.SmartDashboardUtils;
 
 public class Telemetry {
         private final double MaxSpeed;
@@ -78,7 +76,7 @@ public class Telemetry {
         /* Accept the swerve drive state and telemeterize it to smartdashboard */
         public void telemeterize(SwerveDriveState state) {
                 /* Telemeterize the pose */
-                m_field.setRobotPose(SmartDashboardUtils.getPose2dForField2d(state.Pose));
+                m_field.setRobotPose(state.Pose);
 
                 /* Telemeterize the robot's general speeds */
                 double currentTime = Utils.getCurrentTimeSeconds();

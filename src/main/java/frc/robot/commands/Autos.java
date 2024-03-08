@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.path.PathPlannerPath;
 
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -30,6 +29,7 @@ import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.RobotContainer.ShooterType;
 import frc.robot.commands.AutoPosition.AutoPositionType;
 import frc.robot.RobotContainer;
+import frc.robot.RobotState;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.Turret;
@@ -128,7 +128,7 @@ public final class Autos {
           Commands
               .waitUntil(
                   () -> {
-                    goingToShootNoteFromCenter = RobotContainer.isBeyondWing()
+                    goingToShootNoteFromCenter = RobotState.isBeyondWing()
                         && !justSkippedPathToShoot;
                     return !RobotContainer.getRobotState().isNoteInRobot() || goingToShootNoteFromCenter;
                   })

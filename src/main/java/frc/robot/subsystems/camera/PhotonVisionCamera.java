@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
+import frc.robot.RobotState;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.utils.MathUtils;
 
@@ -54,7 +55,7 @@ public class PhotonVisionCamera extends SubsystemBase {
 
     @Override
     public void periodic() {
-        RobotContainer.getPose().ifPresent((referencePose) -> {
+        RobotState.getPose().ifPresent((referencePose) -> {
             photonPoseEstimator.setReferencePose(referencePose);
             var estimatedPose = photonPoseEstimator.update();
 

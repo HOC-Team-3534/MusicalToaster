@@ -4,7 +4,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.ctre.phoenix.ParamEnum;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
@@ -15,6 +14,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
+import frc.robot.RobotState;
 import frc.robot.subsystems.turret.Turret.TurretState;
 import frc.robot.utils.MathUtils;
 import frc.robot.utils.TurretUtils;
@@ -65,7 +65,7 @@ public interface TurretRequest {
                         lowerLimit_azimuthDegrees,
                         upperLimit_azimuthDegrees);
 
-                outputTilt = RobotContainer.isTiltForcedFlat()
+                outputTilt = RobotState.isTiltForcedFlat()
                         ? new Rotation2d()
                         : tilt;
 
@@ -138,7 +138,7 @@ public interface TurretRequest {
                  * Elevation Calculation
                  */
                 targetElevation = targetElevationFunction.apply(parameters.turretState).map(
-                        target -> RobotContainer.isTiltForcedFlat()
+                        target -> RobotState.isTiltForcedFlat()
                                 ? new Rotation2d()
                                 : Rotation2d.fromDegrees(MathUtils.applyUpperAndLowerLimit(target.getDegrees(),
                                         lowerLimit_elevationDegrees, upperLimit_elevationDegrees)));

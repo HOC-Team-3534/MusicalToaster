@@ -8,7 +8,6 @@ import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -21,6 +20,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
+import frc.robot.RobotState;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
@@ -126,7 +126,7 @@ public class Turret extends SubsystemBase {
                                     var speeds = drivetrain.getFieldRelativeChassisSpeeds();
                                     return new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
                                 }).orElse(new Translation2d()),
-                        () -> RobotContainer.getPose()
+                        () -> RobotState.getPose()
                                 .map((drivetrain) -> drivetrain.getTranslation()).orElse(new Translation2d()),
                         (vector) -> timeOfFlightEquation.get(vector.getNorm()));
     }

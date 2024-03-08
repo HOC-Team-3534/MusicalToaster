@@ -4,7 +4,6 @@
 package frc.robot;
 
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -12,19 +11,16 @@ import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.path.PathPlannerTrajectory;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -40,8 +36,7 @@ import frc.robot.commands.Autos;
 import frc.robot.subsystems.camera.PhotonVisionCamera;
 import frc.robot.subsystems.climber.Climber;
 import frc.robot.subsystems.climber.ClimberRequest;
-import frc.robot.subsystems.climber.ClimberRequest.ControlClimber;
-import frc.robot.subsystems.climber.ClimberRequest.ResetClimber;
+import frc.robot.subsystems.climber.ClimberRequest.*;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeRequest.ControlIntake;
 import frc.robot.subsystems.lights.Lights;
@@ -49,14 +44,13 @@ import frc.robot.subsystems.lights.Lights.LightModes;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.swervedrive.path.IPathPlanner;
 import frc.robot.subsystems.turret.ShooterRequest;
-import frc.robot.subsystems.turret.ShooterRequest.ControlShooter;
-import frc.robot.subsystems.turret.ShooterRequest.Idle;
+import frc.robot.subsystems.turret.ShooterRequest.*;
 import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest;
-import frc.robot.subsystems.turret.TurretRequest.ControlTurret;
-import frc.robot.subsystems.turret.TurretRequest.IndexFromIntake;
-import frc.robot.subsystems.turret.TurretRequest.JustRoller;
-import frc.robot.utils.SmartDashboardUtils;
+import frc.robot.subsystems.turret.TurretRequest.*;
+import frc.robot.utils.PathUtils;
+import frc.robot.utils.TelemetryUtils;
+import frc.robot.utils.auto.SendableChooserWithChangeDetector;
 
 /**
  * This class is where the bulk of the robot should be declared. Since
@@ -84,7 +78,7 @@ public class RobotContainer {
 			.withRollerOutput(-1.0)
 			.withTilt(Rotation2d.fromDegrees(40));
 	private final static ControlTurret aimForSpeaker = new ControlTurret()
-			.withTargetAzimuthFunction(turretState -> getPoseRotation()
+			.withTargetAzimuthFunction(turretState -> RobotState.getPoseRotation()
 					.flatMap(robotRotation -> turretState.getVirtualGoalLocationDisplacement()
 							.map(displacementToGoal -> displacementToGoal.getAngle().minus(robotRotation))))
 			.withTargetElevationFunction(
@@ -97,7 +91,7 @@ public class RobotContainer {
 						SmartDashboard.putNumber("Distance from Goal", distance);
 						return Rotation2d.fromDegrees(degrees);
 					}))
-			.withAllowShootWhenAimedSupplier(() -> isValidShootPosition());
+			.withAllowShootWhenAimedSupplier(() -> RobotState.isValidShootPosition());
 
 	private final static ControlTurret shootStraightForward = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
@@ -107,7 +101,7 @@ public class RobotContainer {
 			})
 			.withAllowShootWhenAimedSupplier(() -> BTN.SubwooferLetItRip.get());
 	private final static ControlTurret aimForSteal = new ControlTurret()
-			.withTargetAzimuthFunction((turretState) -> getPoseRotation()
+			.withTargetAzimuthFunction((turretState) -> RobotState.getPoseRotation()
 					.flatMap(robotRotation -> DriverStation.getAlliance().map(alliance -> {
 						var targetAzimuth = alliance.equals(Alliance.Blue)
 								? Rotation2d.fromDegrees(180)
@@ -127,17 +121,17 @@ public class RobotContainer {
 			.withTargetAzimuthFunction((turretState) -> Optional.of(turretState.getCurrentAzimuth()))
 			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(-20.0)));
 
-	private final static Idle shooterOff = new ShooterRequest.Idle();
+	private final static ShooterRequest.Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 	private final static ControlShooter shooterExtake = new ControlShooter().withVelocity(15);
 
-	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
-	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
+	private static SendableChooserWithChangeDetector<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooserWithChangeDetector[5];
+	private static SendableChooserWithChangeDetector<ShooterType>[] shootOrStealChoosers = new SendableChooserWithChangeDetector[5];
 
-	private static SendableChooser<String> guiAutoChooser = new SendableChooser<>();
-	private static SendableChooser<Integer> maxAutoPathsChooser = new SendableChooser<>();
+	private static SendableChooserWithChangeDetector<String> guiAutoChooser = new SendableChooserWithChangeDetector<>();
+	private static SendableChooserWithChangeDetector<Integer> maxAutoPathsChooser = new SendableChooserWithChangeDetector<>();
 
 	private static RobotState m_robotState = new RobotState();
 
@@ -246,18 +240,8 @@ public class RobotContainer {
 		}
 	}
 
-	public static Optional<Pose2d> getPose() {
-		return CommandSwerveDrivetrain.getInstance()
-				.map((drivetrain) -> drivetrain.getState().Pose);
-	}
-
-	public static Optional<Rotation2d> getPoseRotation() {
-		return CommandSwerveDrivetrain.getInstance()
-				.map((drivetrain) -> drivetrain.getState().Pose.getRotation());
-	}
-
-	public static SendableChooser<Autos.AutoNotes> newNoteHiearchyChooser() {
-		SendableChooser<Autos.AutoNotes> noteHiearchy = new SendableChooser<>();
+	public static SendableChooserWithChangeDetector<Autos.AutoNotes> newNoteHiearchyChooser() {
+		SendableChooserWithChangeDetector<Autos.AutoNotes> noteHiearchy = new SendableChooserWithChangeDetector<>();
 
 		noteHiearchy.setDefaultOption("None", null);
 		for (Autos.AutoNotes note : Autos.AutoNotes.values()) {
@@ -267,8 +251,8 @@ public class RobotContainer {
 		return noteHiearchy;
 	}
 
-	public static SendableChooser<ShooterType> newShootOrStealChooser() {
-		SendableChooser<ShooterType> shootOrSteal = new SendableChooser<>();
+	public static SendableChooserWithChangeDetector<ShooterType> newShootOrStealChooser() {
+		SendableChooserWithChangeDetector<ShooterType> shootOrSteal = new SendableChooserWithChangeDetector<>();
 
 		shootOrSteal.setDefaultOption("Shoot", ShooterType.Speaker);
 		shootOrSteal.addOption("Steal", ShooterType.Steal);
@@ -366,37 +350,6 @@ public class RobotContainer {
 		}).orElse(Commands.none());
 	}
 
-	public static boolean isValidShootPosition() {
-		var speeds = CommandSwerveDrivetrain.getInstance().map(drivetrain -> drivetrain.getChassisSpeeds())
-				.orElse(new ChassisSpeeds());
-		var drivingSlow = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 0.25;
-		return isWithinWingAKABehindAllianceLine() && !isTiltForcedFlat() && drivingSlow;
-	}
-
-	public static boolean isBeyondWing() {
-		return !isWithinWingAKABehindAllianceLine();
-	}
-
-	public static boolean isWithinWingAKABehindAllianceLine() {
-		return getPose().map((pose) -> {
-			var x = pose.getX();
-			var alliance = DriverStation.getAlliance().get();
-			return alliance.equals(Alliance.Blue)
-					? x < FIELD_DIMENSIONS.CENTER_OF_FIELD.minus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER)
-							.getX()
-					: x > FIELD_DIMENSIONS.CENTER_OF_FIELD.plus(FIELD_DIMENSIONS.OFFSET_ALLIANCE_LINE_FROM_CENTER)
-							.getX();
-		}).orElse(true);
-	}
-
-	public static boolean isTiltForcedFlat() {
-		return BTN.TiltFlat.get();
-	}
-
-	static final Translation2d DriveStraightForwardLine = FIELD_DIMENSIONS.CENTER_OF_FIELD
-			.minus(FIELD_DIMENSIONS.OFFSET_AUTO_CROSS_LINE_FROM_CENTER)
-			.plus(new Translation2d(Units.inchesToMeters(25.0), 0));
-
 	public static Command getAutonomousCommand() {
 		if (Constants.ROBOT.getPathPlanner() instanceof IPathPlanner.PathPlanner2024)
 			return getAutonomousCommandDynamic();
@@ -406,9 +359,13 @@ public class RobotContainer {
 
 	private static Command getAutonomousCommand_FixedFromGUI() {
 		Turret.getInstance().ifPresent(turret -> turret.setNoteLoadedNoDelay());
-		var paths = Autos.getAutoPaths(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
+		var paths = PathUtils.getAutoPaths(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
 		return Autos.getGUIAutoCommandNoNamedCommmands(paths);
 	}
+
+	static final Translation2d DriveStraightForwardLine = FIELD_DIMENSIONS.CENTER_OF_FIELD
+			.minus(FIELD_DIMENSIONS.OFFSET_AUTO_CROSS_LINE_FROM_CENTER)
+			.plus(new Translation2d(Units.inchesToMeters(25.0), 0));
 
 	private static Command getAutonomousCommandDynamic() {
 		Turret.getInstance().ifPresent(turret -> turret.setNoteLoadedNoDelay());
@@ -421,7 +378,7 @@ public class RobotContainer {
 				positions.add(note, shootOrSteal);
 		}
 		if (positions.isEmpty()) {
-			getPose().ifPresent((pose) -> {
+			RobotState.getPose().ifPresent((pose) -> {
 				var current = pose.getTranslation();
 				var x = DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Blue)
 						? DriveStraightForwardLine.getX()
@@ -435,21 +392,17 @@ public class RobotContainer {
 		return Autos.getDynamicAutonomous(positions);
 	}
 
-	static String selectedAuto = "";
-	static double selectedMaxAutoPaths;
 	static LinkedList<PathPlannerPath> autoPaths;
 	static int pathIndexOnField;
-	static double totalTimeCurrentTrajectory;
 	static Timer trajectoryOnFieldTimer = new Timer();
 	static Trajectory visualizedTrajectory;
 
 	public static void publishAutoTrajectoriesOnField() {
-		if (!selectedAuto.equals(guiAutoChooser.getSelected())
-				|| selectedMaxAutoPaths != maxAutoPathsChooser.getSelected()) {
-			selectedAuto = guiAutoChooser.getSelected();
-			selectedMaxAutoPaths = maxAutoPathsChooser.getSelected();
+		var auto = guiAutoChooser.detectChange();
+		var maxPaths = maxAutoPathsChooser.detectChange();
 
-			autoPaths = Autos.getAutoPaths(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
+		if (auto.isPresent() || maxPaths.isPresent()) {
+			autoPaths = PathUtils.getAutoPaths(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
 			pathIndexOnField = 0;
 			trajectoryOnFieldTimer.restart();
 			updateTrajectory();
@@ -457,7 +410,7 @@ public class RobotContainer {
 
 		if (autoPaths.size() > 0) {
 
-			if (trajectoryOnFieldTimer.advanceIfElapsed(totalTimeCurrentTrajectory)) {
+			if (trajectoryOnFieldTimer.advanceIfElapsed(visualizedTrajectory.getTotalTimeSeconds())) {
 				pathIndexOnField++;
 				if (pathIndexOnField >= autoPaths.size())
 					pathIndexOnField = 0;
@@ -467,72 +420,28 @@ public class RobotContainer {
 		}
 
 		if (autoPaths.size() > 0) {
-			CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
-				if (drivetrain.getTimeSincePoseUpdated() > 5.0) {
-					var firstPath = DriverStation.getAlliance()
-							.map(alliance -> alliance.equals(Alliance.Red) ? autoPaths.get(0).flipPath()
-									: autoPaths.get(0))
-							.orElse(autoPaths.get(0));
-					drivetrain.seedFieldRelative(firstPath.getPreviewStartingHolonomicPose());
-				}
-			});
-		} else {
+			RobotState.seedFieldRelativeToInitalPositionIfNoCameraUpdates(autoPaths);
 		}
 	}
 
 	private static void updateTrajectory() {
-		var trajectory = getDisplayTrajectory(autoPaths.get(pathIndexOnField));
-		totalTimeCurrentTrajectory = trajectory.getTotalTimeSeconds();
-		visualizedTrajectory = getWPILIBTrajectory(trajectory);
+		visualizedTrajectory = TelemetryUtils.getWPILIBTrajectory(autoPaths.get(pathIndexOnField));
 		CommandSwerveDrivetrain.getInstance().ifPresent(drivetrain -> {
 			drivetrain.getField().getObject("traj").setTrajectory(visualizedTrajectory);
 		});
 	}
 
-	static Optional<PathPlannerPath> currentDisplayedPath = Optional.empty();
-	static boolean wasEmptyLastCheck;
-
-	static Trajectory autoTrajectory;
+	static Optional<PathPlannerPath> displayedPath;
 
 	public static void publishCurrentTrajectoryOnField() {
-		autoTrajectory = null;
 
-		if (currentDisplayedPath.isEmpty() || currentDisplayedPath.get() != Autos.getCurrentPath()) {
-			currentDisplayedPath = Optional.ofNullable(Autos.getCurrentPath());
+		var trajectory = TelemetryUtils.getTrajectoryIfChanged(() -> Optional.ofNullable(Autos.getCurrentPath()));
 
-			currentDisplayedPath.ifPresentOrElse(path -> {
-				autoTrajectory = getWPILIBTrajectory(getDisplayTrajectory(path));
-				wasEmptyLastCheck = false;
-			}, () -> {
-				if (!wasEmptyLastCheck) {
-					autoTrajectory = new Trajectory();
-					wasEmptyLastCheck = true;
-				}
-			});
-		}
-
-		if (autoTrajectory != null) {
+		if (trajectory.isPresent()) {
 			CommandSwerveDrivetrain.getInstance().ifPresent(drivetrain -> {
-				drivetrain.getField().getObject("traj").setTrajectory(autoTrajectory);
+				drivetrain.getField().getObject("traj").setTrajectory(trajectory.get());
 			});
 		}
 	}
 
-	private static PathPlannerTrajectory getDisplayTrajectory(PathPlannerPath path) {
-		var alliancePath = DriverStation.getAlliance()
-				.map(alliance -> alliance.equals(Alliance.Red) ? path.flipPath() : path).orElse(path);
-		return alliancePath.getTrajectory(new ChassisSpeeds(),
-				alliancePath.getPreviewStartingHolonomicPose().getRotation());
-	}
-
-	private static Trajectory getWPILIBTrajectory(PathPlannerTrajectory trajectory) {
-
-		List<Trajectory.State> states = trajectory.getStates().stream()
-				.map(state -> new Trajectory.State(state.timeSeconds, state.velocityMps, state.accelerationMpsSq,
-						SmartDashboardUtils.getPose2dForField2d(state.getTargetHolonomicPose()),
-						state.curvatureRadPerMeter))
-				.toList();
-
-		return new Trajectory(states);
-	}
 }
