@@ -399,6 +399,12 @@ public class RobotContainer {
 		TGR.ResetClimber.tgr().whileTrue(
 				Climber.getInstance().map(climber -> climber.applyRequest(() -> resetClimber)).orElse(Commands.none()));
 
+		new Trigger(() -> getRobotState().isNoteInRobot()).whileTrue(Lights.getInstance().map(lights -> {
+			var lightMode = DriverStation.getAlliance()
+					.map(alliance -> alliance.equals(Alliance.Red) ? LightModes.StrobeRed : LightModes.StrobeBlue);
+			return lights.applyLightMode(lightMode.orElse(LightModes.StrobeBlue));
+		}).orElse(Commands.none()));
+
 	}
 
 	public static Command getIntakeAutonomouslyCommand() {
