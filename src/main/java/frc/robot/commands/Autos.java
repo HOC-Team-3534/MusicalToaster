@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.path.PathPlannerPath;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -125,8 +126,7 @@ public final class Autos {
                 justSkippedPathToShoot = !RobotContainer.getRobotState().isNoteInRobot()
                     && goingToShootNoteFromCenter;
                 return justSkippedPathToShoot;
-              }))
-              .andThen(
+              }),
                   Commands.waitUntil(() -> RobotContainer.getRobotState().isNoteInRobot() || goingToShootNoteFromCenter)
                       .withTimeout(1.0))
               .repeatedly()
@@ -150,7 +150,7 @@ public final class Autos {
             return (Command) CommandSwerveDrivetrain.getInstance()
                 .map(drivetrain -> {
                   currentPath = paths.pop();
-                  return drivetrain.followPath(paths.pop());
+                  return drivetrain.followPath(currentPath);
                 })
                 .orElse(Commands.none());
           } catch (NoSuchElementException e) {

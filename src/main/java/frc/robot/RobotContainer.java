@@ -128,11 +128,15 @@ public class RobotContainer {
 			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(90)))
 			.withTargetElevationFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withAllowShootWhenAimedSupplier(() -> false);
+	private final static ControlTurret extakeTurret = new ControlTurret()
+			.withTargetAzimuthFunction((turretState) -> Optional.of(turretState.getCurrentAzimuth()))
+			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(-20.0)));
 
 	private final static Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
+	private final static ControlShooter shooterExtake = new ControlShooter().withVelocity(15);
 
 	private static SendableChooser<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooser[5];
 	private static SendableChooser<ShooterType>[] shootOrStealChoosers = new SendableChooser[5];
@@ -148,6 +152,7 @@ public class RobotContainer {
 		boolean noteLoaded;
 		boolean climbing;
 		boolean resetingClimber;
+		boolean isExtaking;
 
 		public boolean isActivelyGrabbing() {
 			return this.activelyGrabbing;
@@ -199,6 +204,18 @@ public class RobotContainer {
 
 		public boolean isResetingClimber() {
 			return this.resetingClimber;
+		}
+
+		public void setExtaking() {
+			this.isExtaking = true;
+		}
+
+		public void resetExtaking() {
+			this.isExtaking = false;
+		}
+
+		public boolean isExtaking() {
+			return this.isExtaking;
 		}
 	}
 
@@ -356,7 +373,10 @@ public class RobotContainer {
 						.orElse(Commands.none()),
 						Commands.run(() -> {
 							Intake.getInstance().ifPresent((intake) -> intake.resetAllNoteInPosition());
-						})));
+							Turret.getInstance().ifPresent(turret -> turret.resetNoteLoaded());
+							getRobotState().setExtaking();
+						}), getShootCommand(() -> ShooterType.ExtakeFromTurret)))
+				.onFalse(Commands.runOnce(() -> getRobotState().resetExtaking()));
 
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
@@ -395,7 +415,8 @@ public class RobotContainer {
 		Speaker(aimForSpeaker, shooterSpeaker),
 		Steal(aimForSteal, shooterSteal),
 		Subwoofer(shootStraightForward, shootSubwoofer),
-		ReloadNote(reloadNote, shooterOff);
+		ReloadNote(reloadNote, shooterOff),
+		ExtakeFromTurret(extakeTurret, shooterExtake);
 
 		TurretRequest turretRequest;
 		ShooterRequest shooterRequest;
@@ -410,8 +431,9 @@ public class RobotContainer {
 		return Turret.getInstance().map((turret) -> {
 			var type = shooterTypeSupplier.get();
 			return turret.applyRequest(
-					() -> getRobotState().noteLoaded || type.equals(ShooterType.ReloadNote) ? type.turretRequest
-							: indexFromIntake,
+					() -> getRobotState().noteLoaded || type.equals(ShooterType.ReloadNote)
+							|| type.equals(ShooterType.ExtakeFromTurret) ? type.turretRequest
+									: indexFromIntake,
 					() -> type.shooterRequest);
 		}).orElse(Commands.none());
 	}
@@ -448,6 +470,7 @@ public class RobotContainer {
 	}
 
 	private static Command getAutonomousCommand_FixedFromGUI() {
+		Turret.getInstance().ifPresent(turret -> turret.setNoteLoaded());
 		var paths = Autos.getAutoPaths(guiAutoChooser.getSelected(), maxAutoPathsChooser.getSelected());
 		return Autos.getGUIAutoCommandNoNamedCommmands(paths);
 	}
@@ -506,6 +529,19 @@ public class RobotContainer {
 
 				updateTrajectory();
 			}
+		}
+
+		if (autoPaths.size() > 0) {
+			CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
+				if (drivetrain.getTimeSincePoseUpdated() > 5.0) {
+					var firstPath = DriverStation.getAlliance()
+							.map(alliance -> alliance.equals(Alliance.Red) ? autoPaths.get(0).flipPath()
+									: autoPaths.get(0))
+							.orElse(autoPaths.get(0));
+					drivetrain.seedFieldRelative(firstPath.getPreviewStartingHolonomicPose());
+				}
+			});
+		} else {
 		}
 	}
 
