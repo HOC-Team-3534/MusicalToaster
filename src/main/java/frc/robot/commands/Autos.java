@@ -95,6 +95,11 @@ public final class Autos {
            * robot is moving and this is checked, it may cause issues. Right now, when
            * this is checked, the robot should not be following a path, so it should work
            * 
+           * UPDATE: isValidShootPosition was not the problem, but for clarity, since we
+           * only care about the position of the robot in this case, its better to have
+           * a dedicated function to determine the region the robot is in for pathing
+           * purposes
+           * 
            * Step 2 :
            * Drive and Intake. Skip if going to shoot Note from center but the robot did
            * not pick up the prior note from the center
