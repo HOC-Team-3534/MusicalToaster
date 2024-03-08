@@ -17,8 +17,8 @@ public interface ClimberRequest {
         ClimberState climberState;
     }
 
-    static final double stopRotations1 = 12.5;
-    static final double stopRotations2 = 20.45;
+    static final double stopRotations1 = 13.1;
+    static final double stopRotations2 = 20.76;
     static final double gapTime = 0.25;
 
     public StatusCode apply(ControlClimberRequestParameters parameters, TalonFX climberMotor);
