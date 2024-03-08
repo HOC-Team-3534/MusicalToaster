@@ -122,7 +122,7 @@ public class RobotState {
     }
 
     public static boolean isTiltForcedFlat() {
-        return BTN.TiltFlat.get();
+        return BTN.TiltFlat.get() || RobotContainer.getRobotState().isClimbing();
     }
 
     public static void seedFieldRelativeToInitalPositionIfNoCameraUpdates(List<PathPlannerPath> paths) {
