@@ -232,11 +232,11 @@ public class Turret extends SubsystemBase {
 
         double delayNoteLoadedSeconds = Turret.delayNoteLoadedSeconds;
 
-        SensorMonitor rotateMonitor = new SensorMonitor(1.0, 0.020, 5.0); // check for 1 second, max difference should
-                                                                          // not exceed 5 degrees within that time
-                                                                          // period
+        SensorMonitor rotateMonitor = new SensorMonitor(1.0, 0.020, 10.0); // check for 1 second, max difference should
+                                                                           // not exceed 5 degrees within that time
+                                                                           // period
 
-        SensorMonitor tiltMonitor = new SensorMonitor(1.0, 0.020, 5.0);
+        SensorMonitor tiltMonitor = new SensorMonitor(1.0, 0.020, 10.0);
 
         public boolean isNoteLoaded() {
             return noteLoaded && noteLoadedTimer.hasElapsed(delayNoteLoadedSeconds);

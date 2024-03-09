@@ -38,8 +38,8 @@ public interface TurretRequest {
     static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(0.75);
     static final Rotation2d elevationWhenRotating = Rotation2d.fromDegrees(30.0);
     static final Rotation2d wideAzimuthToleranceForTilt = Rotation2d.fromDegrees(25);
-    static final Rotation2d stillAzimuthTolerance = azimuthTolerance.plus(Rotation2d.fromDegrees(5));
-    static final Rotation2d stillElevationTolerance = elevationTolerance.plus(Rotation2d.fromDegrees(4));
+    static final Rotation2d stillAzimuthTolerance = azimuthTolerance.plus(Rotation2d.fromDegrees(7));
+    static final Rotation2d stillElevationTolerance = elevationTolerance.plus(Rotation2d.fromDegrees(6));
 
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
