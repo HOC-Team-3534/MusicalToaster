@@ -23,7 +23,7 @@ public class RobotState {
     boolean climbing;
     boolean resetingClimber;
     boolean isExtaking;
-    boolean toggleAutoAimSubwoofer = true;
+    boolean holdingManualAim = false;
 
     public boolean isActivelyGrabbing() {
         return this.activelyGrabbing;
@@ -89,12 +89,8 @@ public class RobotState {
         return this.isExtaking;
     }
 
-    public boolean isAutoAimingSubwoofer() {
-        return this.toggleAutoAimSubwoofer;
-    }
-
-    public void toggleAutoAimSubwoofer() {
-        this.toggleAutoAimSubwoofer = !this.toggleAutoAimSubwoofer;
+    public boolean isManualAimingSubwoofer() {
+        return BTN.ManualShooting.get();
     }
 
     public static Optional<Pose2d> getPose() {

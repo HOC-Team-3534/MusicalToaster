@@ -20,7 +20,8 @@ public class ControllerInputs {
         Creep(() -> driverController.getHID().getLeftTriggerAxis() > 0.15),
         SubwooferLetItRip(() -> operatorController.getHID().getRightBumper()),
         ReloadNoteActivate(() -> SubwooferLetItRip.get()),
-        ResetClimber(() -> driverController.getHID().getPOV() == 180 && TiltFlat.get());
+        ResetClimber(() -> driverController.getHID().getPOV() == 180 && TiltFlat.get()),
+        ManualShooting(() -> operatorController.getHID().getLeftStickButton());
 
         Supplier<Boolean> buttonSupplier;
 
@@ -43,8 +44,9 @@ public class ControllerInputs {
         AmpLights(operatorController.y(), false),
 
         ResetNoteinRobot(driverController.back(), false),
-        // Below are debugging actions
-        ToggleAutoAimSubwoofer(operatorController.rightStick(), false),
+        // // Below are debugging actions
+        // ToggleAutoAimSubwoofer(operatorController.rightStick(), false),
+        // HoldManualAimSubwoofer(operatorController.leftStick(), true),
 
         Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled), false),
         ResetClimber(new Trigger(() -> BTN.ResetClimber.get()).and(() -> !DriverStation.isFMSAttached()), false);
