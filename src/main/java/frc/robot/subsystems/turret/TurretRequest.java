@@ -34,16 +34,16 @@ public interface TurretRequest {
     static final double upperLimit_elevationDegrees = 50;
 
     static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
-    static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(90);
+    static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(70);
     static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(2.0);
     static final Rotation2d elevationWhenRotating = Rotation2d.fromDegrees(30.0);
     static final Rotation2d wideAzimuthToleranceForTilt = Rotation2d.fromDegrees(25);
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
 
-    static final double rotateQuickAccel = 0.45;
-    static final double rotateSlowAccel = 0.15;
-    static final Rotation2d slowAccelRange = Rotation2d.fromDegrees(25.0);
+    static final double rotateQuickAccel = 0.6;
+    static final double rotateSlowAccel = 0.2;
+    static final Rotation2d slowAccelRange = Rotation2d.fromDegrees(80.0);
 
     public class IndexFromIntake implements TurretRequest {
         private Rotation2d tilt;
@@ -232,7 +232,7 @@ public interface TurretRequest {
 
         Rotation2d tilt;
         double rollerOutput;
-        Supplier<Boolean> turnOnRollerOnceReadySupplier = () -> true;
+        Function<Boolean, Boolean> turnOnRollerOnceReadyFunction = (withinTolerance) -> true;
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
@@ -247,7 +247,7 @@ public interface TurretRequest {
 
             var currentAzimuth = parameters.turretState.azimuth;
             var currentElevation = parameters.turretState.elevation;
-            if (MathUtils.withinTolerance(targetElevation, currentElevation) && turnOnRollerOnceReadySupplier.get()) {
+            if (turnOnRollerOnceReadyFunction.apply(MathUtils.withinTolerance(targetElevation, currentElevation))) {
                 rollerOn = true;
                 parameters.turretState.setNoteLoaded();
             }
@@ -268,8 +268,8 @@ public interface TurretRequest {
             return this;
         }
 
-        public JustRoller withTurnOnRollerSupplier(Supplier<Boolean> turnOnRollerWhenReadySupplier) {
-            this.turnOnRollerOnceReadySupplier = turnOnRollerWhenReadySupplier;
+        public JustRoller withTurnOnRollerSupplier(Function<Boolean, Boolean> turnOnRollerWhenReadyFunction) {
+            this.turnOnRollerOnceReadyFunction = turnOnRollerWhenReadyFunction;
             return this;
         }
 

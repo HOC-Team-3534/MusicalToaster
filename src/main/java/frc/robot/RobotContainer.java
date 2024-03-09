@@ -116,7 +116,7 @@ public class RobotContainer {
 	private final static JustRoller reloadNote = new JustRoller()
 			.withRollerPercent(0.5)
 			.withTilt(Rotation2d.fromDegrees(40))
-			.withTurnOnRollerSupplier(() -> BTN.ReloadNoteActivate.get());
+			.withTurnOnRollerSupplier((withinTolerance) -> BTN.ReloadNoteActivate.get());
 	private final static ControlTurret prepareForClimbTurret = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(Rotation2d.fromDegrees(90)))
 			.withTargetElevationFunction((turretState) -> Optional.of(new Rotation2d()))
