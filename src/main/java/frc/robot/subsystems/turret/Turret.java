@@ -25,6 +25,7 @@ import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.sensors.ProximitySensorInput;
+import frc.robot.utils.sensors.SensorMonitor;
 import frc.robot.utils.shooting.QuadraticEquation;
 
 public class Turret extends SubsystemBase {
@@ -178,6 +179,9 @@ public class Turret extends SubsystemBase {
 
         RobotContainer.getRobotState().setNoteLoaded(m_cachedState.isNoteLoaded());
 
+        m_cachedState.rotateMonitor.addSensorValue(m_cachedState.azimuth.getDegrees());
+        m_cachedState.tiltMonitor.addSensorValue(m_cachedState.elevation.getDegrees());
+
         m_requestParameters.turretState = m_cachedState;
 
         turretTelemetry.telemetrize(m_cachedState);
@@ -228,6 +232,12 @@ public class Turret extends SubsystemBase {
 
         double delayNoteLoadedSeconds = Turret.delayNoteLoadedSeconds;
 
+        SensorMonitor rotateMonitor = new SensorMonitor(1.0, 0.020, 5.0); // check for 1 second, max difference should
+                                                                          // not exceed 5 degrees within that time
+                                                                          // period
+
+        SensorMonitor tiltMonitor = new SensorMonitor(1.0, 0.020, 5.0);
+
         public boolean isNoteLoaded() {
             return noteLoaded && noteLoadedTimer.hasElapsed(delayNoteLoadedSeconds);
         }
@@ -267,6 +277,10 @@ public class Turret extends SubsystemBase {
 
         public Rotation2d getCurrentAzimuth() {
             return this.azimuth;
+        }
+
+        public boolean hasTurretAnglesBeenStill() {
+            return !(rotateMonitor.hasSignificantMovement() || tiltMonitor.hasSignificantMovement());
         }
 
     }

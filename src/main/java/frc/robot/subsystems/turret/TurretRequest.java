@@ -38,6 +38,9 @@ public interface TurretRequest {
     static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(2.0);
     static final Rotation2d elevationWhenRotating = Rotation2d.fromDegrees(30.0);
     static final Rotation2d wideAzimuthToleranceForTilt = Rotation2d.fromDegrees(25);
+    static final Rotation2d stillAzimuthTolerance = azimuthTolerance.plus(Rotation2d.fromDegrees(5));
+    static final Rotation2d stillElevationTolerance = elevationTolerance.plus(Rotation2d.fromDegrees(3));
+
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
 
@@ -160,9 +163,15 @@ public interface TurretRequest {
                         targetElevation = Optional.of(elevationWhenRotating);
                     }
 
-                    if ((MathUtils.withinTolerance(azimuthError, azimuthTolerance)
+                    var withinTolerance = MathUtils.withinTolerance(azimuthError, azimuthTolerance)
                             && MathUtils.withinTolerance(elevationError, elevationTolerance)
-                            && MathUtils.withinTolerance(shooterError, shooterTolerance)
+                            && MathUtils.withinTolerance(shooterError, shooterTolerance);
+
+                    var withinStillTolerance = MathUtils.withinTolerance(azimuthError, azimuthTolerance)
+                            && MathUtils.withinTolerance(elevationError, elevationTolerance)
+                            && parameters.turretState.hasTurretAnglesBeenStill();
+
+                    if (((withinTolerance || withinStillTolerance)
                             && allowShootWhenAimedSupplier.get())
                             || parameters.turretState.currentlyShooting) {
                         rollerOn = true;
