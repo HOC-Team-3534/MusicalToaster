@@ -44,6 +44,7 @@ public class ControllerInputs {
 
         ResetNoteinRobot(driverController.back(), false),
         // Below are debugging actions
+        ToggleAutoAimSubwoofer(operatorController.rightStick(), false),
 
         Characterize(driverController.a().and(() -> EnabledDebugModes.CharacterizeEnabled), false),
         ResetClimber(new Trigger(() -> BTN.ResetClimber.get()).and(() -> !DriverStation.isFMSAttached()), false);

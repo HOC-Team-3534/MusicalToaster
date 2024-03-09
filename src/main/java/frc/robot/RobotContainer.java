@@ -87,14 +87,18 @@ public class RobotContainer {
 						var a = 2.582;
 						var b = -24.096;
 						var c = 81.35;
-						var degrees = a * Math.pow(distance, 2) + b * distance + c + 1.5;
+						var degrees = a * Math.pow(distance, 2) + b * distance + c + 2.5;
 						SmartDashboard.putNumber("Distance from Goal", distance);
 						return Rotation2d.fromDegrees(degrees);
 					}))
 			.withAllowShootWhenAimedSupplier(() -> RobotState.isValidShootPosition());
 
-	private final static ControlTurret shootStraightForward = new ControlTurret()
-			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
+	private final static ControlTurret aimSubwoofer = new ControlTurret()
+			.withTargetAzimuthFunction(turretState -> getRobotState().isAutoAimingSubwoofer()
+					? RobotState.getPoseRotation()
+							.flatMap(robotRotation -> turretState.getVirtualGoalLocationDisplacement()
+									.map(displacementToGoal -> displacementToGoal.getAngle().minus(robotRotation)))
+					: Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
 				var degrees = SmartDashboard.getNumber("Tilt", 49);
 				return Optional.of(Rotation2d.fromDegrees(degrees));
@@ -311,6 +315,8 @@ public class RobotContainer {
 				.whileTrue(Lights.getInstance().map(lights -> lights.applyLightMode(LightModes.SolidYellow))
 						.orElse(Commands.none()));
 
+		TGR.ToggleAutoAimSubwoofer.tgr().toggleOnTrue(Commands.runOnce(() -> getRobotState().toggleAutoAimSubwoofer()));
+
 	}
 
 	public static Command getIntakeAutonomouslyCommand() {
@@ -326,7 +332,7 @@ public class RobotContainer {
 	public enum ShooterType {
 		Speaker(aimForSpeaker, shooterSpeaker),
 		Steal(aimForSteal, shooterSteal),
-		Subwoofer(shootStraightForward, shootSubwoofer),
+		Subwoofer(aimSubwoofer, shootSubwoofer),
 		ReloadNote(reloadNote, shooterOff),
 		ExtakeFromTurret(extakeTurret, shooterExtake);
 

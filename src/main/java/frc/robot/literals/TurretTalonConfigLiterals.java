@@ -23,7 +23,7 @@ public interface TurretTalonConfigLiterals {
             cfg.MotionMagic.MotionMagicAcceleration = 0.35;
             cfg.MotionMagic.MotionMagicJerk = 20;
 
-            cfg.Slot0.kP = 80;
+            cfg.Slot0.kP = 100;
             cfg.Slot0.kV = 13.906;
             cfg.Slot0.kS = 0.164;
 

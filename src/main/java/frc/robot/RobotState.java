@@ -23,6 +23,7 @@ public class RobotState {
     boolean climbing;
     boolean resetingClimber;
     boolean isExtaking;
+    boolean toggleAutoAimSubwoofer = true;
 
     public boolean isActivelyGrabbing() {
         return this.activelyGrabbing;
@@ -88,6 +89,14 @@ public class RobotState {
         return this.isExtaking;
     }
 
+    public boolean isAutoAimingSubwoofer() {
+        return this.toggleAutoAimSubwoofer;
+    }
+
+    public void toggleAutoAimSubwoofer() {
+        this.toggleAutoAimSubwoofer = !this.toggleAutoAimSubwoofer;
+    }
+
     public static Optional<Pose2d> getPose() {
         return CommandSwerveDrivetrain.getInstance()
                 .map((drivetrain) -> drivetrain.getState().Pose);
@@ -101,7 +110,7 @@ public class RobotState {
     public static boolean isValidShootPosition() {
         var speeds = CommandSwerveDrivetrain.getInstance().map(drivetrain -> drivetrain.getChassisSpeeds())
                 .orElse(new ChassisSpeeds());
-        var drivingSlow = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 0.25;
+        var drivingSlow = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 0.5;
         return isWithinWingAKABehindAllianceLine() && !isTiltForcedFlat() && drivingSlow;
     }
 
