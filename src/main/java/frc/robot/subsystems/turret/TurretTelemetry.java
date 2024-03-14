@@ -11,8 +11,6 @@ public class TurretTelemetry {
 
     private final NetworkTable table = inst.getTable("Turret");
     private final DoublePublisher azimuth = table.getDoubleTopic("Azimuth").publish();
-    private final DoublePublisher rawAzimuthEncoderCounts = table.getDoubleTopic("Raw Azimuth Counts").publish();
-    private final DoublePublisher azimuthFromMotor = table.getDoubleTopic("Azimuth From Motor").publish();
     private final DoublePublisher elevation = table.getDoubleTopic("Elevation").publish();
     private final DoublePublisher rawElevationRotations = table.getDoubleTopic("Raw Elevation Rotations").publish();
 
@@ -28,8 +26,6 @@ public class TurretTelemetry {
     public void telemetrize(TurretState state) {
         azimuth.set(state.azimuth.getDegrees());
         elevation.set(state.elevation.getDegrees());
-        rawAzimuthEncoderCounts.set(state.rawAzimuthEncoderCounts);
-        azimuthFromMotor.set(state.azimuthFromMotor.getDegrees());
         rawElevationRotations.set(state.rawElevationRotations);
 
         azimuthError.set(state.rotateClosedLoopError.getDegrees());
