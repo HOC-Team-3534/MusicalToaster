@@ -48,6 +48,7 @@ import frc.robot.subsystems.turret.ShooterRequest.*;
 import frc.robot.subsystems.turret.Turret;
 import frc.robot.subsystems.turret.TurretRequest;
 import frc.robot.subsystems.turret.TurretRequest.*;
+import frc.robot.utils.FieldCentricCorrect;
 import frc.robot.utils.PathUtils;
 import frc.robot.utils.TelemetryUtils;
 import frc.robot.utils.auto.SendableChooserWithChangeDetector;
@@ -64,7 +65,7 @@ public class RobotContainer {
 	// The driver station connected controllers are defined here...
 	private static double MaxAngularRate = 4 * Math.PI;
 
-	private final static FieldCentric drive = new FieldCentric();
+	private final static FieldCentric drive = new FieldCentricCorrect();
 
 	private final static ControlClimber climb = new ControlClimber().withVoltage(12.0);
 	private final static ResetClimber resetClimber = new ResetClimber();
