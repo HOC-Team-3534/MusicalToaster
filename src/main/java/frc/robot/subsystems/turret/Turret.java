@@ -157,15 +157,14 @@ public class Turret extends SubsystemBase {
     @Override
     public void periodic() {
         if (RobotContainer.getRobotState().isResetingClimber()) {
-            rollerMotor.setSelectedSensorPosition(Rotation2d.fromDegrees(90).getRotations() * 1440.0);
+            // TODO reset the offsets so that the turret is at 90 degrees
+            // Only on Rising edge of reseting climber
         }
 
         updateTurretPosition.run();
 
         m_cachedState.azimuth = Rotation2d
                 .fromRotations(rotateMotor.getPosition().getValueAsDouble());
-
-        m_cachedState.rawElevationRotations = tiltMotor.getPosition().getValueAsDouble();
 
         m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
 
@@ -175,7 +174,16 @@ public class Turret extends SubsystemBase {
             m_cachedState.setNoteLoaded();
         }
 
-        m_cachedState.resetNoteLoadedAfterTimerUponShooting();
+        if (m_cachedState.seeingNote && !sensor.get()
+                && m_cachedState.currentlyShooting
+                && !m_cachedState.unloadedTimerStarted) {
+            m_cachedState.noteUnloadedTimer.restart();
+            m_cachedState.unloadedTimerStarted = true;
+        }
+
+        if (m_cachedState.noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {
+            m_cachedState.resetNoteLoaded();
+        }
 
         m_cachedState.rotateClosedLoopError = Rotation2d
                 .fromRotations(rotateMotor.getClosedLoopReference().getValueAsDouble()
@@ -200,6 +208,8 @@ public class Turret extends SubsystemBase {
         m_cachedState.rotateMonitor.addSensorValue(m_cachedState.azimuth.getDegrees());
         m_cachedState.tiltMonitor.addSensorValue(m_cachedState.elevation.getDegrees());
 
+        m_cachedState.seeingNote = sensor.get();
+
         m_requestParameters.turretState = m_cachedState;
 
         turretTelemetry.telemetrize(m_cachedState);
@@ -218,23 +228,17 @@ public class Turret extends SubsystemBase {
     }
 
     public class TurretState {
-        Rotation2d azimuth;
+        Rotation2d azimuth, elevation;
 
-        Rotation2d elevation;
-
-        double rawElevationRotations;
+        boolean seeingNote;
 
         boolean noteLoaded;
 
-        Timer noteLoadedTimer = new Timer();
-
-        Timer noteUnloadedTimer = new Timer();
+        final Timer noteLoadedTimer, noteUnloadedTimer;
 
         Optional<Translation2d> virtualGoalLocationDisplacement;
 
-        Rotation2d rotateClosedLoopError;
-
-        Rotation2d tiltClosedLoopError;
+        Rotation2d rotateClosedLoopError, tiltClosedLoopError;
 
         double shooterMotorClosedLoopError;
 
@@ -251,6 +255,11 @@ public class Turret extends SubsystemBase {
                                                                            // period
 
         SensorMonitor tiltMonitor = new SensorMonitor(1.0, 0.020, 10.0);
+
+        TurretState() {
+            noteLoadedTimer = new Timer();
+            noteUnloadedTimer = new Timer();
+        }
 
         public boolean isNoteLoaded() {
             return noteLoaded && noteLoadedTimer.hasElapsed(delayNoteLoadedSeconds);
@@ -272,17 +281,6 @@ public class Turret extends SubsystemBase {
             noteUnloadedTimer.stop();
             noteUnloadedTimer.reset();
             unloadedTimerStarted = false;
-        }
-
-        public void resetNoteLoadedAfterTimerUponShooting() {
-            if (currentlyShooting && !unloadedTimerStarted) {
-                noteUnloadedTimer.restart();
-                unloadedTimerStarted = true;
-            }
-
-            if (noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {
-                resetNoteLoaded();
-            }
         }
 
         public Optional<Translation2d> getVirtualGoalLocationDisplacement() {
