@@ -212,8 +212,6 @@ public class Turret extends SubsystemBase {
 
     public class TurretState {
 
-        public Rotation2d initialRobotRotation, initialTurretRotation;
-
         Rotation2d azimuth, elevation;
 
         double rollerSupplyCurrent;
@@ -221,8 +219,6 @@ public class Turret extends SubsystemBase {
         boolean seeingNote;
 
         boolean noteLoaded;
-
-        Rotation2d robotRotationSinceBoot, turretRotationSinceBoot;
 
         final Timer noteLoadedTimer;
 
@@ -250,8 +246,6 @@ public class Turret extends SubsystemBase {
 
         TurretState() {
             noteLoadedTimer = new Timer();
-            robotRotationSinceBoot = new Rotation2d();
-            turretRotationSinceBoot = new Rotation2d();
         }
 
         public boolean isNoteLoaded() {

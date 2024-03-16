@@ -17,16 +17,6 @@ public class TurretTelemetry {
     private final DoublePublisher elevationError = table.getDoubleTopic("Elevation Error").publish();
     private final DoublePublisher shooterError = table.getDoubleTopic("Shooter Error").publish();
 
-    private final DoublePublisher robotRotationSinceBoot = table.getDoubleTopic("Robot Rotations Since Boot Degrees")
-            .publish();
-    private final DoublePublisher turretRotationSinceBoot = table.getDoubleTopic("Turret Rotations Since Boot Degrees")
-            .publish();
-
-    private final DoublePublisher initialRobotRotation = table.getDoubleTopic("Robot Initial Rotation Degrees")
-            .publish();
-    private final DoublePublisher initialTurretRotation = table.getDoubleTopic("Turret Initial Rotation Degrees")
-            .publish();
-
     private final BooleanPublisher noteLoaded = table.getBooleanTopic("Note Loaded").publish();
 
     public TurretTelemetry() {
@@ -39,12 +29,6 @@ public class TurretTelemetry {
         azimuthError.set(state.rotateClosedLoopError.getDegrees());
         elevationError.set(state.tiltClosedLoopError.getDegrees());
         shooterError.set(state.shooterMotorClosedLoopError);
-
-        robotRotationSinceBoot.set(state.robotRotationSinceBoot.getDegrees());
-        turretRotationSinceBoot.set(state.turretRotationSinceBoot.getDegrees());
-
-        initialRobotRotation.set(state.initialRobotRotation.getDegrees());
-        initialTurretRotation.set(state.initialTurretRotation.getDegrees());
 
         noteLoaded.set(state.isNoteLoaded());
     }
