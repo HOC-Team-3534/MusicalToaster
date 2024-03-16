@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
+import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
@@ -36,11 +37,8 @@ public class Turret extends SubsystemBase {
     TalonFX rightShooterMotor, leftShooterMotor, rotateMotor, tiltMotor;
     TalonSRX rollerMotor;
     ProximitySensorInput sensor;
-    Pigeon2 pigeon;
 
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
-
-    private final Runnable updateTurretPosition;
 
     final static double delayNoteLoadedSeconds = 0.05;
     final static double delayNoteUnloadedSeconds = 0.1;
@@ -77,7 +75,6 @@ public class Turret extends SubsystemBase {
         tiltMotor = new TalonFX(15);
         rollerMotor = new TalonSRX(18);
         sensor = new ProximitySensorInput(4);
-        pigeon = new Pigeon2(22);
 
         /*
          * Function for configuring motor
@@ -104,12 +101,6 @@ public class Turret extends SubsystemBase {
         configureMotor.accept(leftShooterMotor, shooterConfig);
         configureMotor.accept(rightShooterMotor, shooterConfig);
 
-        var pigeonConfig = new Pigeon2Configuration();
-
-        // pigeonConfig.MountPose.MountPoseRoll = 180;
-
-        pigeon.getConfigurator().apply(pigeonConfig);
-
         rightShooterMotor.setInverted(true);
         leftShooterMotor.setInverted(false);
 
@@ -120,6 +111,9 @@ public class Turret extends SubsystemBase {
         tiltMotor.setPosition(0);
 
         rollerMotor.configFactoryDefault();
+        rollerMotor.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder);
+        rollerMotor.setSelectedSensorPosition(0);
+        rollerMotor.setSensorPhase(true);
 
         var offsetGoalFromWallInches = 0.0;
 
@@ -139,29 +133,6 @@ public class Turret extends SubsystemBase {
                         () -> RobotState.getPose()
                                 .map((drivetrain) -> drivetrain.getTranslation()).orElse(new Translation2d()),
                         (vector) -> timeOfFlightEquation.get(vector.getNorm()));
-
-        var robotRotationSinceBoot = CommandSwerveDrivetrain.getInstance().map(drivetrain -> {
-            m_cachedState.initialRobotRotation = drivetrain.getPigeon2().getRotation2d();
-            Supplier<Optional<Rotation2d>> function = () -> Optional
-                    .of(Rotation2d.fromRotations(drivetrain.getPigeon2().getRotation2d().getRotations()
-                            - m_cachedState.initialRobotRotation.getRotations()));
-            return function;
-        }).orElse(() -> Optional.empty());
-
-        m_cachedState.initialTurretRotation = pigeon.getRotation2d();
-        Supplier<Rotation2d> turretRotationsSinceBoot = () -> Rotation2d
-                .fromRotations(
-                        pigeon.getRotation2d().getRotations() - m_cachedState.initialTurretRotation.getRotations());
-
-        updateTurretPosition = () -> {
-            robotRotationSinceBoot.get().ifPresent(robotRotation -> {
-                m_cachedState.robotRotationSinceBoot = robotRotation;
-                m_cachedState.turretRotationSinceBoot = turretRotationsSinceBoot.get();
-                var calculatedAzimuthFromPigeon = Rotation2d
-                        .fromRotations(turretRotationsSinceBoot.get().getRotations() - robotRotation.getRotations());
-                rotateMotor.setPosition(calculatedAzimuthFromPigeon.getRotations());
-            });
-        };
     }
 
     static int loopCounter = 0;
@@ -169,18 +140,14 @@ public class Turret extends SubsystemBase {
     @Override
     public void periodic() {
         if (RobotContainer.getRobotState().isResetingClimber()) {
-            // TODO reset the offsets so that the turret is at 90 degrees
-            // Only on Rising edge of reseting climber
+            rollerMotor.setSelectedSensorPosition(Rotation2d.fromDegrees(90).getRotations() * 1440.0);
         }
 
-        if (loopCounter++ > 10) {
-            updateTurretPosition();
+        var rawAzimuthEncoderCounts = rollerMotor.getSelectedSensorPosition();
 
-            loopCounter = 0;
-        }
+        m_cachedState.azimuth = Rotation2d.fromRotations(rawAzimuthEncoderCounts / 1440.0);
 
-        m_cachedState.azimuth = Rotation2d
-                .fromRotations(rotateMotor.getPosition().getValueAsDouble());
+        rotateMotor.setPosition(m_cachedState.azimuth.getRotations());
 
         m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
 
@@ -332,10 +299,6 @@ public class Turret extends SubsystemBase {
 
     public void setNoteLoadedNoDelay() {
         m_cachedState.setNoteLoadedNoDelay();
-    }
-
-    public void updateTurretPosition() {
-        updateTurretPosition.run();
     }
 
 }

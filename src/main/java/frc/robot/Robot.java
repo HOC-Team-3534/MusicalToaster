@@ -83,7 +83,6 @@ public class Robot extends TimedRobot {
     RobotContainer.publishAutoTrajectoriesOnField();
 
     if (loopCounter++ > 10) {
-      Turret.getInstance().ifPresent(turret -> turret.updateTurretPosition());
 
       loopCounter = 0;
     }
