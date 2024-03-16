@@ -1,20 +1,16 @@
 package frc.robot.subsystems.turret;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
-import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.VoltageOut;
-import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.units.Voltage;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.Constants;
 import frc.robot.RobotContainer;
 import frc.robot.RobotState;
 import frc.robot.subsystems.turret.Turret.TurretState;
@@ -27,7 +23,8 @@ public interface TurretRequest {
         TurretState turretState;
     }
 
-    public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+    public StatusCode apply(TurretControlRequestParameters parameters, Consumer<Rotation2d> rotateTurretConsumer,
+            Consumer<Rotation2d> tiltTurretConsumer,
             TalonSRX rollerMotor);
 
     static final double lowerLimit_azimuthDegrees = -240;
@@ -47,18 +44,13 @@ public interface TurretRequest {
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
 
-    static final double rotateQuickAccel = 1.0;
-    static final double rotateSlowAccel = 0.25;
-    static final Rotation2d slowAccelRange = Rotation2d.fromDegrees(50.0);
-
     public class IndexFromIntake implements TurretRequest {
         private Rotation2d tilt;
         private double rollerPercentOut;
-        private VoltageOut rotationVoltageOut = new VoltageOut(0);
-        private MotionMagicVoltage rotationMotionMagic = new MotionMagicVoltage(0);
 
         @Override
-        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+        public StatusCode apply(TurretControlRequestParameters parameters, Consumer<Rotation2d> rotateTurretConsumer,
+                Consumer<Rotation2d> tiltTurretConsumer,
                 TalonSRX rollerMotor) {
             parameters.turretState.currentlyShooting = false;
 
@@ -89,31 +81,9 @@ public interface TurretRequest {
                 }
             }
 
-            var accelRotate = MathUtils.withinTolerance(
-                    MathUtils.firstMinusSecondRotation(targetAzimuth, currentAzimuth),
-                    slowAccelRange)
-                            ? rotateSlowAccel
-                            : rotateQuickAccel;
-            if (accelRotate != parameters.turretState.currentRotateAccel) {
-                var mm_config = Constants.ROBOT.getTurretTalonConfigLiterals().getRotateConfig().MotionMagic;
-                var updated_mm_config = mm_config.withMotionMagicAcceleration(accelRotate);
-                rotateMotor.getConfigurator().apply(updated_mm_config);
-                parameters.turretState.currentRotateAccel = accelRotate;
-            }
-
-            var azimuthError = MathUtils.firstMinusSecondRotation(targetAzimuth, currentAzimuth);
-
-            var azimuthWithinTolerance = MathUtils.withinTolerance(azimuthError, azimuthTolerance);
-
-            // var rotateControlMode = azimuthWithinTolerance ?
-            // rotationVoltageOut.withOutput(0)
-            // : rotationMotionMagic.withPosition(targetAzimuth.getRotations());
-
-            var rotateControlMode = rotationMotionMagic.withPosition(targetAzimuth.getRotations());
-
-            rotateMotor.setControl(rotateControlMode);
+            rotateTurretConsumer.accept(targetAzimuth);
             rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);
-            tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
+            tiltTurretConsumer.accept(outputTilt);
             return StatusCode.OK;
         }
 
@@ -134,12 +104,12 @@ public interface TurretRequest {
         Function<TurretState, Optional<Rotation2d>> targetAzimuthFunction;
         Function<TurretState, Optional<Rotation2d>> targetElevationFunction;
         Supplier<Boolean> allowShootWhenAimedSupplier = () -> true;
-        private VoltageOut rotationVoltageOut = new VoltageOut(0);
-        private MotionMagicVoltage rotationMotionMagic = new MotionMagicVoltage(0);
+
         private SensorMonitor onTargetMonitor = new SensorMonitor(0.5, 0.02, 0.01);
 
         @Override
-        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+        public StatusCode apply(TurretControlRequestParameters parameters, Consumer<Rotation2d> rotateTurretConsumer,
+                Consumer<Rotation2d> tiltTurretConsumer,
                 TalonSRX rollerMotor) {
             boolean rollerOn = false;
             Optional<Rotation2d> targetAzimuth = Optional.empty();
@@ -205,35 +175,11 @@ public interface TurretRequest {
 
             }
 
-            var finalTargetAzimuth = targetAzimuth.orElse(currentAzimuth);
-
-            var accelRotate = MathUtils.withinTolerance(
-                    MathUtils.firstMinusSecondRotation(finalTargetAzimuth, currentAzimuth),
-                    slowAccelRange)
-                            ? rotateSlowAccel
-                            : rotateQuickAccel;
-            if (accelRotate != parameters.turretState.currentRotateAccel) {
-                var mm_config = Constants.ROBOT.getTurretTalonConfigLiterals().getRotateConfig().MotionMagic;
-                var updated_mm_config = mm_config.withMotionMagicAcceleration(accelRotate);
-                rotateMotor.getConfigurator().apply(updated_mm_config);
-                parameters.turretState.currentRotateAccel = accelRotate;
-            }
-
             parameters.turretState.currentlyShooting = rollerOn;
 
-            var azimuthError = MathUtils.firstMinusSecondRotation(finalTargetAzimuth, currentAzimuth);
-
-            var azimuthWithinTolerance = MathUtils.withinTolerance(azimuthError, azimuthTolerance);
-
-            // var rotateControlMode = azimuthWithinTolerance ?
-            // rotationVoltageOut.withOutput(0)
-            // : rotationMotionMagic.withPosition(finalTargetAzimuth.getRotations());
-
-            var rotateControlMode = rotationMotionMagic.withPosition(finalTargetAzimuth.getRotations());
-
             rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerShootPercentOut : 0);
-            rotateMotor.setControl(rotateControlMode);
-            tiltMotor.setControl(new MotionMagicVoltage(targetElevation.orElse(new Rotation2d()).getRotations()));
+            rotateTurretConsumer.accept(targetAzimuth.orElse(currentAzimuth));
+            tiltTurretConsumer.accept(targetElevation.orElse(new Rotation2d()));
 
             return StatusCode.OK;
         }
@@ -259,14 +205,12 @@ public interface TurretRequest {
 
     public class Idle implements TurretRequest {
 
-        VoltageOut rotateOut = new VoltageOut(0);
-        VoltageOut tiltOut = new VoltageOut(0);
-
         @Override
-        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+        public StatusCode apply(TurretControlRequestParameters parameters, Consumer<Rotation2d> rotateTurretConsumer,
+                Consumer<Rotation2d> tiltTurretConsumer,
                 TalonSRX rollerMotor) {
-            rotateMotor.setControl(rotateOut);
-            tiltMotor.setControl(tiltOut);
+            rotateTurretConsumer.accept(null);
+            tiltTurretConsumer.accept(null);
             rollerMotor.set(ControlMode.PercentOutput, 0);
             return StatusCode.OK;
         }
@@ -280,7 +224,8 @@ public interface TurretRequest {
         Function<Boolean, Boolean> turnOnRollerOnceReadyFunction = (withinTolerance) -> true;
 
         @Override
-        public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
+        public StatusCode apply(TurretControlRequestParameters parameters, Consumer<Rotation2d> rotateTurretConsumer,
+                Consumer<Rotation2d> tiltTurretConsumer,
                 TalonSRX rollerMotor) {
             parameters.turretState.currentlyShooting = false;
 
@@ -296,8 +241,8 @@ public interface TurretRequest {
                 rollerOn = true;
                 parameters.turretState.setNoteLoaded();
             }
-            rotateMotor.setControl(new MotionMagicVoltage(currentAzimuth.getRotations()));
-            tiltMotor.setControl(new MotionMagicVoltage(targetElevation.getRotations()));
+            rotateTurretConsumer.accept(currentAzimuth);
+            tiltTurretConsumer.accept(targetElevation);
             rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerOutput : 0);
             return StatusCode.OK;
 

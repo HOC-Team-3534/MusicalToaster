@@ -17,6 +17,16 @@ public interface TurretTalonConfigLiterals {
 
         @Override
         public TalonFXConfiguration getRotateConfig() {
+            return getRotateConfigNoMotionMagic();
+        }
+
+        private TalonFXConfiguration getRotateConfigNoMotionMagic() {
+            TalonFXConfiguration cfg = new TalonFXConfiguration();
+
+            return cfg;
+        }
+
+        private TalonFXConfiguration getRotateConfigWithMotionMagic() {
             TalonFXConfiguration cfg = new TalonFXConfiguration();
 
             cfg.MotionMagic.MotionMagicCruiseVelocity = 0.35;
@@ -35,7 +45,13 @@ public interface TurretTalonConfigLiterals {
 
         @Override
         public TalonFXConfiguration getTiltConfig() {
-            return getTiltConfigWithPigeon();
+            return getTiltConfigNoMotionMagic();
+        }
+
+        private TalonFXConfiguration getTiltConfigNoMotionMagic() {
+            TalonFXConfiguration cfg = new TalonFXConfiguration();
+
+            return cfg;
         }
 
         private TalonFXConfiguration getTiltConfigWithPigeon() {

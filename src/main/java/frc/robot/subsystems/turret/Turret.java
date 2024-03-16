@@ -4,22 +4,29 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-import com.ctre.phoenix.motorcontrol.FeedbackDevice;
+import javax.swing.text.Position;
+
+import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.PositionVoltage;
+import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.hardware.TalonFX;
 
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.PIDCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
@@ -28,15 +35,18 @@ import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.sensors.ProximitySensorInput;
+import frc.robot.utils.sensors.QuadEncoderOnSRX;
 import frc.robot.utils.sensors.SensorMonitor;
 import frc.robot.utils.shooting.QuadraticEquation;
 
 public class Turret extends SubsystemBase {
     final QuadraticEquation timeOfFlightEquation = new QuadraticEquation().withA(0).withB(0).withC(0);
 
-    TalonFX rightShooterMotor, leftShooterMotor, rotateMotor, tiltMotor;
-    TalonSRX rollerMotor;
-    ProximitySensorInput sensor;
+    final TalonFX rightShooterMotor, leftShooterMotor, rotateMotor, tiltMotor;
+    final TalonSRX rollerMotor;
+    final ProximitySensorInput sensor;
+    final QuadEncoderOnSRX quadEncoder;
+    final Pigeon2 pigeon2;
 
     private final TurretTelemetry turretTelemetry = new TurretTelemetry();
 
@@ -75,6 +85,7 @@ public class Turret extends SubsystemBase {
         tiltMotor = new TalonFX(15);
         rollerMotor = new TalonSRX(18);
         sensor = new ProximitySensorInput(4);
+        pigeon2 = new Pigeon2(22);
 
         /*
          * Function for configuring motor
@@ -101,6 +112,10 @@ public class Turret extends SubsystemBase {
         configureMotor.accept(leftShooterMotor, shooterConfig);
         configureMotor.accept(rightShooterMotor, shooterConfig);
 
+        var pigeonConfig = new Pigeon2Configuration();
+
+        pigeon2.getConfigurator().apply(pigeonConfig);
+
         rightShooterMotor.setInverted(true);
         leftShooterMotor.setInverted(false);
 
@@ -111,9 +126,9 @@ public class Turret extends SubsystemBase {
         tiltMotor.setPosition(0);
 
         rollerMotor.configFactoryDefault();
-        rollerMotor.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder);
-        rollerMotor.setSelectedSensorPosition(0);
-        rollerMotor.setSensorPhase(true);
+
+        quadEncoder = new QuadEncoderOnSRX(rollerMotor).withSensorPhase(true);
+        quadEncoder.setRotation(new Rotation2d());
 
         var offsetGoalFromWallInches = 0.0;
 
@@ -140,16 +155,12 @@ public class Turret extends SubsystemBase {
     @Override
     public void periodic() {
         if (RobotContainer.getRobotState().isResetingClimber()) {
-            rollerMotor.setSelectedSensorPosition(Rotation2d.fromDegrees(90).getRotations() * 1440.0);
+            quadEncoder.setRotation(Rotation2d.fromDegrees(90));
         }
 
-        var rawAzimuthEncoderCounts = rollerMotor.getSelectedSensorPosition();
+        m_cachedState.azimuth = quadEncoder.getRotation();
 
-        m_cachedState.azimuth = Rotation2d.fromRotations(rawAzimuthEncoderCounts / 1440.0);
-
-        rotateMotor.setPosition(m_cachedState.azimuth.getRotations());
-
-        m_cachedState.elevation = Rotation2d.fromRotations(tiltMotor.getPosition().getValueAsDouble());
+        m_cachedState.elevation = Rotation2d.fromDegrees(pigeon2.getPitch().getValueAsDouble());
 
         var rollerOn = Math.abs(rollerMotor.getMotorOutputPercent()) > 0.01;
 
@@ -167,14 +178,6 @@ public class Turret extends SubsystemBase {
                 && m_cachedState.currentlyShooting) {
             m_cachedState.resetNoteLoaded();
         }
-
-        m_cachedState.rotateClosedLoopError = Rotation2d
-                .fromRotations(rotateMotor.getClosedLoopReference().getValueAsDouble()
-                        - rotateMotor.getPosition().getValueAsDouble());
-
-        m_cachedState.tiltClosedLoopError = Rotation2d
-                .fromRotations(tiltMotor.getClosedLoopReference().getValueAsDouble()
-                        - tiltMotor.getPosition().getValueAsDouble());
 
         m_cachedState.shooterMotorClosedLoopError = rightShooterMotor.getClosedLoopError()
                 .getValueAsDouble();
@@ -206,8 +209,83 @@ public class Turret extends SubsystemBase {
     private void setControl(TurretRequest request, ShooterRequest shooterRequest) {
         m_requestToApply = request;
         m_requestToApplyToShooter = shooterRequest;
-        m_requestToApply.apply(m_requestParameters, rotateMotor, tiltMotor, rollerMotor);
+        m_requestToApply.apply(m_requestParameters, this::controlRotate, this::controlTilt, rollerMotor);
         m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor, leftShooterMotor);
+    }
+
+    static double rotateHowQuickToResolveError = 0.1;
+    static double tiltHowQuickToResolveError = 0.55; // DO NOT GO BELOW 0.55 seconds
+
+    ProfiledPIDController rotatePID = new ProfiledPIDController(1 / rotateHowQuickToResolveError, 0, 0,
+            new TrapezoidProfile.Constraints(0.3, 0.25));
+    ProfiledPIDController tiltPID = new ProfiledPIDController(1 / tiltHowQuickToResolveError, 0, 0,
+            new TrapezoidProfile.Constraints(0.85, 1));
+
+    SimpleMotorFeedforward rotateFeedforward = new SimpleMotorFeedforward(0.162, 14.6);
+    SimpleMotorFeedforward tiltFeedforward = new SimpleMotorFeedforward(0.216898, 32.0713);
+
+    VoltageOut rotateOut = new VoltageOut(0);
+    VoltageOut tiltOut = new VoltageOut(0);
+
+    SensorMonitor rotateBacklashSensorMonitor = new SensorMonitor(0.25, 0.020, 1.0);
+    SensorMonitor tiltBacklashSensorMonitor = new SensorMonitor(0.25, 0.020, 0.5);
+
+    final static double MAX_BACKLASH_VELOCITY_ROTATE = 0.05;
+    final static double MAX_BACKLASH_VELOCITY_TILT = 0.015;
+
+    private void controlRotate(Rotation2d targetRotation) {
+        rotateOut.withOutput(0);
+
+        var rotateError = 0.0;
+
+        if (targetRotation != null) {
+            rotateBacklashSensorMonitor.addSensorValue(m_cachedState.azimuth.getDegrees());
+
+            var velocityOutput = rotatePID.calculate(m_cachedState.azimuth.getRotations(),
+                    targetRotation.getRotations());
+
+            if (!rotateBacklashSensorMonitor.hasSignificantMovement()
+                    && Math.abs(velocityOutput) > MAX_BACKLASH_VELOCITY_ROTATE) {
+                velocityOutput = Math.copySign(MAX_BACKLASH_VELOCITY_ROTATE, velocityOutput);
+            }
+
+            var voltageOutput = rotateFeedforward.calculate(velocityOutput);
+
+            rotateOut.withOutput(voltageOutput);
+
+            rotateError = rotatePID.getPositionError();
+        }
+
+        rotateMotor.setControl(rotateOut);
+
+        m_cachedState.rotateClosedLoopError = Rotation2d.fromRotations(rotateError);
+    }
+
+    private void controlTilt(Rotation2d targetTilt) {
+        tiltOut.withOutput(0);
+
+        var tiltError = 0.0;
+
+        if (targetTilt != null) {
+            tiltBacklashSensorMonitor.addSensorValue(m_cachedState.elevation.getDegrees());
+
+            var velocityOutput = tiltPID.calculate(m_cachedState.elevation.getRotations(), targetTilt.getRotations());
+
+            if (!tiltBacklashSensorMonitor.hasSignificantMovement()
+                    && Math.abs(velocityOutput) > MAX_BACKLASH_VELOCITY_TILT) {
+                velocityOutput = Math.copySign(MAX_BACKLASH_VELOCITY_TILT, velocityOutput);
+            }
+
+            var voltageOutput = tiltFeedforward.calculate(velocityOutput);
+
+            tiltOut.withOutput(voltageOutput);
+
+            tiltError = tiltPID.getPositionError();
+        }
+
+        tiltMotor.setControl(tiltOut);
+
+        m_cachedState.tiltClosedLoopError = Rotation2d.fromRotations(tiltError);
     }
 
     public class TurretState {
@@ -246,6 +324,8 @@ public class Turret extends SubsystemBase {
 
         TurretState() {
             noteLoadedTimer = new Timer();
+            rotateClosedLoopError = new Rotation2d();
+            tiltClosedLoopError = new Rotation2d();
         }
 
         public boolean isNoteLoaded() {
