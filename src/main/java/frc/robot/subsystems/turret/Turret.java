@@ -16,6 +16,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -42,7 +43,7 @@ public class Turret extends SubsystemBase {
     private final Runnable updateTurretPosition;
 
     final static double delayNoteLoadedSeconds = 0.05;
-    final static double delayNoteUnloadedSeconds = 1.0;
+    final static double delayNoteUnloadedSeconds = 0.1;
 
     protected TurretRequest m_requestToApply = new TurretRequest.Idle();
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
@@ -103,7 +104,11 @@ public class Turret extends SubsystemBase {
         configureMotor.accept(leftShooterMotor, shooterConfig);
         configureMotor.accept(rightShooterMotor, shooterConfig);
 
-        pigeon.getConfigurator().apply(new Pigeon2Configuration());
+        var pigeonConfig = new Pigeon2Configuration();
+
+        // pigeonConfig.MountPose.MountPoseRoll = 180;
+
+        pigeon.getConfigurator().apply(pigeonConfig);
 
         rightShooterMotor.setInverted(true);
         leftShooterMotor.setInverted(false);
@@ -136,23 +141,30 @@ public class Turret extends SubsystemBase {
                         (vector) -> timeOfFlightEquation.get(vector.getNorm()));
 
         var robotRotationSinceBoot = CommandSwerveDrivetrain.getInstance().map(drivetrain -> {
-            Rotation2d initialRotation = drivetrain.getPigeon2().getRotation2d();
+            m_cachedState.initialRobotRotation = drivetrain.getPigeon2().getRotation2d();
             Supplier<Optional<Rotation2d>> function = () -> Optional
-                    .of(drivetrain.getPigeon2().getRotation2d().minus(initialRotation));
+                    .of(Rotation2d.fromRotations(drivetrain.getPigeon2().getRotation2d().getRotations()
+                            - m_cachedState.initialRobotRotation.getRotations()));
             return function;
         }).orElse(() -> Optional.empty());
 
-        var initialTurretRotation = pigeon.getRotation2d().unaryMinus();
-        Supplier<Rotation2d> turretRotationsSinceBoot = () -> pigeon.getRotation2d().unaryMinus()
-                .minus(initialTurretRotation);
+        m_cachedState.initialTurretRotation = pigeon.getRotation2d();
+        Supplier<Rotation2d> turretRotationsSinceBoot = () -> Rotation2d
+                .fromRotations(
+                        pigeon.getRotation2d().getRotations() - m_cachedState.initialTurretRotation.getRotations());
 
         updateTurretPosition = () -> {
             robotRotationSinceBoot.get().ifPresent(robotRotation -> {
-                var calculatedAzimuthFromPigeon = turretRotationsSinceBoot.get().minus(robotRotation);
+                m_cachedState.robotRotationSinceBoot = robotRotation;
+                m_cachedState.turretRotationSinceBoot = turretRotationsSinceBoot.get();
+                var calculatedAzimuthFromPigeon = Rotation2d
+                        .fromRotations(turretRotationsSinceBoot.get().getRotations() - robotRotation.getRotations());
                 rotateMotor.setPosition(calculatedAzimuthFromPigeon.getRotations());
             });
         };
     }
+
+    static int loopCounter = 0;
 
     @Override
     public void periodic() {
@@ -161,7 +173,11 @@ public class Turret extends SubsystemBase {
             // Only on Rising edge of reseting climber
         }
 
-        updateTurretPosition.run();
+        if (loopCounter++ > 10) {
+            updateTurretPosition();
+
+            loopCounter = 0;
+        }
 
         m_cachedState.azimuth = Rotation2d
                 .fromRotations(rotateMotor.getPosition().getValueAsDouble());
@@ -174,14 +190,14 @@ public class Turret extends SubsystemBase {
             m_cachedState.setNoteLoaded();
         }
 
-        if (m_cachedState.seeingNote && !sensor.get()
-                && m_cachedState.currentlyShooting
-                && !m_cachedState.unloadedTimerStarted) {
-            m_cachedState.noteUnloadedTimer.restart();
-            m_cachedState.unloadedTimerStarted = true;
-        }
+        m_cachedState.rollerSupplyCurrent = rollerMotor.getSupplyCurrent();
 
-        if (m_cachedState.noteUnloadedTimer.hasElapsed(delayNoteUnloadedSeconds)) {
+        m_cachedState.rollerCurrentMonitor.addSensorValue(m_cachedState.rollerSupplyCurrent);
+
+        if (!m_cachedState.rollerCurrentMonitor.hasSignificantMovement()
+                && m_cachedState.rollerSupplyCurrent > 10
+                && m_cachedState.rollerSupplyCurrent < 18
+                && m_cachedState.currentlyShooting) {
             m_cachedState.resetNoteLoaded();
         }
 
@@ -228,13 +244,20 @@ public class Turret extends SubsystemBase {
     }
 
     public class TurretState {
+
+        public Rotation2d initialRobotRotation, initialTurretRotation;
+
         Rotation2d azimuth, elevation;
+
+        double rollerSupplyCurrent;
 
         boolean seeingNote;
 
         boolean noteLoaded;
 
-        final Timer noteLoadedTimer, noteUnloadedTimer;
+        Rotation2d robotRotationSinceBoot, turretRotationSinceBoot;
+
+        final Timer noteLoadedTimer;
 
         Optional<Translation2d> virtualGoalLocationDisplacement;
 
@@ -256,9 +279,12 @@ public class Turret extends SubsystemBase {
 
         SensorMonitor tiltMonitor = new SensorMonitor(1.0, 0.020, 10.0);
 
+        SensorMonitor rollerCurrentMonitor = new SensorMonitor(Turret.delayNoteUnloadedSeconds, 0.020, 3);
+
         TurretState() {
             noteLoadedTimer = new Timer();
-            noteUnloadedTimer = new Timer();
+            robotRotationSinceBoot = new Rotation2d();
+            turretRotationSinceBoot = new Rotation2d();
         }
 
         public boolean isNoteLoaded() {
@@ -278,9 +304,6 @@ public class Turret extends SubsystemBase {
 
         public void resetNoteLoaded() {
             noteLoaded = false;
-            noteUnloadedTimer.stop();
-            noteUnloadedTimer.reset();
-            unloadedTimerStarted = false;
         }
 
         public Optional<Translation2d> getVirtualGoalLocationDisplacement() {
@@ -309,6 +332,10 @@ public class Turret extends SubsystemBase {
 
     public void setNoteLoadedNoDelay() {
         m_cachedState.setNoteLoadedNoDelay();
+    }
+
+    public void updateTurretPosition() {
+        updateTurretPosition.run();
     }
 
 }

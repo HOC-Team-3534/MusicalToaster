@@ -24,8 +24,8 @@ public interface TurretTalonConfigLiterals {
             cfg.MotionMagic.MotionMagicJerk = 20;
 
             cfg.Slot0.kP = 100;
-            cfg.Slot0.kV = 13.906;
-            cfg.Slot0.kS = 0.164;
+            cfg.Slot0.kV = 14.6;
+            cfg.Slot0.kS = 0.162;
 
             cfg.Feedback.SensorToMechanismRatio = 125;
 
@@ -50,7 +50,7 @@ public interface TurretTalonConfigLiterals {
 
             cfg.Feedback.FeedbackRemoteSensorID = 22;
             cfg.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RemotePigeon2_Pitch;
-            cfg.Feedback.SensorToMechanismRatio = -1.0;
+            cfg.Feedback.SensorToMechanismRatio = 1.0;
 
             return cfg;
         }

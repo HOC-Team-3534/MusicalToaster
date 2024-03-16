@@ -1,4 +1,4 @@
-package frc.robot.utils;
+package frc.robot.utils.swerve;
 
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveModule;
@@ -8,10 +8,11 @@ import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 
 public class FieldCentricCorrect extends FieldCentric {
 
-    Rotation2d[] cachedModuleRotations;
+    Rotation2d[] cachedModuleRotations = new Rotation2d[4];
 
     @Override
     public StatusCode apply(SwerveControlRequestParameters parameters, SwerveModule... modulesToApply) {
@@ -39,9 +40,18 @@ public class FieldCentricCorrect extends FieldCentric {
 
         var states = parameters.kinematics.toSwerveModuleStates(speeds, CenterOfRotation);
 
+        var keepSteerStill = true;
+
+        for (SwerveModuleState state : states) {
+            if (state.speedMetersPerSecond > 0.005) {
+                keepSteerStill = false;
+                break;
+            }
+        }
+
         for (int i = 0; i < modulesToApply.length; ++i) {
 
-            states[i].angle = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 0.005
+            states[i].angle = keepSteerStill
                     ? cachedModuleRotations[i]
                     : states[i].angle;
 

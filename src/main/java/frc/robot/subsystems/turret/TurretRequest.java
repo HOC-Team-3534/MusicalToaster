@@ -12,6 +12,7 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.units.Voltage;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
 import frc.robot.RobotState;
@@ -33,9 +34,9 @@ public interface TurretRequest {
     static final double lowerLimit_elevationDegrees = -50;
     static final double upperLimit_elevationDegrees = 50;
 
-    static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(2);
+    static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(3);
     static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(70);
-    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(0.75);
+    static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(1.5);
     static final Rotation2d elevationWhenRotating = Rotation2d.fromDegrees(30.0);
     static final Rotation2d wideAzimuthToleranceForTilt = Rotation2d.fromDegrees(25);
     static final Rotation2d stillAzimuthTolerance = azimuthTolerance.plus(Rotation2d.fromDegrees(7));
@@ -51,6 +52,8 @@ public interface TurretRequest {
     public class IndexFromIntake implements TurretRequest {
         private Rotation2d tilt;
         private double rollerPercentOut;
+        private VoltageOut rotationVoltageOut = new VoltageOut(0);
+        private MotionMagicVoltage rotationMotionMagic = new MotionMagicVoltage(0);
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
@@ -74,8 +77,8 @@ public interface TurretRequest {
                         ? new Rotation2d()
                         : tilt;
 
-                var azimuthError = targetAzimuth.minus(currentAzimuth);
-                var elevationError = outputTilt.minus(currentElevation);
+                var azimuthError = MathUtils.firstMinusSecondRotation(targetAzimuth, currentAzimuth);
+                var elevationError = MathUtils.firstMinusSecondRotation(outputTilt, currentElevation);
 
                 if (MathUtils.withinTolerance(azimuthError, azimuthIndexFromIntakeTolerance)
                         && MathUtils.withinTolerance(elevationError, elevationTolerance)) {
@@ -84,7 +87,8 @@ public interface TurretRequest {
                 }
             }
 
-            var accelRotate = MathUtils.withinTolerance(targetAzimuth.minus(currentAzimuth),
+            var accelRotate = MathUtils.withinTolerance(
+                    MathUtils.firstMinusSecondRotation(targetAzimuth, currentAzimuth),
                     slowAccelRange)
                             ? rotateSlowAccel
                             : rotateQuickAccel;
@@ -95,7 +99,14 @@ public interface TurretRequest {
                 parameters.turretState.currentRotateAccel = accelRotate;
             }
 
-            rotateMotor.setControl(new MotionMagicVoltage(targetAzimuth.getRotations()));
+            var azimuthError = MathUtils.firstMinusSecondRotation(targetAzimuth, currentAzimuth);
+
+            var azimuthWithinTolerance = MathUtils.withinTolerance(azimuthError, azimuthTolerance);
+
+            var rotateControlMode = azimuthWithinTolerance ? rotationVoltageOut.withOutput(0)
+                    : rotationMotionMagic.withPosition(targetAzimuth.getRotations());
+
+            rotateMotor.setControl(rotateControlMode);
             rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerPercentOut : 0);
             tiltMotor.setControl(new MotionMagicVoltage(outputTilt.getRotations()));
             return StatusCode.OK;
@@ -118,6 +129,8 @@ public interface TurretRequest {
         Function<TurretState, Optional<Rotation2d>> targetAzimuthFunction;
         Function<TurretState, Optional<Rotation2d>> targetElevationFunction;
         Supplier<Boolean> allowShootWhenAimedSupplier = () -> true;
+        private VoltageOut rotationVoltageOut = new VoltageOut(0);
+        private MotionMagicVoltage rotationMotionMagic = new MotionMagicVoltage(0);
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, TalonFX rotateMotor, TalonFX tiltMotor,
@@ -154,8 +167,8 @@ public interface TurretRequest {
 
                 if (targetAzimuth.isPresent() && targetElevation.isPresent()) {
 
-                    var azimuthError = targetAzimuth.get().minus(currentAzimuth);
-                    var elevationError = targetElevation.get().minus(currentElevation);
+                    var azimuthError = MathUtils.firstMinusSecondRotation(targetAzimuth.get(), currentAzimuth);
+                    var elevationError = MathUtils.firstMinusSecondRotation(targetElevation.get(), currentElevation);
                     var shooterError = parameters.turretState.shooterMotorClosedLoopError;
 
                     if (!MathUtils.withinTolerance(azimuthError, wideAzimuthToleranceForTilt)
@@ -182,7 +195,8 @@ public interface TurretRequest {
 
             var finalTargetAzimuth = targetAzimuth.orElse(currentAzimuth);
 
-            var accelRotate = MathUtils.withinTolerance(finalTargetAzimuth.minus(currentAzimuth),
+            var accelRotate = MathUtils.withinTolerance(
+                    MathUtils.firstMinusSecondRotation(finalTargetAzimuth, currentAzimuth),
                     slowAccelRange)
                             ? rotateSlowAccel
                             : rotateQuickAccel;
@@ -195,8 +209,15 @@ public interface TurretRequest {
 
             parameters.turretState.currentlyShooting = rollerOn;
 
+            var azimuthError = MathUtils.firstMinusSecondRotation(finalTargetAzimuth, currentAzimuth);
+
+            var azimuthWithinTolerance = MathUtils.withinTolerance(azimuthError, azimuthTolerance);
+
+            var rotateControlMode = azimuthWithinTolerance ? rotationVoltageOut.withOutput(0)
+                    : rotationMotionMagic.withPosition(finalTargetAzimuth.getRotations());
+
             rollerMotor.set(ControlMode.PercentOutput, rollerOn ? rollerShootPercentOut : 0);
-            rotateMotor.setControl(new MotionMagicVoltage(finalTargetAzimuth.getRotations()));
+            rotateMotor.setControl(rotateControlMode);
             tiltMotor.setControl(new MotionMagicVoltage(targetElevation.orElse(new Rotation2d()).getRotations()));
 
             return StatusCode.OK;

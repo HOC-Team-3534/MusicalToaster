@@ -19,4 +19,12 @@ public class MathUtils {
         return Math.abs(value) <= Math.abs(tolerance);
     }
 
+    public static Rotation2d addRotations(Rotation2d rot1, Rotation2d rot2) {
+        return Rotation2d.fromDegrees(rot1.getDegrees() + rot2.getDegrees());
+    }
+
+    public static Rotation2d firstMinusSecondRotation(Rotation2d rot1, Rotation2d rot2) {
+        return Rotation2d.fromDegrees(rot1.getDegrees() - rot2.getDegrees());
+    }
+
 }

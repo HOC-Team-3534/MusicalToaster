@@ -3,18 +3,17 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot;
 
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.pathplanner.lib.path.PathConstraints;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.motorcontrol.Talon;
 import frc.robot.literals.CameraLiterals;
 import frc.robot.literals.RobotLiterals;
 import frc.robot.literals.SwerveDrivetrainLiterals;
-import frc.robot.literals.TurretTalonConfigLiterals;
-import frc.robot.literals.TurretTalonConfigLiterals.*;
+import frc.robot.literals.TurretTalonConfigLiterals.CBOT_TurretTalonConfigLiterals;
+import frc.robot.literals.TurretTalonConfigLiterals.PBOT_TurretTalonConfigLiterals;
+import frc.robot.literals.TurretTalonConfigLiterals.TBOT_TurretTalonConfigLiterals;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide
