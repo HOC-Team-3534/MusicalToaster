@@ -20,12 +20,13 @@ public interface TurretTalonConfigLiterals {
             TalonFXConfiguration cfg = new TalonFXConfiguration();
 
             cfg.MotionMagic.MotionMagicCruiseVelocity = 0.75;
-            cfg.MotionMagic.MotionMagicAcceleration = 0.35;
+            cfg.MotionMagic.MotionMagicAcceleration = 0.6;
             cfg.MotionMagic.MotionMagicJerk = 20;
 
             cfg.Slot0.kP = 100;
             cfg.Slot0.kV = 14.6;
             cfg.Slot0.kS = 0.162;
+            cfg.Slot0.kD = 15;
 
             cfg.Feedback.SensorToMechanismRatio = 125;
 
