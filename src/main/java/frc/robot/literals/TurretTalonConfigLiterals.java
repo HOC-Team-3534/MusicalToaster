@@ -19,14 +19,14 @@ public interface TurretTalonConfigLiterals {
         public TalonFXConfiguration getRotateConfig() {
             TalonFXConfiguration cfg = new TalonFXConfiguration();
 
-            cfg.MotionMagic.MotionMagicCruiseVelocity = 0.75;
+            cfg.MotionMagic.MotionMagicCruiseVelocity = 0.35;
             cfg.MotionMagic.MotionMagicAcceleration = 0.6;
             cfg.MotionMagic.MotionMagicJerk = 20;
 
-            cfg.Slot0.kP = 100;
+            cfg.Slot0.kP = 60;
             cfg.Slot0.kV = 14.6;
             cfg.Slot0.kS = 0.162;
-            cfg.Slot0.kD = 15;
+            // cfg.Slot0.kD = 8;
 
             cfg.Feedback.SensorToMechanismRatio = 125;
 

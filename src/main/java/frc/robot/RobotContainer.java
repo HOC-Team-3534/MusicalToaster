@@ -85,9 +85,9 @@ public class RobotContainer {
 			.withTargetElevationFunction(
 					(turretState) -> turretState.getVirtualGoalLocationDisplacement().map((displacementToGoal) -> {
 						var distance = displacementToGoal.getNorm();
-						var a = 2.582;
-						var b = -24.096;
-						var c = 81.35;
+						var a = 1.93651;
+						var b = -18.6632;
+						var c = 68.975;
 						var degrees = a * Math.pow(distance, 2) + b * distance + c;
 						SmartDashboard.putNumber("Distance from Goal", distance);
 						return Rotation2d.fromDegrees(degrees);
