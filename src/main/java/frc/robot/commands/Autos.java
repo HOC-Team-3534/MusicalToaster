@@ -121,7 +121,7 @@ public final class Autos {
                   () -> {
                     goingToShootNoteFromCenter = RobotState.isBeyondWing()
                         && !justSkippedPathToShoot;
-                    return !RobotContainer.getRobotState().isNoteInRobot() || goingToShootNoteFromCenter;
+                    return !waitBecauseNoteInRobotAndTooCloseToNextNoteToPickup(paths) || goingToShootNoteFromCenter;
                   })
               .andThen(getDrivePathCommand(paths).until(() -> {
                 justSkippedPathToShoot = !RobotContainer.getRobotState().isNoteInRobot()
@@ -136,6 +136,20 @@ public final class Autos {
           RobotContainer.getShootCommand(() -> ShooterType.Speaker),
           RobotContainer.getIntakeAutonomouslyCommand());
     }).orElse(Commands.none());
+  }
+
+  static boolean waitForRobotToShootDuringAuton = false;
+
+  private static boolean waitBecauseNoteInRobotAndTooCloseToNextNoteToPickup(LinkedList<PathPlannerPath> paths) {
+    if (waitForRobotToShootDuringAuton)
+      return RobotContainer.getRobotState().isNoteInRobot();
+    var nextPath = paths.peek();
+    if (nextPath == null)
+      return false;
+    var nextPathPoses = paths.peek().getPathPoses();
+    var nextPathEndPose = nextPathPoses.get(nextPathPoses.size() - 1);
+    return RobotContainer.getRobotState().isNoteInRobot() && RobotState.getPose()
+        .map(currentPose -> currentPose.relativeTo(nextPathEndPose).getTranslation().getNorm() < 2.5).orElse(true);
   }
 
   static PathPlannerPath currentPath;
