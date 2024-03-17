@@ -216,19 +216,16 @@ public class Turret extends SubsystemBase {
     static double rotateHowQuickToResolveError = 0.1;
     static double tiltHowQuickToResolveError = 0.55; // DO NOT GO BELOW 0.55 seconds
 
-    ProfiledPIDController rotatePID = new ProfiledPIDController(1 / rotateHowQuickToResolveError, 0, 0,
+    ProfiledPIDController rotatePID = new ProfiledPIDController(1.0 / rotateHowQuickToResolveError, 0, 0,
             new TrapezoidProfile.Constraints(0.3, 0.25));
-    ProfiledPIDController tiltPID = new ProfiledPIDController(1 / tiltHowQuickToResolveError, 0, 0,
-            new TrapezoidProfile.Constraints(0.85, 1));
+    ProfiledPIDController tiltPID = new ProfiledPIDController(1.0 / tiltHowQuickToResolveError, 0, 0,
+            new TrapezoidProfile.Constraints(0.00, 0.00));
 
     SimpleMotorFeedforward rotateFeedforward = new SimpleMotorFeedforward(0.162, 14.6);
     SimpleMotorFeedforward tiltFeedforward = new SimpleMotorFeedforward(0.216898, 32.0713);
 
     VoltageOut rotateOut = new VoltageOut(0);
     VoltageOut tiltOut = new VoltageOut(0);
-
-    SensorMonitor rotateBacklashSensorMonitor = new SensorMonitor(0.25, 0.020, 1.0);
-    SensorMonitor tiltBacklashSensorMonitor = new SensorMonitor(0.25, 0.020, 0.5);
 
     final static double MAX_BACKLASH_VELOCITY_ROTATE = 0.05;
     final static double MAX_BACKLASH_VELOCITY_TILT = 0.015;
@@ -239,17 +236,18 @@ public class Turret extends SubsystemBase {
         var rotateError = 0.0;
 
         if (targetRotation != null) {
-            rotateBacklashSensorMonitor.addSensorValue(m_cachedState.azimuth.getDegrees());
+            m_cachedState.rotateBacklashSensorMonitor.addSensorValue(m_cachedState.azimuth.getDegrees());
 
-            var velocityOutput = rotatePID.calculate(m_cachedState.azimuth.getRotations(),
+            m_cachedState.rotateVelocityOut = rotatePID.calculate(m_cachedState.azimuth.getRotations(),
                     targetRotation.getRotations());
 
-            if (!rotateBacklashSensorMonitor.hasSignificantMovement()
-                    && Math.abs(velocityOutput) > MAX_BACKLASH_VELOCITY_ROTATE) {
-                velocityOutput = Math.copySign(MAX_BACKLASH_VELOCITY_ROTATE, velocityOutput);
+            if (!m_cachedState.rotateBacklashSensorMonitor.hasSignificantMovement()
+                    && Math.abs(m_cachedState.rotateVelocityOut) > MAX_BACKLASH_VELOCITY_ROTATE) {
+                m_cachedState.rotateVelocityOut = Math.copySign(MAX_BACKLASH_VELOCITY_ROTATE,
+                        m_cachedState.rotateVelocityOut);
             }
 
-            var voltageOutput = rotateFeedforward.calculate(velocityOutput);
+            var voltageOutput = rotateFeedforward.calculate(m_cachedState.rotateVelocityOut);
 
             rotateOut.withOutput(voltageOutput);
 
@@ -267,18 +265,22 @@ public class Turret extends SubsystemBase {
         var tiltError = 0.0;
 
         if (targetTilt != null) {
-            tiltBacklashSensorMonitor.addSensorValue(m_cachedState.elevation.getDegrees());
+            m_cachedState.tiltBacklashSensorMonitor.addSensorValue(m_cachedState.elevation.getDegrees());
 
-            var velocityOutput = tiltPID.calculate(m_cachedState.elevation.getRotations(), targetTilt.getRotations());
+            m_cachedState.tiltVelocityOut = tiltPID.calculate(m_cachedState.elevation.getRotations(),
+                    targetTilt.getRotations());
 
-            if (!tiltBacklashSensorMonitor.hasSignificantMovement()
-                    && Math.abs(velocityOutput) > MAX_BACKLASH_VELOCITY_TILT) {
-                velocityOutput = Math.copySign(MAX_BACKLASH_VELOCITY_TILT, velocityOutput);
+            if (!m_cachedState.tiltBacklashSensorMonitor.hasSignificantMovement()
+                    && Math.abs(m_cachedState.tiltVelocityOut) > MAX_BACKLASH_VELOCITY_TILT) {
+                m_cachedState.tiltVelocityOut = Math.copySign(MAX_BACKLASH_VELOCITY_TILT,
+                        m_cachedState.tiltVelocityOut);
             }
 
-            var voltageOutput = tiltFeedforward.calculate(velocityOutput);
+            var voltageOutput = tiltFeedforward.calculate(m_cachedState.tiltVelocityOut);
 
             tiltOut.withOutput(voltageOutput);
+
+            m_cachedState.tiltSetpointPosition = tiltPID.getSetpoint().position;
 
             tiltError = tiltPID.getPositionError();
         }
@@ -290,6 +292,8 @@ public class Turret extends SubsystemBase {
 
     public class TurretState {
 
+        double tiltSetpointPosition;
+
         Rotation2d azimuth, elevation;
 
         double rollerSupplyCurrent;
@@ -300,6 +304,8 @@ public class Turret extends SubsystemBase {
 
         final Timer noteLoadedTimer;
 
+        double rotateVelocityOut, tiltVelocityOut;
+
         Optional<Translation2d> virtualGoalLocationDisplacement;
 
         Rotation2d rotateClosedLoopError, tiltClosedLoopError;
@@ -309,6 +315,9 @@ public class Turret extends SubsystemBase {
         boolean currentlyShooting;
 
         boolean unloadedTimerStarted = false;
+
+        SensorMonitor rotateBacklashSensorMonitor = new SensorMonitor(0.25, 0.020, 1.0);
+        SensorMonitor tiltBacklashSensorMonitor = new SensorMonitor(0.25, 0.020, 0.5);
 
         protected double currentRotateAccel = 0;
 
