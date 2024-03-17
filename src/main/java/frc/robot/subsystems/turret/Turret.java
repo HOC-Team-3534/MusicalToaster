@@ -4,29 +4,21 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-import javax.swing.text.Position;
-
-import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.hardware.TalonFX;
 
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.PIDCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.RobotContainer;
@@ -34,6 +26,7 @@ import frc.robot.RobotState;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
+import frc.robot.utils.pid.PID4Backlash;
 import frc.robot.utils.sensors.ProximitySensorInput;
 import frc.robot.utils.sensors.QuadEncoderOnSRX;
 import frc.robot.utils.sensors.SensorMonitor;
@@ -214,80 +207,44 @@ public class Turret extends SubsystemBase {
     }
 
     static double rotateHowQuickToResolveError = 0.1;
-    static double tiltHowQuickToResolveError = 0.55; // DO NOT GO BELOW 0.55 seconds
+    static double tiltHowQuickToResolveError = 0.1;
 
-    ProfiledPIDController rotatePID = new ProfiledPIDController(1.0 / rotateHowQuickToResolveError, 0, 0,
-            new TrapezoidProfile.Constraints(0.3, 0.25));
-    ProfiledPIDController tiltPID = new ProfiledPIDController(1.0 / tiltHowQuickToResolveError, 0, 0,
-            new TrapezoidProfile.Constraints(0.00, 0.00));
-
-    SimpleMotorFeedforward rotateFeedforward = new SimpleMotorFeedforward(0.162, 14.6);
-    SimpleMotorFeedforward tiltFeedforward = new SimpleMotorFeedforward(0.216898, 32.0713);
+    PID4Backlash rotatePID = new PID4Backlash(1.0 / rotateHowQuickToResolveError, 0, 0, 0.3, 0.25)
+            .withFeedforward(0.162, 14.6)
+            .withStillMonitor(0.25, 1);
+    PID4Backlash tiltPID = new PID4Backlash(1.0 / tiltHowQuickToResolveError, 0, 0, 0.35, 0.5)
+            .withFeedforward(0.2169, 32.07)
+            .withStillMonitor(0.25, 1);
 
     VoltageOut rotateOut = new VoltageOut(0);
     VoltageOut tiltOut = new VoltageOut(0);
 
-    final static double MAX_BACKLASH_VELOCITY_ROTATE = 0.05;
-    final static double MAX_BACKLASH_VELOCITY_TILT = 0.015;
-
     private void controlRotate(Rotation2d targetRotation) {
         rotateOut.withOutput(0);
 
-        var rotateError = 0.0;
-
         if (targetRotation != null) {
-            m_cachedState.rotateBacklashSensorMonitor.addSensorValue(m_cachedState.azimuth.getDegrees());
-
-            m_cachedState.rotateVelocityOut = rotatePID.calculate(m_cachedState.azimuth.getRotations(),
-                    targetRotation.getRotations());
-
-            if (!m_cachedState.rotateBacklashSensorMonitor.hasSignificantMovement()
-                    && Math.abs(m_cachedState.rotateVelocityOut) > MAX_BACKLASH_VELOCITY_ROTATE) {
-                m_cachedState.rotateVelocityOut = Math.copySign(MAX_BACKLASH_VELOCITY_ROTATE,
-                        m_cachedState.rotateVelocityOut);
-            }
-
-            var voltageOutput = rotateFeedforward.calculate(m_cachedState.rotateVelocityOut);
-
-            rotateOut.withOutput(voltageOutput);
-
-            rotateError = rotatePID.getPositionError();
+            rotateOut.withOutput(
+                    rotatePID.calculate(m_cachedState.azimuth.getRotations(), targetRotation.getRotations()));
         }
+
+        m_cachedState.rotateVelocityOut = rotatePID.getSetpoint().velocity;
+        m_cachedState.rotateClosedLoopError = Rotation2d.fromRotations(rotatePID.getPositionError());
 
         rotateMotor.setControl(rotateOut);
-
-        m_cachedState.rotateClosedLoopError = Rotation2d.fromRotations(rotateError);
     }
 
-    private void controlTilt(Rotation2d targetTilt) {
+    private void controlTilt(Rotation2d targetRotation) {
         tiltOut.withOutput(0);
 
-        var tiltError = 0.0;
-
-        if (targetTilt != null) {
-            m_cachedState.tiltBacklashSensorMonitor.addSensorValue(m_cachedState.elevation.getDegrees());
-
-            m_cachedState.tiltVelocityOut = tiltPID.calculate(m_cachedState.elevation.getRotations(),
-                    targetTilt.getRotations());
-
-            if (!m_cachedState.tiltBacklashSensorMonitor.hasSignificantMovement()
-                    && Math.abs(m_cachedState.tiltVelocityOut) > MAX_BACKLASH_VELOCITY_TILT) {
-                m_cachedState.tiltVelocityOut = Math.copySign(MAX_BACKLASH_VELOCITY_TILT,
-                        m_cachedState.tiltVelocityOut);
-            }
-
-            var voltageOutput = tiltFeedforward.calculate(m_cachedState.tiltVelocityOut);
-
-            tiltOut.withOutput(voltageOutput);
-
-            m_cachedState.tiltSetpointPosition = tiltPID.getSetpoint().position;
-
-            tiltError = tiltPID.getPositionError();
+        if (targetRotation != null) {
+            tiltOut.withOutput(
+                    tiltPID.calculate(m_cachedState.elevation.getRotations(), targetRotation.getRotations()));
         }
 
-        tiltMotor.setControl(tiltOut);
+        m_cachedState.tiltVelocityOut = tiltPID.getSetpoint().velocity;
+        m_cachedState.tiltClosedLoopError = Rotation2d.fromRotations(tiltPID.getPositionError());
 
-        m_cachedState.tiltClosedLoopError = Rotation2d.fromRotations(tiltError);
+        tiltMotor.setControl(tiltOut);
     }
 
     public class TurretState {
