@@ -38,13 +38,19 @@ public class PID4Backlash extends ProfiledPIDController {
     public double calculate(double measurement, double goal) {
         stillSensorMonitor.addSensorValue(measurement);
 
+        // Reset Setpoint for proper profiling when there has not been significant
+        // movement and the error is more than can be solved in a second during backlash
+        if (!stillSensorMonitor.hasSignificantMovement()
+                && Math.abs(measurement - goal) > getVelocityDuringBacklash()) {
+            super.reset(measurement);
+        }
+
         var targetVelocity = super.calculate(measurement, goal);
 
         if (!stillSensorMonitor.hasSignificantMovement()) {
             if (Math.abs(targetVelocity) > getVelocityDuringBacklash()) {
                 targetVelocity = Math.copySign(getVelocityDuringBacklash(), targetVelocity);
             }
-            super.reset(measurement);
         }
 
         this.setpoint = new TrapezoidProfile.State(super.getSetpoint().position, targetVelocity);
