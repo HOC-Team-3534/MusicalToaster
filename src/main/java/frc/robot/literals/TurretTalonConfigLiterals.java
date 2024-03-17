@@ -3,8 +3,6 @@ package frc.robot.literals;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-
 public interface TurretTalonConfigLiterals {
 
     public TalonFXConfiguration getRotateConfig();
