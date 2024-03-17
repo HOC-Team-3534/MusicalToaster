@@ -41,7 +41,7 @@ public class PID4Backlash extends ProfiledPIDController {
         // Reset Setpoint for proper profiling when there has not been significant
         // movement and the error is more than can be solved in a second during backlash
         if (!stillSensorMonitor.hasSignificantMovement()
-                && Math.abs(measurement - goal) > getVelocityDuringBacklash()) {
+                && Math.abs(measurement - super.getSetpoint().position) > getVelocityDuringBacklash()) {
             super.reset(measurement);
         }
 
