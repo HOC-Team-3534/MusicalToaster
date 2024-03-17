@@ -33,7 +33,8 @@ import frc.robot.utils.sensors.SensorMonitor;
 import frc.robot.utils.shooting.QuadraticEquation;
 
 public class Turret extends SubsystemBase {
-    final QuadraticEquation timeOfFlightEquation = new QuadraticEquation().withA(0).withB(0).withC(0);
+    final QuadraticEquation timeOfFlightEquation = new QuadraticEquation().withA(0.00983625).withB(0.0397349)
+            .withC(0.082);
 
     final TalonFX rightShooterMotor, leftShooterMotor, rotateMotor, tiltMotor;
     final TalonSRX rollerMotor;
