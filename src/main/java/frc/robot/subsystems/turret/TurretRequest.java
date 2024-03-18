@@ -106,7 +106,7 @@ public interface TurretRequest {
         Supplier<Boolean> allowShootWhenAimedSupplier = () -> true;
         Supplier<Boolean> shootImmediatelyOverride = () -> false;
 
-        private SensorMonitor onTargetMonitor = new SensorMonitor(0.5, 0.02, 0.01);
+        private SensorMonitor onTargetMonitor = new SensorMonitor(0.2, 0.02, 0.01);
 
         @Override
         public StatusCode apply(TurretControlRequestParameters parameters, Consumer<Rotation2d> rotateTurretConsumer,
