@@ -104,6 +104,7 @@ public interface TurretRequest {
         Function<TurretState, Optional<Rotation2d>> targetAzimuthFunction;
         Function<TurretState, Optional<Rotation2d>> targetElevationFunction;
         Supplier<Boolean> allowShootWhenAimedSupplier = () -> true;
+        Supplier<Boolean> shootImmediatelyOverride = () -> false;
 
         private SensorMonitor onTargetMonitor = new SensorMonitor(0.5, 0.02, 0.01);
 
@@ -167,7 +168,7 @@ public interface TurretRequest {
 
                     onTargetMonitor.addSensorValue(goodToShoot ? 1 : 0);
 
-                    if ((!onTargetMonitor.hasSignificantMovement() && goodToShoot)
+                    if ((!onTargetMonitor.hasSignificantMovement() && goodToShoot) || shootImmediatelyOverride.get()
                             || parameters.turretState.currentlyShooting) {
                         rollerOn = true;
                     }
@@ -198,6 +199,11 @@ public interface TurretRequest {
 
         public ControlTurret withAllowShootWhenAimedSupplier(Supplier<Boolean> allowShootWhenAimedSupplier) {
             this.allowShootWhenAimedSupplier = allowShootWhenAimedSupplier;
+            return this;
+        }
+
+        public ControlTurret withShootImmediatelyOverrideSupplier(Supplier<Boolean> shootImmediatelyOverride) {
+            this.shootImmediatelyOverride = shootImmediatelyOverride;
             return this;
         }
 

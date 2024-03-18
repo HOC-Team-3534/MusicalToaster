@@ -25,6 +25,7 @@ public class TurretTelemetry {
     private final DoublePublisher tiltVelocityOut = table.getDoubleTopic("Tilt Velocity Out").publish();
     private final DoublePublisher rotateVelocityOut = table.getDoubleTopic("Rotate Velocity Out").publish();
 
+    private final DoublePublisher rotateSetpointPosition = table.getDoubleTopic("Rotate Setpoint Position").publish();
     private final DoublePublisher tiltSetpointPosition = table.getDoubleTopic("Tilt Setpoint Position").publish();
 
     public TurretTelemetry() {
@@ -38,13 +39,11 @@ public class TurretTelemetry {
         elevationError.set(state.tiltClosedLoopError.getDegrees());
         shooterError.set(state.shooterMotorClosedLoopError);
 
-        tiltStillMonitor.set(!state.tiltBacklashSensorMonitor.hasSignificantMovement());
-        rotateStillMonitor.set(!state.rotateBacklashSensorMonitor.hasSignificantMovement());
-
         tiltVelocityOut.set(state.tiltVelocityOut);
         rotateVelocityOut.set(state.rotateVelocityOut);
 
-        tiltSetpointPosition.set(state.tiltSetpointPosition);
+        rotateSetpointPosition.set(state.rotatePositionSetpoint.getDegrees());
+        tiltSetpointPosition.set(state.tiltPositionSetpoint.getDegrees());
 
         noteLoaded.set(state.isNoteLoaded());
     }

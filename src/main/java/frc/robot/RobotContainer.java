@@ -124,7 +124,8 @@ public class RobotContainer {
 			.withAllowShootWhenAimedSupplier(() -> false);
 	private final static ControlTurret extakeTurret = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(turretState.getCurrentAzimuth()))
-			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(-20.0)));
+			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(-20.0)))
+			.withShootImmediatelyOverrideSupplier(() -> true);
 
 	private final static ShooterRequest.Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(80);// TODO Find these

@@ -17,7 +17,7 @@ public class TurretUtils {
         double shiftInCurrentAngle = Math.abs(difference) < 180 ? difference
                 : difference < 0 ? difference + 360 : difference - 360;
 
-        double outputTarget = a + shiftInCurrentAngle;
+        double outputTarget = current.getDegrees() + shiftInCurrentAngle;
         while (outputTarget > upperLimitDegrees) {
             outputTarget -= 360;
         }

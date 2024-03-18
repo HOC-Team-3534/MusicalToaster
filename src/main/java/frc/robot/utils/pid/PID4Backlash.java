@@ -3,17 +3,18 @@ package frc.robot.utils.pid;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import frc.robot.utils.sensors.SensorMonitor;
 
 public class PID4Backlash extends ProfiledPIDController {
 
     SimpleMotorFeedforward feedforward = new SimpleMotorFeedforward(0, 0); // No output without calling WithFeedforward
-    SensorMonitor stillSensorMonitor = new SensorMonitor(1, 0);
 
-    double maxSpeedConsideredStill;
-    double outputScaleDuringBacklashAboveStillSpeed = 1.3;
+    double speedWhileInBacklash;
+
+    double prevMeasurement;
 
     TrapezoidProfile.State setpoint = new TrapezoidProfile.State();
+
+    double resetLimit;
 
     public PID4Backlash(double Kp, double Ki, double Kd, double maxVelocity, double maxAccel, double period) {
         super(Kp, Ki, Kd, new TrapezoidProfile.Constraints(maxVelocity, maxAccel), period);
@@ -28,38 +29,41 @@ public class PID4Backlash extends ProfiledPIDController {
         return this;
     }
 
-    public PID4Backlash withStillMonitor(double durationWindow, double maxDelta) {
-        this.stillSensorMonitor = new SensorMonitor(durationWindow, getPeriod(), maxDelta);
-        this.maxSpeedConsideredStill = maxDelta / durationWindow;
+    public PID4Backlash withSpeedWhileInBacklash(double backlashSpeed) {
+        this.speedWhileInBacklash = backlashSpeed;
+        return this;
+    }
+
+    public PID4Backlash withMaxErrorBeforeReset(double resetLimit) {
+        this.resetLimit = resetLimit;
         return this;
     }
 
     @Override
     public double calculate(double measurement, double goal) {
-        stillSensorMonitor.addSensorValue(measurement);
-
         // Reset Setpoint for proper profiling when there has not been significant
         // movement and the error is more than can be solved in a second during backlash
-        if (!stillSensorMonitor.hasSignificantMovement()
-                && Math.abs(measurement - super.getSetpoint().position) > getVelocityDuringBacklash()) {
+        if (Math.abs(measurement - super.getSetpoint().position) > this.resetLimit) {
             super.reset(measurement);
         }
 
         var targetVelocity = super.calculate(measurement, goal);
 
-        if (!stillSensorMonitor.hasSignificantMovement()) {
-            if (Math.abs(targetVelocity) > getVelocityDuringBacklash()) {
-                targetVelocity = Math.copySign(getVelocityDuringBacklash(), targetVelocity);
+        var motion = measurement - prevMeasurement;
+
+        var motionInOppositionToOutput = motion / (targetVelocity) < 0;
+
+        if (motionInOppositionToOutput) {
+            if (Math.abs(targetVelocity) > this.speedWhileInBacklash) {
+                targetVelocity = Math.copySign(this.speedWhileInBacklash, targetVelocity);
             }
         }
 
         this.setpoint = new TrapezoidProfile.State(super.getSetpoint().position, targetVelocity);
 
-        return feedforward.calculate(targetVelocity);
-    }
+        this.prevMeasurement = measurement;
 
-    private double getVelocityDuringBacklash() {
-        return this.maxSpeedConsideredStill * this.outputScaleDuringBacklashAboveStillSpeed;
+        return feedforward.calculate(targetVelocity);
     }
 
     @Override

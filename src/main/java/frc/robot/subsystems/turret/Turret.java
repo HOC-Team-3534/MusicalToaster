@@ -25,6 +25,7 @@ import frc.robot.RobotContainer;
 import frc.robot.RobotState;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
+import frc.robot.utils.MathUtils;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.pid.PID4Backlash;
 import frc.robot.utils.sensors.ProximitySensorInput;
@@ -207,50 +208,70 @@ public class Turret extends SubsystemBase {
         m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor, leftShooterMotor);
     }
 
-    static double rotateHowQuickToResolveError = 0.1;
-    static double tiltHowQuickToResolveError = 0.1;
+    static double rotateHowQuickToResolveError = 0.24;
+    static double tiltHowQuickToResolveError = 0.3;
 
-    PID4Backlash rotatePID = new PID4Backlash(1.0 / rotateHowQuickToResolveError, 0, 0, 0.3, 0.25)
+    PID4Backlash rotatePID = new PID4Backlash(1.0 / rotateHowQuickToResolveError, 0, 0.1, 0.7, 0.5)
             .withFeedforward(0.162, 14.6)
-            .withStillMonitor(0.25, 1);
-    PID4Backlash tiltPID = new PID4Backlash(1.0 / tiltHowQuickToResolveError, 0, 0, 0.35, 0.5)
+            .withSpeedWhileInBacklash(2.0 / 360.0)
+            .withMaxErrorBeforeReset(45.0 / 360.0);
+
+    PID4Backlash tiltPID = new PID4Backlash(1.0 / tiltHowQuickToResolveError, 0, 0.15, 0.35, 0.2)
             .withFeedforward(0.2169, 32.07)
-            .withStillMonitor(0.25, 1);
+            .withSpeedWhileInBacklash(2.0 / 360.0)
+            .withMaxErrorBeforeReset(15.0 / 360.0);
 
     VoltageOut rotateOut = new VoltageOut(0);
     VoltageOut tiltOut = new VoltageOut(0);
 
+    // double tiltMaxVoltageOutputWhen0 = 0.65;
+    // Rotation2d tiltRangeAround0 = Rotation2d.fromDegrees(18);
+
     private void controlRotate(Rotation2d targetRotation) {
-        rotateOut.withOutput(0);
 
         if (targetRotation != null) {
             rotateOut.withOutput(
                     rotatePID.calculate(m_cachedState.azimuth.getRotations(), targetRotation.getRotations()));
+        } else {
+            rotateOut.withOutput(0);
         }
 
         m_cachedState.rotateVelocityOut = rotatePID.getSetpoint().velocity;
         m_cachedState.rotateClosedLoopError = Rotation2d.fromRotations(rotatePID.getPositionError());
+        m_cachedState.rotatePositionSetpoint = Rotation2d.fromRotations(rotatePID.getSetpoint().position);
 
         rotateMotor.setControl(rotateOut);
     }
 
     private void controlTilt(Rotation2d targetRotation) {
-        tiltOut.withOutput(0);
 
         if (targetRotation != null) {
-            tiltOut.withOutput(
-                    tiltPID.calculate(m_cachedState.elevation.getRotations(), targetRotation.getRotations()));
+
+            var output = tiltPID.calculate(m_cachedState.elevation.getRotations(), targetRotation.getRotations());
+
+            // if (Math.abs(targetRotation.getDegrees()) < 0.01
+            // && MathUtils.withinTolerance(m_cachedState.elevation, tiltRangeAround0))
+            // output = Math.copySign(Math.min(output, tiltMaxVoltageOutputWhen0), output);
+
+            if ((Math.abs(targetRotation.getDegrees()) < 0.01
+                    && Math.abs(m_cachedState.elevation.getDegrees()) < 0.5))
+                output = 0;
+
+            tiltOut.withOutput(output);
+        } else {
+            tiltOut.withOutput(0);
         }
 
         m_cachedState.tiltVelocityOut = tiltPID.getSetpoint().velocity;
         m_cachedState.tiltClosedLoopError = Rotation2d.fromRotations(tiltPID.getPositionError());
+        m_cachedState.tiltPositionSetpoint = Rotation2d.fromRotations(tiltPID.getSetpoint().position);
 
         tiltMotor.setControl(tiltOut);
     }
 
     public class TurretState {
 
-        double tiltSetpointPosition;
+        Rotation2d rotatePositionSetpoint, tiltPositionSetpoint;
 
         Rotation2d azimuth, elevation;
 
@@ -274,9 +295,6 @@ public class Turret extends SubsystemBase {
 
         boolean unloadedTimerStarted = false;
 
-        SensorMonitor rotateBacklashSensorMonitor = new SensorMonitor(0.25, 0.020, 1.0);
-        SensorMonitor tiltBacklashSensorMonitor = new SensorMonitor(0.25, 0.020, 0.5);
-
         protected double currentRotateAccel = 0;
 
         double delayNoteLoadedSeconds = Turret.delayNoteLoadedSeconds;
@@ -293,6 +311,8 @@ public class Turret extends SubsystemBase {
             noteLoadedTimer = new Timer();
             rotateClosedLoopError = new Rotation2d();
             tiltClosedLoopError = new Rotation2d();
+            rotatePositionSetpoint = new Rotation2d();
+            tiltPositionSetpoint = new Rotation2d();
         }
 
         public boolean isNoteLoaded() {
