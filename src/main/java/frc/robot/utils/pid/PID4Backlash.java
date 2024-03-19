@@ -41,15 +41,14 @@ public class PID4Backlash extends ProfiledPIDController {
 
     @Override
     public double calculate(double measurement, double goal) {
+        var motion = measurement - prevMeasurement;
         // Reset Setpoint for proper profiling when there has not been significant
         // movement and the error is more than can be solved in a second during backlash
         if (Math.abs(measurement - super.getSetpoint().position) > this.resetLimit) {
-            super.reset(measurement);
+            super.reset(measurement, motion / getPeriod());
         }
 
         var targetVelocity = super.calculate(measurement, goal);
-
-        var motion = measurement - prevMeasurement;
 
         var motionInOppositionToOutput = motion / (targetVelocity) < 0;
 

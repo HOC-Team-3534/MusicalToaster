@@ -25,7 +25,6 @@ import frc.robot.RobotContainer;
 import frc.robot.RobotState;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
-import frc.robot.utils.MathUtils;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.pid.PID4Backlash;
 import frc.robot.utils.sensors.ProximitySensorInput;
@@ -208,13 +207,13 @@ public class Turret extends SubsystemBase {
         m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor, leftShooterMotor);
     }
 
-    static double rotateHowQuickToResolveError = 0.24;
+    static double rotateHowQuickToResolveError = 0.25;
     static double tiltHowQuickToResolveError = 0.3;
 
     PID4Backlash rotatePID = new PID4Backlash(1.0 / rotateHowQuickToResolveError, 0, 0.1, 0.7, 0.5)
             .withFeedforward(0.162, 14.6)
             .withSpeedWhileInBacklash(2.0 / 360.0)
-            .withMaxErrorBeforeReset(45.0 / 360.0);
+            .withMaxErrorBeforeReset(90.0 / 360.0);
 
     PID4Backlash tiltPID = new PID4Backlash(1.0 / tiltHowQuickToResolveError, 0, 0.15, 0.35, 0.2)
             .withFeedforward(0.2169, 32.07)

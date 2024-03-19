@@ -3,6 +3,7 @@ package frc.robot;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -42,6 +43,7 @@ public class ControllerInputs {
         Climb(operatorController.start().and(() -> driverController.getHID().getStartButton()), false),
         ReloadNote(operatorController.back(), true),
         AmpLights(operatorController.y(), false),
+        RollNoteFurtherIntoTurret(operatorController.a(), true),
 
         ResetNoteinRobot(driverController.back(), false),
         // // Below are debugging actions

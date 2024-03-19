@@ -126,6 +126,10 @@ public class RobotContainer {
 			.withTargetAzimuthFunction((turretState) -> Optional.of(turretState.getCurrentAzimuth()))
 			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(-20.0)))
 			.withShootImmediatelyOverrideSupplier(() -> true);
+	private final static JustRoller bumpNoteForward = new JustRoller()
+			.withRollerPercent(-0.4)
+			.withTilt(Rotation2d.fromDegrees(10))
+			.withTurnOnRollerSupplier((withinTolerance) -> true);
 
 	private final static ShooterRequest.Idle shooterOff = new ShooterRequest.Idle();
 	private final static ControlShooter shootSubwoofer = new ControlShooter().withVelocity(80);// TODO Find these
@@ -316,6 +320,7 @@ public class RobotContainer {
 		TGR.AmpLights.tgr()
 				.whileTrue(Lights.getInstance().map(lights -> lights.applyLightMode(LightModes.SolidYellow))
 						.orElse(Commands.none()));
+		TGR.RollNoteFurtherIntoTurret.tgr().whileTrue(getShootCommand(() -> ShooterType.BumpNoteForward));
 
 		// TGR.HoldManualAimSubwoofer.tgr()
 		// .toggleOnTrue(Commands.runOnce(() ->
@@ -338,7 +343,8 @@ public class RobotContainer {
 		Steal(aimForSteal, shooterSteal),
 		Subwoofer(aimSubwoofer, shootSubwoofer),
 		ReloadNote(reloadNote, shooterOff),
-		ExtakeFromTurret(extakeTurret, shooterExtake);
+		ExtakeFromTurret(extakeTurret, shooterExtake),
+		BumpNoteForward(bumpNoteForward, shooterOff);
 
 		TurretRequest turretRequest;
 		ShooterRequest shooterRequest;
