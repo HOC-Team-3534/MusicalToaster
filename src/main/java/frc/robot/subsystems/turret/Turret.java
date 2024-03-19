@@ -212,12 +212,10 @@ public class Turret extends SubsystemBase {
 
     PID4Backlash rotatePID = new PID4Backlash(1.0 / rotateHowQuickToResolveError, 0, 0.1, 0.7, 0.5)
             .withFeedforward(0.162, 14.6)
-            .withSpeedWhileInBacklash(2.0 / 360.0)
             .withMaxErrorBeforeReset(90.0 / 360.0);
 
     PID4Backlash tiltPID = new PID4Backlash(1.0 / tiltHowQuickToResolveError, 0, 0.15, 0.35, 0.2)
             .withFeedforward(0.2169, 32.07)
-            .withSpeedWhileInBacklash(2.0 / 360.0)
             .withMaxErrorBeforeReset(15.0 / 360.0);
 
     VoltageOut rotateOut = new VoltageOut(0);
@@ -247,10 +245,6 @@ public class Turret extends SubsystemBase {
         if (targetRotation != null) {
 
             var output = tiltPID.calculate(m_cachedState.elevation.getRotations(), targetRotation.getRotations());
-
-            // if (Math.abs(targetRotation.getDegrees()) < 0.01
-            // && MathUtils.withinTolerance(m_cachedState.elevation, tiltRangeAround0))
-            // output = Math.copySign(Math.min(output, tiltMaxVoltageOutputWhen0), output);
 
             if ((Math.abs(targetRotation.getDegrees()) < 0.01
                     && Math.abs(m_cachedState.elevation.getDegrees()) < 0.5))
