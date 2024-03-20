@@ -12,6 +12,7 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.hardware.TalonFX;
 
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
@@ -26,7 +27,8 @@ import frc.robot.RobotState;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
-import frc.robot.utils.pid.PID4Backlash;
+import frc.robot.utils.motioncontrol.statemachine.MotionProfileStateMachine;
+import frc.robot.utils.motioncontrol.statemachine.OutputConstraints;
 import frc.robot.utils.sensors.ProximitySensorInput;
 import frc.robot.utils.sensors.QuadEncoderOnSRX;
 import frc.robot.utils.sensors.SensorMonitor;
@@ -51,6 +53,11 @@ public class Turret extends SubsystemBase {
     protected ShooterRequest m_requestToApplyToShooter = new ShooterRequest.Idle();
     protected TurretControlRequestParameters m_requestParameters = new TurretControlRequestParameters();
 
+    final SimpleMotorFeedforward tiltFeedforward = new SimpleMotorFeedforward(0.2169, 32.07);
+    final SimpleMotorFeedforward rotateFeedforward = new SimpleMotorFeedforward(0.162, 14.6);
+
+    final MotionProfileStateMachine tiltStateMachine, rotateStateMachine;
+
     private static final boolean enabled = true;
     private static Turret INSTANCE;
 
@@ -70,6 +77,13 @@ public class Turret extends SubsystemBase {
 
     private Turret() {
         super();
+
+        rotateStateMachine = new MotionProfileStateMachine(() -> m_cachedState.azimuth.getRotations(), 2.0 / 360.0,
+                0.1, new OutputConstraints(0.2, 0.1, 0.1, 0.02, 0.02));
+
+        tiltStateMachine = new MotionProfileStateMachine(() -> m_cachedState.elevation.getRotations(), 1.0 / 360.0,
+                0.1, new OutputConstraints(0.2, 0.05, 0.05, 0.02, 0.02));
+
         /*
          * Device instantiation
          */
@@ -207,70 +221,52 @@ public class Turret extends SubsystemBase {
         m_requestToApplyToShooter.apply(m_requestParameters, rightShooterMotor, leftShooterMotor);
     }
 
-    static double rotateHowQuickToResolveError = 0.25;
-    static double tiltHowQuickToResolveError = 0.3;
-
-    PID4Backlash rotatePID = new PID4Backlash(1.0 / rotateHowQuickToResolveError, 0, 0.1, 0.7, 0.5)
-            .withFeedforward(0.162, 14.6)
-            .withSpeedWhileInBacklash(2.0 / 360.0)
-            .withMaxErrorBeforeReset(90.0 / 360.0);
-
-    PID4Backlash tiltPID = new PID4Backlash(1.0 / tiltHowQuickToResolveError, 0, 0.15, 0.35, 0.2)
-            .withFeedforward(0.2169, 32.07)
-            .withSpeedWhileInBacklash(2.0 / 360.0)
-            .withMaxErrorBeforeReset(15.0 / 360.0);
-
     VoltageOut rotateOut = new VoltageOut(0);
     VoltageOut tiltOut = new VoltageOut(0);
 
-    // double tiltMaxVoltageOutputWhen0 = 0.65;
-    // Rotation2d tiltRangeAround0 = Rotation2d.fromDegrees(18);
-
     private void controlRotate(Rotation2d targetRotation) {
 
+        double outputVelocity = 0;
+
         if (targetRotation != null) {
-            rotateOut.withOutput(
-                    rotatePID.calculate(m_cachedState.azimuth.getRotations(), targetRotation.getRotations()));
+
+            outputVelocity = rotateStateMachine.determineStateAndCalculateVelocity(targetRotation.getRotations());
+
+            rotateOut.withOutput(rotateFeedforward.calculate(outputVelocity));
         } else {
             rotateOut.withOutput(0);
         }
 
-        m_cachedState.rotateVelocityOut = rotatePID.getSetpoint().velocity;
-        m_cachedState.rotateClosedLoopError = Rotation2d.fromRotations(rotatePID.getPositionError());
-        m_cachedState.rotatePositionSetpoint = Rotation2d.fromRotations(rotatePID.getSetpoint().position);
+        m_cachedState.rotateVelocityOut = outputVelocity;
+        m_cachedState.rotateClosedLoopError = Rotation2d.fromRotations(rotateStateMachine.getPositionError());
+        m_cachedState.rotateVelocityError = Rotation2d.fromRotations(rotateStateMachine.getVelocityError());
 
         rotateMotor.setControl(rotateOut);
     }
 
     private void controlTilt(Rotation2d targetRotation) {
 
+        double outputVelocity = 0;
+
         if (targetRotation != null) {
 
-            var output = tiltPID.calculate(m_cachedState.elevation.getRotations(), targetRotation.getRotations());
+            outputVelocity = tiltStateMachine.determineStateAndCalculateVelocity(targetRotation.getRotations());
 
-            // if (Math.abs(targetRotation.getDegrees()) < 0.01
-            // && MathUtils.withinTolerance(m_cachedState.elevation, tiltRangeAround0))
-            // output = Math.copySign(Math.min(output, tiltMaxVoltageOutputWhen0), output);
-
-            if ((Math.abs(targetRotation.getDegrees()) < 0.01
-                    && Math.abs(m_cachedState.elevation.getDegrees()) < 0.5))
-                output = 0;
-
-            tiltOut.withOutput(output);
+            tiltOut.withOutput(tiltFeedforward.calculate(outputVelocity));
         } else {
             tiltOut.withOutput(0);
         }
 
-        m_cachedState.tiltVelocityOut = tiltPID.getSetpoint().velocity;
-        m_cachedState.tiltClosedLoopError = Rotation2d.fromRotations(tiltPID.getPositionError());
-        m_cachedState.tiltPositionSetpoint = Rotation2d.fromRotations(tiltPID.getSetpoint().position);
+        m_cachedState.tiltVelocityOut = outputVelocity;
+        m_cachedState.tiltClosedLoopError = Rotation2d.fromRotations(tiltStateMachine.getPositionError());
+        m_cachedState.tiltVelocityError = Rotation2d.fromRotations(tiltStateMachine.getVelocityError());
 
         tiltMotor.setControl(tiltOut);
     }
 
     public class TurretState {
 
-        Rotation2d rotatePositionSetpoint, tiltPositionSetpoint;
+        Rotation2d rotateVelocityError, tiltVelocityError;
 
         Rotation2d azimuth, elevation;
 
@@ -310,8 +306,8 @@ public class Turret extends SubsystemBase {
             noteLoadedTimer = new Timer();
             rotateClosedLoopError = new Rotation2d();
             tiltClosedLoopError = new Rotation2d();
-            rotatePositionSetpoint = new Rotation2d();
-            tiltPositionSetpoint = new Rotation2d();
+            rotateVelocityError = new Rotation2d();
+            tiltVelocityError = new Rotation2d();
         }
 
         public boolean isNoteLoaded() {
