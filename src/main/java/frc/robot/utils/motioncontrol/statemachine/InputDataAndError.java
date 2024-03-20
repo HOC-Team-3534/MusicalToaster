@@ -49,7 +49,7 @@ public class InputDataAndError {
         if (MathUtils.oppositeSign(getVelocity(), getPositionError()))
             return false;
         var decelTime = Math.abs(getVelocity() / CONSTRAINTS.maxDecel);
-        var distanceToDecel = Math.abs(getVelocity()) * decelTime / 2.0;
+        var distanceToDecel = (Math.abs(getVelocity()) * decelTime / 2.0) + 2 * GOAL_TOLERANCE;
         var distanceRemaining = Math.abs(getPositionError());
         return distanceToDecel >= distanceRemaining;
     }

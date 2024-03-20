@@ -28,14 +28,11 @@ public class OutputCalculator {
     protected double calculateOutputVelocity() {
         switch (this.stateManagement.getState()) {
             case AccelNegative, AccelPositive:
-                accel();
-                return adjustVelocitySlowerToMatchSlowerThanExpectedVelocity();
+                return accel();
             case DecelNegative, DecelPositive:
                 return decel();
-            case OvershotNegative:
-                return inputDataAndError.atGoal() ? 0 : -CONSTRAINTS.overshootMaxVelocity;
-            case OvershotPositive:
-                return inputDataAndError.atGoal() ? 0 : CONSTRAINTS.overshootMaxVelocity;
+            case OvershotNegative, OvershotPositive:
+                return overshoot();
             case Stationary:
                 return 0;
             default:
@@ -43,14 +40,9 @@ public class OutputCalculator {
         }
     }
 
-    private double adjustVelocitySlowerToMatchSlowerThanExpectedVelocity() {
-        // EXPECTING TO GO FASTER
-        if (MathUtils.sameSign(inputDataAndError.getVelocityError(), this.outputVelocity)
-                && Math.abs(inputDataAndError.getVelocityError()) / accelInc() >= 2) {
-            // HALVE ERROR IF MORE THAN ACCELERATE IN 2 INC
-            this.outputVelocity -= Math.copySign(inputDataAndError.getVelocityError() / 2.0, this.outputVelocity);
-        }
-        return this.outputVelocity;
+    private double overshoot() {
+        return Math.copySign(inputDataAndError.atGoal() ? 0 : CONSTRAINTS.overshootMaxVelocity,
+                inputDataAndError.getPositionError());
     }
 
     private double accel() {
@@ -62,6 +54,18 @@ public class OutputCalculator {
         if (Math.abs(this.outputVelocity) > CONSTRAINTS.maxVelocity)
             this.outputVelocity = Math.copySign(CONSTRAINTS.maxVelocity, this.outputVelocity);
 
+        adjustVelocitySlowerToMatchSlowerThanExpectedVelocity();
+
+        return this.outputVelocity;
+    }
+
+    private double adjustVelocitySlowerToMatchSlowerThanExpectedVelocity() {
+        // EXPECTING TO GO FASTER
+        if (MathUtils.sameSign(inputDataAndError.getVelocityError(), this.outputVelocity)
+                && Math.abs(inputDataAndError.getVelocityError()) / accelInc() >= 2) {
+            // HALVE ERROR IF MORE THAN ACCELERATE IN 2 INC
+            this.outputVelocity -= Math.copySign(inputDataAndError.getVelocityError() / 2.0, this.outputVelocity);
+        }
         return this.outputVelocity;
     }
 
