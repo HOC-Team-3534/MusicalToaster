@@ -1,15 +1,20 @@
 package frc.robot.utils.pid;
 
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 
-public class PID4Backlash extends MyProfiledPIDController {
+public class PID4Backlash extends ProfiledPIDController {
 
     SimpleMotorFeedforward feedforward = new SimpleMotorFeedforward(0, 0); // No output without calling WithFeedforward
 
-    double resetLimit = Double.POSITIVE_INFINITY;
+    double speedWhileInBacklash;
 
-    double prevMeaursement;
+    double prevMeasurement;
+
+    TrapezoidProfile.State setpoint = new TrapezoidProfile.State();
+
+    double resetLimit;
 
     public PID4Backlash(double Kp, double Ki, double Kd, double maxVelocity, double maxAccel, double period) {
         super(Kp, Ki, Kd, new TrapezoidProfile.Constraints(maxVelocity, maxAccel), period);
@@ -24,41 +29,44 @@ public class PID4Backlash extends MyProfiledPIDController {
         return this;
     }
 
+    public PID4Backlash withSpeedWhileInBacklash(double backlashSpeed) {
+        this.speedWhileInBacklash = backlashSpeed;
+        return this;
+    }
+
     public PID4Backlash withMaxErrorBeforeReset(double resetLimit) {
         this.resetLimit = resetLimit;
         return this;
     }
 
     @Override
-    public double calculate(
-            double measurement, TrapezoidProfile.State goal, TrapezoidProfile.Constraints constraints) {
-        setConstraints(constraints);
-        return this.calculate(measurement, goal);
+    public double calculate(double measurement, double goal) {
+        var motion = measurement - prevMeasurement;
+        // Reset Setpoint for proper profiling when there has not been significant
+        // movement and the error is more than can be solved in a second during backlash
+        if (Math.abs(measurement - super.getSetpoint().position) > this.resetLimit) {
+            super.reset(measurement, motion / getPeriod());
+        }
+
+        var targetVelocity = super.calculate(measurement, goal);
+
+        var motionInOppositionToOutput = motion / (targetVelocity) < 0;
+
+        if (motionInOppositionToOutput) {
+            if (Math.abs(targetVelocity) > this.speedWhileInBacklash) {
+                targetVelocity = Math.copySign(this.speedWhileInBacklash, targetVelocity);
+            }
+        }
+
+        this.setpoint = new TrapezoidProfile.State(super.getSetpoint().position, targetVelocity);
+
+        this.prevMeasurement = measurement;
+
+        return feedforward.calculate(targetVelocity);
     }
 
     @Override
-    public double calculate(double measurement, double goal) {
-        if (Math.abs(measurement - getSetpoint().position) > this.resetLimit) {
-            super.reset(measurement);
-        }
-
-        var velocity = (measurement - prevMeaursement) / getPeriod();
-
-        var distanceToCover = Math.abs(getSetpoint().position - measurement); // aka position error
-        var checkTime = getPeriod() * 2;
-        var distanceCanCoverInCheckTime = Math.abs(velocity) * checkTime
-                + 0.5 * getConstraints().maxAcceleration * Math.pow(checkTime, 2);
-        var ableToReachInCheckTime = distanceToCover < distanceCanCoverInCheckTime;
-
-        double targetVelocity = 0;
-        if (!ableToReachInCheckTime) {
-            super.calculateNoUpdateSetpoint(measurement);
-        } else {
-            targetVelocity = super.calculate(measurement, goal);
-        }
-
-        this.prevMeaursement = measurement;
-
-        return feedforward.calculate(targetVelocity);
+    public TrapezoidProfile.State getSetpoint() {
+        return this.setpoint;
     }
 }
