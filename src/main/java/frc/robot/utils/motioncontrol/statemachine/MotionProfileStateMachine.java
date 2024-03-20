@@ -2,8 +2,6 @@ package frc.robot.utils.motioncontrol.statemachine;
 
 import java.util.function.Supplier;
 
-import edu.wpi.first.math.geometry.Rotation2d;
-
 public class MotionProfileStateMachine {
 
     // TODO BUILD IN DETECTION FOR MAJOR OCSCILATION
@@ -48,6 +46,10 @@ public class MotionProfileStateMachine {
 
     public double getVelocityError() {
         return this.inputDataAndError.getVelocityError();
+    }
+
+    public double getPositionError() {
+        return this.inputDataAndError.getPositionError();
     }
 
 }
