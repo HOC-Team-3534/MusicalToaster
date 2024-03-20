@@ -29,6 +29,7 @@ import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.motioncontrol.statemachine.MotionProfileStateMachine;
 import frc.robot.utils.motioncontrol.statemachine.OutputConstraints;
+import frc.robot.utils.motioncontrol.statemachine.StateManagement;
 import frc.robot.utils.sensors.ProximitySensorInput;
 import frc.robot.utils.sensors.QuadEncoderOnSRX;
 import frc.robot.utils.sensors.SensorMonitor;
@@ -82,7 +83,7 @@ public class Turret extends SubsystemBase {
                 0.1, new OutputConstraints(0.2, 0.1, 0.1, 0.02));
 
         tiltStateMachine = new MotionProfileStateMachine(() -> m_cachedState.elevation.getRotations(), 1.0 / 360.0,
-                0.1, new OutputConstraints(0.2, 0.05, 0.05, 0.02));
+                0.1, new OutputConstraints(0.1, 0.05, 0.05, 0.02));
 
         /*
          * Device instantiation
@@ -240,6 +241,8 @@ public class Turret extends SubsystemBase {
         m_cachedState.rotateVelocityOut = outputVelocity;
         m_cachedState.rotateClosedLoopError = Rotation2d.fromRotations(rotateStateMachine.getPositionError());
         m_cachedState.rotateVelocityError = Rotation2d.fromRotations(rotateStateMachine.getVelocityError());
+        m_cachedState.rotateState = rotateStateMachine.getState().name();
+        m_cachedState.rotateStateOrdinal = rotateStateMachine.getState().ordinal();
 
         rotateMotor.setControl(rotateOut);
     }
@@ -260,6 +263,8 @@ public class Turret extends SubsystemBase {
         m_cachedState.tiltVelocityOut = outputVelocity;
         m_cachedState.tiltClosedLoopError = Rotation2d.fromRotations(tiltStateMachine.getPositionError());
         m_cachedState.tiltVelocityError = Rotation2d.fromRotations(tiltStateMachine.getVelocityError());
+        m_cachedState.tiltState = tiltStateMachine.getState().name();
+        m_cachedState.tiltStateOrdinal = tiltStateMachine.getState().ordinal();
 
         tiltMotor.setControl(tiltOut);
     }
@@ -269,6 +274,11 @@ public class Turret extends SubsystemBase {
         Rotation2d rotateVelocityError, tiltVelocityError;
 
         Rotation2d azimuth, elevation;
+
+        String tiltState = "Stationary", rotateState = "Stationary";
+
+        int tiltStateOrdinal = StateManagement.State.Stationary.ordinal(),
+                rotateStateOrdinal = StateManagement.State.Stationary.ordinal();
 
         double rollerSupplyCurrent;
 

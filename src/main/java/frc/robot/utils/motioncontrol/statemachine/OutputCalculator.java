@@ -46,8 +46,7 @@ public class OutputCalculator {
     }
 
     private double accel() {
-        // ACCELERATE IN DIRECTION OF ERROR IF STATIONARY
-        // OTHERWISE, ACCELERATE FURTHER IN DIRECTION OF POSITION ERROR
+        // ACCELERATE IN DIRECTION OF POSITION ERROR
         this.outputVelocity += Math.copySign(accelInc(), inputDataAndError.getPositionError());
 
         // CAP VELOCITY AT MAX VELOCITY
@@ -75,11 +74,13 @@ public class OutputCalculator {
 
     private double decel() {
 
-        this.outputVelocity = (Math.abs(this.outputVelocity) <= CONSTRAINTS.overshootMaxVelocity)
-                // DECREASING VELOCITY WOULD GO DOWN TO 0 OR PAST 0 OR JUST TOO LOW
-                ? Math.copySign(CONSTRAINTS.overshootMaxVelocity, this.outputVelocity)
-                // DECREASE VELOCITY, KNOWING IT WILL NOT GO IN OPPOSITE DIRECTION
-                : this.outputVelocity - Math.copySign(decelInc(), this.outputVelocity);
+        var prevOutput = this.outputVelocity;
+
+        this.outputVelocity -= Math.copySign(decelInc(), this.outputVelocity);
+
+        if (MathUtils.oppositeSign(prevOutput, this.outputVelocity))
+            this.outputVelocity = Math.copySign(CONSTRAINTS.overshootMaxVelocity, prevOutput);
+
         return this.outputVelocity;
     }
 

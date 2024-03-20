@@ -11,14 +11,16 @@ public class StateManagement {
     Timer atGoalTimer = new Timer();
 
     final double AT_GOAL_STEADY_TIME;
+    final double GOAL_TOLERANCE;
 
-    protected StateManagement(InputDataAndError inputDataAndError, double atGoalSteadyTime) {
+    protected StateManagement(InputDataAndError inputDataAndError, double atGoalSteadyTime, double goalTolerance) {
         this.inputDataAndError = inputDataAndError;
         this.prevState = State.Stationary;
         this.currentState = State.Stationary;
         this.nextState = State.Stationary;
 
         this.AT_GOAL_STEADY_TIME = atGoalSteadyTime;
+        this.GOAL_TOLERANCE = goalTolerance;
 
         this.atGoalTimer.restart();
     }
@@ -78,7 +80,12 @@ public class StateManagement {
                 }
                 break;
             case OvershotPositive, OvershotNegative:
-                if (getState().equals(State.OvershotPositive) && goNegative())
+                if (Math.abs(inputDataAndError.getPositionError()) > 2 * GOAL_TOLERANCE) {
+                    if (goPositive())
+                        next(State.AccelPositive);
+                    else if (goNegative())
+                        next(State.AccelNegative);
+                } else if (getState().equals(State.OvershotPositive) && goNegative())
                     next(State.OvershotNegative);
                 else if (getState().equals(State.OvershotNegative) && goPositive())
                     next(State.OvershotPositive);
@@ -115,14 +122,14 @@ public class StateManagement {
         return this.prevState;
     }
 
-    enum State {
-        Stationary,
+    public enum State {
         AccelPositive,
         DecelPositive,
         OvershotPositive,
-        AccelNegative,
+        Stationary,
+        OvershotNegative,
         DecelNegative,
-        OvershotNegative
+        AccelNegative
     }
 
     private boolean goPositive() {
