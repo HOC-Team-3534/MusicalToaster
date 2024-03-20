@@ -10,13 +10,14 @@ public class PID4Backlash extends MyProfiledPIDController {
     double resetLimit = Double.POSITIVE_INFINITY;
 
     double prevMeaursement;
+    double prevPrevMeasurement;
 
-    public PID4Backlash(double Kp, double Ki, double Kd, double maxVelocity, double maxAccel, double period) {
-        super(Kp, Ki, Kd, new TrapezoidProfile.Constraints(maxVelocity, maxAccel), period);
+    public PID4Backlash(double Kp, double Ki, double Kd, TrapezoidProfile.Constraints constraints, double period) {
+        super(Kp, Ki, Kd, constraints, period);
     }
 
-    public PID4Backlash(double Kp, double Ki, double Kd, double maxVelocity, double maxAccel) {
-        this(Kp, Ki, Kd, maxVelocity, maxAccel, 0.020);
+    public PID4Backlash(double Kp, double Ki, double Kd, TrapezoidProfile.Constraints constraints) {
+        this(Kp, Ki, Kd, constraints, 0.020);
     }
 
     public PID4Backlash withFeedforward(double kS, double kV) {
@@ -29,35 +30,35 @@ public class PID4Backlash extends MyProfiledPIDController {
         return this;
     }
 
-    @Override
-    public double calculate(
-            double measurement, TrapezoidProfile.State goal, TrapezoidProfile.Constraints constraints) {
-        setConstraints(constraints);
-        return this.calculate(measurement, goal);
-    }
-
-    @Override
-    public double calculate(double measurement, double goal) {
-        if (Math.abs(measurement - getSetpoint().position) > this.resetLimit) {
+    public double calculate(double measurement, double goal, TrapezoidProfile.Constraints constraints) {
+        if (constraints.maxVelocity != getConstraints().maxVelocity) {
             super.reset(measurement);
         }
 
+        setConstraints(constraints);
+
+        var positionError = measurement - getSetpoint().position;
+
+        // var prevVelocity = (prevMeaursement - prevPrevMeasurement) / getPeriod();
         var velocity = (measurement - prevMeaursement) / getPeriod();
 
-        var distanceToCover = Math.abs(getSetpoint().position - measurement); // aka position error
-        var checkTime = getPeriod() * 2;
-        var distanceCanCoverInCheckTime = Math.abs(velocity) * checkTime
-                + 0.5 * getConstraints().maxAcceleration * Math.pow(checkTime, 2);
-        var ableToReachInCheckTime = distanceToCover < distanceCanCoverInCheckTime;
-
-        double targetVelocity = 0;
-        if (!ableToReachInCheckTime) {
-            super.calculateNoUpdateSetpoint(measurement);
-        } else {
-            targetVelocity = super.calculate(measurement, goal);
+        if (Math.abs(positionError) > this.resetLimit && Math.abs(velocity) < getConstraints().maxVelocity * 0.05) {
+            super.reset(measurement);
         }
 
-        this.prevMeaursement = measurement;
+        // var targetVelocity = 0.0;
+        // if (Math.abs(getPositionError()) / getPeriod() / 2.0 >
+        // Math.abs(getSetpoint().velocity)
+        // && Math.abs(getSetpoint().velocity) < getConstraints().maxVelocity * 0.02) {
+        // targetVelocity = super.calculateNoUpdateSetpoint(measurement);
+        // } else {
+        // targetVelocity = super.calculate(measurement, goal);
+        // }
+
+        // this.prevPrevMeasurement = prevMeaursement;
+        // this.prevMeaursement = measurement;
+
+        var targetVelocity = super.calculate(measurement, goal);
 
         return feedforward.calculate(targetVelocity);
     }

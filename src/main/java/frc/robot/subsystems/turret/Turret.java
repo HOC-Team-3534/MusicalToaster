@@ -14,6 +14,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -25,6 +26,7 @@ import frc.robot.RobotContainer;
 import frc.robot.RobotState;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.TurretRequest.TurretControlRequestParameters;
+import frc.robot.utils.MathUtils;
 import frc.robot.utils.ShootingUtils;
 import frc.robot.utils.pid.PID4Backlash;
 import frc.robot.utils.sensors.ProximitySensorInput;
@@ -208,15 +210,20 @@ public class Turret extends SubsystemBase {
     }
 
     static double rotateHowQuickToResolveError = 0.25;
-    static double tiltHowQuickToResolveError = 0.3;
+    static double tiltHowQuickToResolveError = 0.25;
 
-    PID4Backlash rotatePID = new PID4Backlash(1.0 / rotateHowQuickToResolveError, 0, 0.1, 0.7, 0.5)
+    TrapezoidProfile.Constraints tiltNormal = new TrapezoidProfile.Constraints(0.35, 0.2);
+    TrapezoidProfile.Constraints tiltSlow = new TrapezoidProfile.Constraints(0.05, 0.05);
+    TrapezoidProfile.Constraints rotateNormal = new TrapezoidProfile.Constraints(0.7, 0.75);
+    TrapezoidProfile.Constraints rotateSlow = new TrapezoidProfile.Constraints(0.35, 0.2);
+
+    PID4Backlash rotatePID = new PID4Backlash(1.0 / rotateHowQuickToResolveError, 0, 0, rotateNormal)
             .withFeedforward(0.162, 14.6)
             .withMaxErrorBeforeReset(90.0 / 360.0);
 
-    PID4Backlash tiltPID = new PID4Backlash(1.0 / tiltHowQuickToResolveError, 0, 0.15, 0.35, 0.2)
+    PID4Backlash tiltPID = new PID4Backlash(1.0 / tiltHowQuickToResolveError, 0, 0, tiltNormal)
             .withFeedforward(0.2169, 32.07)
-            .withMaxErrorBeforeReset(15.0 / 360.0);
+            .withMaxErrorBeforeReset(1.5 / 360.0);
 
     VoltageOut rotateOut = new VoltageOut(0);
     VoltageOut tiltOut = new VoltageOut(0);
@@ -227,8 +234,16 @@ public class Turret extends SubsystemBase {
     private void controlRotate(Rotation2d targetRotation) {
 
         if (targetRotation != null) {
+            // var constraints = MathUtils.withinTolerance(
+            // MathUtils.firstMinusSecondRotation(targetRotation, m_cachedState.azimuth),
+            // Rotation2d.fromDegrees(5))
+            // ? rotateSlow
+            // : rotateNormal;
+            var constraints = rotateNormal;
             rotateOut.withOutput(
-                    rotatePID.calculate(m_cachedState.azimuth.getRotations(), targetRotation.getRotations()));
+                    rotatePID.calculate(m_cachedState.azimuth.getRotations(),
+                            targetRotation.getRotations(),
+                            constraints));
         } else {
             rotateOut.withOutput(0);
         }
@@ -244,10 +259,27 @@ public class Turret extends SubsystemBase {
 
         if (targetRotation != null) {
 
-            var output = tiltPID.calculate(m_cachedState.elevation.getRotations(), targetRotation.getRotations());
+            TrapezoidProfile.Constraints constraints;
+
+            if (MathUtils.withinTolerance(
+                    MathUtils.firstMinusSecondRotation(targetRotation, m_cachedState.elevation),
+                    Rotation2d.fromDegrees(30))
+                    && MathUtils.withinTolerance(targetRotation, Rotation2d.fromDegrees(3))) {
+                constraints = tiltSlow;
+                var positionError = tiltPID.getSetpoint().position - m_cachedState.elevation.getRotations();
+                if (Math.abs(positionError) > 3.0 / 360.0) {
+                    tiltPID.reset(m_cachedState.elevation.getRotations());
+                }
+            } else {
+                constraints = tiltNormal;
+            }
+
+            var output = tiltPID.calculate(m_cachedState.elevation.getRotations(),
+                    targetRotation.getRotations(),
+                    constraints);
 
             if ((Math.abs(targetRotation.getDegrees()) < 0.01
-                    && Math.abs(m_cachedState.elevation.getDegrees()) < 0.5))
+                    && Math.abs(m_cachedState.elevation.getDegrees()) < 5))
                 output = 0;
 
             tiltOut.withOutput(output);
