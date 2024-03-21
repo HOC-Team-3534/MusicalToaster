@@ -105,7 +105,7 @@ public class RobotState {
     public static boolean isValidShootPosition() {
         var speeds = CommandSwerveDrivetrain.getInstance().map(drivetrain -> drivetrain.getChassisSpeeds())
                 .orElse(new ChassisSpeeds());
-        var drivingSlow = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 1.5;
+        var drivingSlow = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).getNorm() < 3.5;
         return isWithinWingAKABehindAllianceLine() && !isTiltForcedFlat() && drivingSlow;
     }
 
