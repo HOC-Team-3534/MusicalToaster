@@ -83,7 +83,7 @@ public class Turret extends SubsystemBase {
                 0.1, 10.0 / 360.0, new OutputConstraints(0.7, 1.5, 0.2, 0.035));
 
         tiltStateMachine = new MotionProfileStateMachine(() -> m_cachedState.elevation.getRotations(), 0.2 / 360.0,
-                0.1, 5.0 / 360.0, new OutputConstraints(0.4, 0.5, 0.3, 0.025));
+                0.1, 5.0 / 360.0, new OutputConstraints(0.4, 0.5, 0.3, 0.02));
 
         /*
          * Device instantiation
