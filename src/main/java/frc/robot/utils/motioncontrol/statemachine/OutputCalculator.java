@@ -65,9 +65,9 @@ public class OutputCalculator {
     private double adjustVelocitySlowerToMatchSlowerThanExpectedVelocity() {
         // EXPECTING TO GO FASTER
         if (MathUtils.sameSign(inputDataAndError.getVelocityError(), this.outputVelocity)
-                && Math.abs(inputDataAndError.getVelocityError()) / accelInc() >= 2) {
+                && Math.abs(inputDataAndError.getVelocityError()) / accelInc() >= 5) {
             // HALVE ERROR IF MORE THAN ACCELERATE IN 2 INC
-            this.outputVelocity -= Math.copySign(inputDataAndError.getVelocityError() / 3.0, this.outputVelocity);
+            this.outputVelocity -= Math.copySign(inputDataAndError.getVelocityError() / 20.0, this.outputVelocity);
         }
         return this.outputVelocity;
     }

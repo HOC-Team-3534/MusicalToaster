@@ -11,16 +11,16 @@ public class StateManagement {
     Timer atGoalTimer = new Timer();
 
     final double AT_GOAL_STEADY_TIME;
-    final double GOAL_TOLERANCE;
+    final double BUFFER_WINDOW;
 
-    protected StateManagement(InputDataAndError inputDataAndError, double atGoalSteadyTime, double goalTolerance) {
+    protected StateManagement(InputDataAndError inputDataAndError, double atGoalSteadyTime, double bufferWindow) {
         this.inputDataAndError = inputDataAndError;
         this.prevState = State.Stationary;
         this.currentState = State.Stationary;
         this.nextState = State.Stationary;
 
         this.AT_GOAL_STEADY_TIME = atGoalSteadyTime;
-        this.GOAL_TOLERANCE = goalTolerance;
+        this.BUFFER_WINDOW = bufferWindow;
 
         this.atGoalTimer.restart();
     }
@@ -52,6 +52,8 @@ public class StateManagement {
                         default:
                             break;
                     }
+                    if (Math.abs(inputDataAndError.getPositionError()) < BUFFER_WINDOW)
+                        next(State.OvershotPositive);
                 } else {
                     // !!! SHOULD NEVER HAPPEN : EITHER POSITIVE, NEGATIVE, OR AT GOAL
                 }
@@ -75,12 +77,14 @@ public class StateManagement {
                         default:
                             break;
                     }
+                    if (Math.abs(inputDataAndError.getPositionError()) < BUFFER_WINDOW)
+                        next(State.OvershotNegative);
                 } else {
                     // !!! SHOULD NEVER HAPPEN : EITHER POSITIVE, NEGATIVE, OR AT GOAL
                 }
                 break;
             case OvershotPositive, OvershotNegative:
-                if (Math.abs(inputDataAndError.getPositionError()) > 2 * GOAL_TOLERANCE) {
+                if (Math.abs(inputDataAndError.getPositionError()) > BUFFER_WINDOW) {
                     if (goPositive())
                         next(State.AccelPositive);
                     else if (goNegative())
@@ -93,7 +97,7 @@ public class StateManagement {
         }
 
         if ((getState().equals(State.OvershotNegative) || getState().equals(State.OvershotPositive))
-                && atGoal() && atGoalTimer.hasElapsed(this.AT_GOAL_STEADY_TIME)) {
+                && atGoal()) {// && atGoalTimer.hasElapsed(this.AT_GOAL_STEADY_TIME)) {
             next(State.Stationary);
         } else if (getState().equals(State.Stationary)) {
         } else {

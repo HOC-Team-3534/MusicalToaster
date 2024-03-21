@@ -27,7 +27,7 @@ public class MotionProfileStateMachine {
 
         this.CONSTRAINTS = constraints;
         this.inputDataAndError = new InputDataAndError(goalTolerance, decelBufferWindow, constraints);
-        this.stateManagement = new StateManagement(inputDataAndError, atGoalSteadyTime, goalTolerance);
+        this.stateManagement = new StateManagement(inputDataAndError, atGoalSteadyTime, decelBufferWindow);
         this.outputCalculator = new OutputCalculator(constraints, stateManagement, inputDataAndError);
     }
 
