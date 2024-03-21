@@ -2,8 +2,10 @@ package frc.robot.subsystems.turret;
 
 import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.IntegerPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StringPublisher;
 import frc.robot.subsystems.turret.Turret.TurretState;
 
 public class TurretTelemetry {
@@ -19,14 +21,17 @@ public class TurretTelemetry {
 
     private final BooleanPublisher noteLoaded = table.getBooleanTopic("Note Loaded").publish();
 
-    private final BooleanPublisher tiltStillMonitor = table.getBooleanTopic("Tilt Still").publish();
-    private final BooleanPublisher rotateStillMonitor = table.getBooleanTopic("Rotate Still").publish();
-
     private final DoublePublisher tiltVelocityOut = table.getDoubleTopic("Tilt Velocity Out").publish();
     private final DoublePublisher rotateVelocityOut = table.getDoubleTopic("Rotate Velocity Out").publish();
 
-    private final DoublePublisher rotateSetpointPosition = table.getDoubleTopic("Rotate Setpoint Position").publish();
-    private final DoublePublisher tiltSetpointPosition = table.getDoubleTopic("Tilt Setpoint Position").publish();
+    private final DoublePublisher rotateVelocityError = table.getDoubleTopic("Rotate Velocity Error").publish();
+    private final DoublePublisher tiltVelocityError = table.getDoubleTopic("Tilt Velocity Error").publish();
+
+    private final StringPublisher rotateState = table.getStringTopic("Rotate State").publish();
+    private final StringPublisher tiltState = table.getStringTopic("Tilt State").publish();
+
+    private final IntegerPublisher rotateStateOrdinal = table.getIntegerTopic("Rotate State Ordinal").publish();
+    private final IntegerPublisher tiltStateOrdinal = table.getIntegerTopic("Tilt State Ordinal").publish();
 
     public TurretTelemetry() {
     }
@@ -42,8 +47,14 @@ public class TurretTelemetry {
         tiltVelocityOut.set(state.tiltVelocityOut);
         rotateVelocityOut.set(state.rotateVelocityOut);
 
-        rotateSetpointPosition.set(state.rotatePositionSetpoint.getDegrees());
-        tiltSetpointPosition.set(state.tiltPositionSetpoint.getDegrees());
+        rotateVelocityError.set(state.rotateVelocityError.getDegrees());
+        tiltVelocityError.set(state.tiltVelocityError.getDegrees());
+
+        rotateState.set(state.rotateState);
+        tiltState.set(state.tiltState);
+
+        rotateStateOrdinal.set(state.rotateStateOrdinal);
+        tiltStateOrdinal.set(state.tiltStateOrdinal);
 
         noteLoaded.set(state.isNoteLoaded());
     }

@@ -1,4 +1,4 @@
-package frc.robot.utils.pid;
+package frc.robot.utils.motioncontrol;
 
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;

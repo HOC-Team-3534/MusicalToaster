@@ -27,4 +27,14 @@ public class MathUtils {
         return Rotation2d.fromDegrees(rot1.getDegrees() - rot2.getDegrees());
     }
 
+    public static boolean oppositeSign(double val1, double val2) {
+        long val1Bits = Double.doubleToRawLongBits(val1);
+        long val2Bits = Double.doubleToRawLongBits(val2);
+        return (val1Bits ^ val2Bits) < 0;
+    }
+
+    public static boolean sameSign(double val1, double val2) {
+        return !oppositeSign(val1, val2);
+    }
+
 }
