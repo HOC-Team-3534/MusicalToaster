@@ -35,10 +35,10 @@ public class StateManagement {
                 break;
             case AccelPositive, DecelPositive:
                 if (goNegative() || atGoal()) {
-                    if (goingToFastToSimplySwitchToOvershoot())
-                        next(State.AccelNegative);
-                    else
-                        next(State.OvershotNegative);
+                    // if (goingToFastToSimplySwitchToOvershoot())
+                    // next(State.AccelNegative);
+                    // else
+                    next(State.OvershotNegative);
                 } else if (goPositive()) {
                     switch (getState()) {
                         case AccelPositive:
@@ -60,10 +60,10 @@ public class StateManagement {
                 break;
             case AccelNegative, DecelNegative:
                 if (goPositive() || atGoal()) {
-                    if (goingToFastToSimplySwitchToOvershoot())
-                        next(State.AccelPositive);
-                    else
-                        next(State.OvershotPositive);
+                    // if (goingToFastToSimplySwitchToOvershoot())
+                    // next(State.AccelPositive);
+                    // else
+                    next(State.OvershotPositive);
                 } else if (goNegative()) {
                     switch (getState()) {
                         case AccelNegative:

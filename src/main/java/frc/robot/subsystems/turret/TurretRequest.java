@@ -41,6 +41,8 @@ public interface TurretRequest {
     static final Rotation2d stillAzimuthTolerance = azimuthTolerance.plus(Rotation2d.fromDegrees(3));
     static final Rotation2d stillElevationTolerance = elevationTolerance.plus(Rotation2d.fromDegrees(5));
 
+    static final Rotation2d elevationIntakeTolerance = Rotation2d.fromDegrees(5);
+
     static final double shooterTolerance = 5.0;
     static final double rollerShootPercentOut = -1.0;
 
@@ -75,7 +77,7 @@ public interface TurretRequest {
                 var elevationError = MathUtils.firstMinusSecondRotation(outputTilt, currentElevation);
 
                 if (MathUtils.withinTolerance(azimuthError, azimuthIndexFromIntakeTolerance)
-                        && MathUtils.withinTolerance(elevationError, elevationTolerance)) {
+                        && MathUtils.withinTolerance(elevationError, elevationIntakeTolerance)) {
                     RobotContainer.getRobotState().setActivelyGrabbing(true);
                     rollerOn = true;
                 }
