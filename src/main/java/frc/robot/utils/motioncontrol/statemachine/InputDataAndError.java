@@ -10,12 +10,15 @@ public class InputDataAndError {
 
     final double GOAL_TOLERANCE;
 
+    final double DECEL_BUFFER_WINDOW;
+
     final OutputConstraints CONSTRAINTS;
 
     double expectedOutputVelocity;
 
-    protected InputDataAndError(double goalTolerance, OutputConstraints constraints) {
+    protected InputDataAndError(double goalTolerance, double decelBufferWindow, OutputConstraints constraints) {
         this.GOAL_TOLERANCE = goalTolerance;
+        this.DECEL_BUFFER_WINDOW = decelBufferWindow;
         this.CONSTRAINTS = constraints;
     }
 
@@ -49,7 +52,7 @@ public class InputDataAndError {
         if (MathUtils.oppositeSign(getVelocity(), getPositionError()))
             return false;
         var decelTime = Math.abs(getVelocity() / CONSTRAINTS.maxDecel);
-        var distanceToDecel = (Math.abs(getVelocity()) * decelTime / 2.0) + 2 * GOAL_TOLERANCE;
+        var distanceToDecel = (Math.abs(getVelocity()) * decelTime / 2.0) + DECEL_BUFFER_WINDOW;
         var distanceRemaining = Math.abs(getPositionError());
         return distanceToDecel >= distanceRemaining;
     }

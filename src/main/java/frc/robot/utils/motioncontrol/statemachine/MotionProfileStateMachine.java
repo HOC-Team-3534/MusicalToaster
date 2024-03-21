@@ -21,11 +21,12 @@ public class MotionProfileStateMachine {
 
     public MotionProfileStateMachine(Supplier<Double> measurementSupplier, double goalTolerance,
             double atGoalSteadyTime,
+            double decelBufferWindow,
             OutputConstraints constraints) {
         this.measurementSupplier = measurementSupplier;
 
         this.CONSTRAINTS = constraints;
-        this.inputDataAndError = new InputDataAndError(goalTolerance, constraints);
+        this.inputDataAndError = new InputDataAndError(goalTolerance, decelBufferWindow, constraints);
         this.stateManagement = new StateManagement(inputDataAndError, atGoalSteadyTime, goalTolerance);
         this.outputCalculator = new OutputCalculator(constraints, stateManagement, inputDataAndError);
     }

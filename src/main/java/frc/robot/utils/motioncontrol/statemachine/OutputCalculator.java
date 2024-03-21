@@ -34,7 +34,8 @@ public class OutputCalculator {
             case OvershotNegative, OvershotPositive:
                 return overshoot();
             case Stationary:
-                return 0;
+                this.outputVelocity = 0;
+                return this.outputVelocity;
             default:
                 return 0;
         }
@@ -55,6 +56,9 @@ public class OutputCalculator {
 
         adjustVelocitySlowerToMatchSlowerThanExpectedVelocity();
 
+        if (Math.abs(this.outputVelocity) < CONSTRAINTS.overshootMaxVelocity)
+            this.outputVelocity = Math.copySign(CONSTRAINTS.overshootMaxVelocity, inputDataAndError.getPositionError());
+
         return this.outputVelocity;
     }
 
@@ -63,7 +67,7 @@ public class OutputCalculator {
         if (MathUtils.sameSign(inputDataAndError.getVelocityError(), this.outputVelocity)
                 && Math.abs(inputDataAndError.getVelocityError()) / accelInc() >= 2) {
             // HALVE ERROR IF MORE THAN ACCELERATE IN 2 INC
-            this.outputVelocity -= Math.copySign(inputDataAndError.getVelocityError() / 2.0, this.outputVelocity);
+            this.outputVelocity -= Math.copySign(inputDataAndError.getVelocityError() / 3.0, this.outputVelocity);
         }
         return this.outputVelocity;
     }

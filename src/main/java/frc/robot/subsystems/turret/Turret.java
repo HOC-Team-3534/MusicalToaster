@@ -79,11 +79,11 @@ public class Turret extends SubsystemBase {
     private Turret() {
         super();
 
-        rotateStateMachine = new MotionProfileStateMachine(() -> m_cachedState.azimuth.getRotations(), 2.0 / 360.0,
-                0.1, new OutputConstraints(0.2, 0.1, 0.1, 0.02));
+        rotateStateMachine = new MotionProfileStateMachine(() -> m_cachedState.azimuth.getRotations(), 1.0 / 360.0,
+                0.1, 2.0 / 360.0, new OutputConstraints(0.3, 0.2, 0.1, 0.04));
 
-        tiltStateMachine = new MotionProfileStateMachine(() -> m_cachedState.elevation.getRotations(), 1.0 / 360.0,
-                0.1, new OutputConstraints(0.1, 0.05, 0.05, 0.02));
+        tiltStateMachine = new MotionProfileStateMachine(() -> m_cachedState.elevation.getRotations(), 0.5 / 360.0,
+                0.1, 2.0 / 360.0, new OutputConstraints(0.2, 0.1, 0.1, 0.02));
 
         /*
          * Device instantiation
