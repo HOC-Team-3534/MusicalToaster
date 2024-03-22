@@ -129,7 +129,7 @@ public final class Autos {
                 return justSkippedPathToShoot;
               }),
                   Commands.waitUntil(() -> RobotContainer.getRobotState().isNoteInRobot() || goingToShootNoteFromCenter)
-                      .withTimeout(1.0))
+                      .withTimeout(3.0))
               .repeatedly()
               .until(() -> pathsCompleted)
               .andThen(Commands.waitSeconds(3.0)),
@@ -138,7 +138,7 @@ public final class Autos {
     }).orElse(Commands.none());
   }
 
-  static boolean waitForRobotToShootDuringAuton = false;
+  static boolean waitForRobotToShootDuringAuton = true;
 
   private static boolean waitBecauseNoteInRobotAndTooCloseToNextNoteToPickup(LinkedList<PathPlannerPath> paths) {
     if (waitForRobotToShootDuringAuton)
