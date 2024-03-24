@@ -9,12 +9,19 @@ import java.util.function.Supplier;
 
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.mechanisms.swerve.SwerveRequest.FieldCentric;
+import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.commands.PathPlannerAuto;
+import com.pathplanner.lib.commands.PathfindThenFollowPathHolonomic;
+import com.pathplanner.lib.commands.PathfindingCommand;
 import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.PathPlannerTrajectory;
+import com.pathplanner.lib.path.PathPoint;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -440,11 +447,24 @@ public class RobotContainer {
 		}
 	}
 
+	static PathPlannerPath completePath;
+
 	private static void updateTrajectory() {
-		visualizedTrajectory = TelemetryUtils.getWPILIBTrajectory(autoPaths.get(pathIndexOnField));
-		CommandSwerveDrivetrain.getInstance().ifPresent(drivetrain -> {
-			drivetrain.getField().getObject("traj").setTrajectory(visualizedTrajectory);
-		});
+		PathPlannerPath path = autoPaths.get(pathIndexOnField);
+		if (pathIndexOnField == 0) {
+			RobotState.getPose().ifPresent(pose -> completePath = path.replan(pose, new ChassisSpeeds()));
+		} else {
+			var prevPathPoints = autoPaths.get(pathIndexOnField - 1).getAllPathPoints();
+			var startingPoseForThisPath = new Pose2d(prevPathPoints.get(prevPathPoints.size() - 1).position,
+					new Rotation2d());
+			completePath = path.replan(startingPoseForThisPath, new ChassisSpeeds());
+		}
+		if (completePath != null) {
+			visualizedTrajectory = TelemetryUtils.getWPILIBTrajectory(completePath);
+			CommandSwerveDrivetrain.getInstance().ifPresent(drivetrain -> {
+				drivetrain.getField().getObject("traj").setTrajectory(visualizedTrajectory);
+			});
+		}
 	}
 
 	static Optional<PathPlannerPath> displayedPath;
