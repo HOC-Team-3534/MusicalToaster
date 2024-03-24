@@ -140,7 +140,7 @@ public final class Autos {
                 return justSkippedPathToShoot;
               }),
                   Commands.waitUntil(() -> RobotContainer.getRobotState().isNoteInRobot() || goingToShootNoteFromCenter)
-                      .withTimeout(3.0))
+                      .withTimeout(1.5))
               .repeatedly()
               .until(() -> pathsCompleted)
               .andThen(Commands.waitSeconds(3.0)),
