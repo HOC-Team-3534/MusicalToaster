@@ -366,6 +366,10 @@ public class RobotContainer {
 		}).orElse(Commands.none());
 	}
 
+	public static String getChosenAutoName() {
+		return guiAutoChooser.getSelected();
+	}
+
 	public static Command getAutonomousCommand() {
 		if (Constants.ROBOT.getPathPlanner() instanceof IPathPlanner.PathPlanner2024)
 			return getAutonomousCommandDynamic();
@@ -433,10 +437,6 @@ public class RobotContainer {
 
 				updateTrajectory();
 			}
-		}
-
-		if (autoPaths.size() > 0) {
-			RobotState.seedFieldRelativeToInitalPositionIfNoCameraUpdates(autoPaths);
 		}
 	}
 

@@ -3,7 +3,9 @@ package frc.robot;
 import java.util.List;
 import java.util.Optional;
 
+import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.util.GeometryUtil;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -13,7 +15,9 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.ControllerInputs.BTN;
+import frc.robot.commands.Autos;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
+import frc.robot.utils.PathUtils;
 
 public class RobotState {
     int grabNoteIndex = -1;
@@ -129,14 +133,10 @@ public class RobotState {
         return BTN.TiltFlat.get() || RobotContainer.getRobotState().isClimbing();
     }
 
-    public static void seedFieldRelativeToInitalPositionIfNoCameraUpdates(List<PathPlannerPath> paths) {
+    public static void seedFieldRelativeToDefaultStartingAutoPoseIfNoCameraUpdates(String autoName) {
         CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
             if (drivetrain.getTimeSincePoseUpdated() > 5.0) {
-                var firstPath = DriverStation.getAlliance()
-                        .map(alliance -> alliance.equals(Alliance.Red) ? paths.get(0).flipPath()
-                                : paths.get(0))
-                        .orElse(paths.get(0));
-                drivetrain.seedFieldRelative(firstPath.getPreviewStartingHolonomicPose());
+                drivetrain.seedFieldRelative(Autos.getStartingPose(autoName));
             }
         });
     }

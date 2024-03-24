@@ -81,7 +81,11 @@ public class Robot extends TimedRobot {
   public void disabledPeriodic() {
     RobotContainer.publishAutoTrajectoriesOnField();
 
-    if (loopCounter++ > 10) {
+    if (++loopCounter >= 10) {
+      var selectedAutoName = RobotContainer.getChosenAutoName();
+      if (selectedAutoName != null) {
+        RobotState.seedFieldRelativeToDefaultStartingAutoPoseIfNoCameraUpdates(selectedAutoName);
+      }
 
       loopCounter = 0;
     }

@@ -15,7 +15,9 @@ import java.util.stream.Collectors;
 
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.util.GeometryUtil;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -33,6 +35,7 @@ import frc.robot.RobotState;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 import frc.robot.subsystems.turret.Turret;
+import frc.robot.utils.PathUtils;
 
 public final class Autos {
 
@@ -52,6 +55,14 @@ public final class Autos {
     } catch (IOException e) {
       throw new RuntimeException("Error reading auto files: " + e.getMessage(), e);
     }
+  }
+
+  public static Pose2d getStartingPose(String autoName) {
+    var rawPose = PathUtils.getAutoStartingPose(autoName);
+    return DriverStation.getAlliance()
+        .map(alliance -> alliance.equals(Alliance.Red) ? GeometryUtil.flipFieldPose(rawPose)
+            : rawPose)
+        .orElse(rawPose);
   }
 
   public static Command getGUIAutoCommand(String autoName) {
