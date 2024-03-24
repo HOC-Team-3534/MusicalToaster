@@ -16,16 +16,16 @@
     },
     {
       "anchor": {
-        "x": 8.17656984814683,
-        "y": 7.471513716208602
+        "x": 8.26107756544037,
+        "y": 7.4457951357634125
       },
       "prevControl": {
-        "x": 6.911799501202425,
-        "y": 7.471513716208602
+        "x": 6.996307218495965,
+        "y": 7.4457951357634125
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "GrabTopCenter"
+      "linkedName": null
     }
   ],
   "rotationTargets": [
@@ -45,7 +45,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 178.91907581333945,
+    "rotation": 180.0,
     "rotateFast": true
   },
   "reversed": false,
