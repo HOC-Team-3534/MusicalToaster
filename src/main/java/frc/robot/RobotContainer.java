@@ -95,11 +95,7 @@ public class RobotContainer {
 			.withAllowShootWhenAimedSupplier(() -> RobotState.isValidShootPosition());
 
 	private final static ControlTurret aimSubwoofer = new ControlTurret()
-			.withTargetAzimuthFunction(turretState -> BTN.ManualShooting.get()
-					? Optional.of(new Rotation2d())
-					: RobotState.getPoseRotation()
-							.flatMap(robotRotation -> turretState.getVirtualGoalLocationDisplacement()
-									.map(displacementToGoal -> displacementToGoal.getAngle().minus(robotRotation))))
+			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
 				var degrees = SmartDashboard.getNumber("Tilt", 49);
 				return Optional.of(Rotation2d.fromDegrees(degrees));
