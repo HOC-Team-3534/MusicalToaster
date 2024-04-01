@@ -88,11 +88,15 @@ public class RobotContainer {
 						var a = 1.93651;
 						var b = -19.0568;
 						var c = 74.775;
-						var degrees = a * Math.pow(distance, 2) + b * distance + c - 1.5;
+						var degrees = a * Math.pow(distance, 2) + b * distance + c - 2;
 						SmartDashboard.putNumber("Distance from Goal", distance);
 						return Rotation2d.fromDegrees(degrees);
 					}))
 			.withAllowShootWhenAimedSupplier(() -> RobotState.isValidShootPosition());
+
+	private final static ControlTurret aimForFlatShot = new ControlTurret()
+			.withTargetAzimuthFunction((turretState) -> Optional.of(turretState.getCurrentAzimuth()))
+			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(0.0)));
 
 	private final static ControlTurret aimSubwoofer = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
@@ -290,6 +294,7 @@ public class RobotContainer {
 
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
+		TGR.ShootFlatShot.tgr().whileTrue(getShootCommand(() -> ShooterType.FlatShot));
 
 		TGR.ReloadNote.tgr().whileTrue(getShootCommand(() -> ShooterType.ReloadNote));
 
@@ -312,6 +317,11 @@ public class RobotContainer {
 		new Trigger(() -> getRobotState().isNoteInRobot()).whileTrue(Lights.getInstance().map(lights -> {
 			return lights.applyLightMode(LightModes.SolidGreen);
 		}).orElse(Commands.none()));
+
+		new Trigger(() -> getRobotState().poseNotCheckIn()).and(() -> !getRobotState().isNoteInRobot())
+				.whileTrue(Lights.getInstance().map(lights -> {
+					return lights.applyLightMode(LightModes.SolidRed);
+				}).orElse(Commands.none()));
 
 		TGR.AmpLights.tgr()
 				.whileTrue(Lights.getInstance().map(lights -> lights.applyLightMode(LightModes.SolidYellow))
@@ -340,7 +350,8 @@ public class RobotContainer {
 		Subwoofer(aimSubwoofer, shootSubwoofer),
 		ReloadNote(reloadNote, shooterOff),
 		ExtakeFromTurret(extakeTurret, shooterExtake),
-		BumpNoteForward(bumpNoteForward, shooterOff);
+		BumpNoteForward(bumpNoteForward, shooterOff),
+		FlatShot(aimForFlatShot, shootSubwoofer);
 
 		TurretRequest turretRequest;
 		ShooterRequest shooterRequest;

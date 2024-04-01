@@ -3,6 +3,8 @@ package frc.robot;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.opencv.features2d.FlannBasedMatcher;
+
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -44,6 +46,7 @@ public class ControllerInputs {
         ReloadNote(operatorController.back(), true),
         AmpLights(operatorController.y(), false),
         RollNoteFurtherIntoTurret(operatorController.a(), true),
+        ShootFlatShot(operatorController.leftTrigger(0.15), false),
 
         ResetNoteinRobot(driverController.back(), false),
         // // Below are debugging actions

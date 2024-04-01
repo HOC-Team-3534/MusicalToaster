@@ -34,7 +34,8 @@ public class Lights extends SubsystemBase {
         StrobeBlue(-0.09),
         StrobeGold(-0.07),
         SolidGreen(0.75),
-        SolidYellow(0.67);
+        SolidYellow(0.67),
+        SolidRed(0.61);
 
         double value;
 

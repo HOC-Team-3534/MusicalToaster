@@ -140,4 +140,10 @@ public class RobotState {
             }
         });
     }
+
+    public static boolean poseNotCheckIn(double time) {
+        return CommandSwerveDrivetrain.getInstance()
+                .map((drivetrain) -> drivetrain.getTimeSincePoseUpdated()).get() > time;
+    }
+
 }
