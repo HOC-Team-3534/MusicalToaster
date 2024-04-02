@@ -136,6 +136,7 @@ public class RobotContainer {
 	private final static ControlShooter shooterSpeaker = new ControlShooter().withVelocity(80);// TODO Find these
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 	private final static ControlShooter shooterExtake = new ControlShooter().withVelocity(15);
+	private final static ControlShooter shootFlatShot = new ControlShooter().withVelocity(80);
 
 	private static SendableChooserWithChangeDetector<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooserWithChangeDetector[5];
 	private static SendableChooserWithChangeDetector<ShooterType>[] shootOrStealChoosers = new SendableChooserWithChangeDetector[5];
@@ -348,7 +349,7 @@ public class RobotContainer {
 		ReloadNote(reloadNote, shooterOff),
 		ExtakeFromTurret(extakeTurret, shooterExtake),
 		BumpNoteForward(bumpNoteForward, shooterOff),
-		FlatShot(aimForFlatShot, shootSubwoofer);
+		FlatShot(aimForFlatShot, shootFlatShot);
 
 		TurretRequest turretRequest;
 		ShooterRequest shooterRequest;

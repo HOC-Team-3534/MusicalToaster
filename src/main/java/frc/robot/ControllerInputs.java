@@ -46,7 +46,7 @@ public class ControllerInputs {
         ReloadNote(operatorController.back(), true),
         AmpLights(operatorController.y(), false),
         RollNoteFurtherIntoTurret(operatorController.a(), true),
-        ShootFlatShot(operatorController.leftTrigger(0.15), false),
+        ShootFlatShot(operatorController.leftTrigger(0.15), true),
 
         ResetNoteinRobot(driverController.back(), false),
         // // Below are debugging actions
