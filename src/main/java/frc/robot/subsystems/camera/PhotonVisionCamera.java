@@ -8,6 +8,7 @@ import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -72,9 +73,12 @@ public class PhotonVisionCamera extends SubsystemBase {
 
                 if (!ambiguityOutOfRange && MathUtils.withinTolerance(pitch, Rotation2d.fromDegrees(5))) {
                     if (Constants.EnabledDebugModes.updatePoseWithVisionEnabled) {
-                        CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> drivetrain
-                                .addVisionMeasurement(estimate.estimatedPose.toPose2d(), estimate.timestampSeconds));
-                        m_cachedState.lastTimeUpdated.restart();
+                        CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
+                            drivetrain
+                                    .addVisionMeasurement(estimate.estimatedPose.toPose2d(), estimate.timestampSeconds);
+                            m_cachedState.lastTimeUpdated.restart();
+                            m_cachedState.updatedRobotPose = drivetrain.getState().Pose.times(1);
+                        });
                     }
 
                     for (int i = 0; i < estimate.targetsUsed.size() && i < 2; i++) {
@@ -87,6 +91,10 @@ public class PhotonVisionCamera extends SubsystemBase {
         });
     }
 
+    public CameraState getState() {
+        return this.m_cachedState;
+    }
+
     public class CameraState {
 
         CameraState() {
@@ -97,6 +105,7 @@ public class PhotonVisionCamera extends SubsystemBase {
         public Pose3d robotFieldPose;
         public long[] aprilTagsSeen = new long[2];
         public Timer lastTimeUpdated = new Timer();
+        public Pose2d updatedRobotPose;
     }
 
     final CameraState m_cachedState = new CameraState();

@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.Constants.Drive.FIELD_DIMENSIONS;
 import frc.robot.ControllerInputs.BTN;
+import frc.robot.subsystems.camera.PhotonVisionCamera;
 import frc.robot.subsystems.swervedrive.CommandSwerveDrivetrain;
 
 public class RobotState {
@@ -130,8 +131,11 @@ public class RobotState {
     }
 
     public static void seedFieldRelativeToInitalPositionIfNoCameraUpdates(List<PathPlannerPath> paths) {
+        double elapsedTimeSinceCameraUpdate = PhotonVisionCamera.getInstance()
+                .map(camera -> camera.getState().lastTimeUpdated.get()).orElse(0.0);
+
         CommandSwerveDrivetrain.getInstance().ifPresent((drivetrain) -> {
-            if (drivetrain.getTimeSincePoseUpdated() > 5.0) {
+            if (elapsedTimeSinceCameraUpdate > 5.0) {
                 var firstPath = DriverStation.getAlliance()
                         .map(alliance -> alliance.equals(Alliance.Red) ? paths.get(0).flipPath()
                                 : paths.get(0))
@@ -141,9 +145,16 @@ public class RobotState {
         });
     }
 
-    public static boolean poseNotCheckIn(double time) {
-        return CommandSwerveDrivetrain.getInstance()
-                .map((drivetrain) -> drivetrain.getTimeSincePoseUpdated()).get() > time;
+    public static boolean poseNotCheckIn(double distanceThreshold, double timeThreshold) {
+        return PhotonVisionCamera.getInstance().map(camera -> {
+            double distanceInMetersFromLastUpdate = CommandSwerveDrivetrain.getInstance()
+                    .map(drivetrain -> drivetrain.getState().Pose.getTranslation()
+                            .getDistance(camera.getState().updatedRobotPose.getTranslation()))
+                    .orElse(0.0);
+
+            return distanceInMetersFromLastUpdate > distanceThreshold
+                    && camera.getState().lastTimeUpdated.get() > timeThreshold;
+        }).orElse(true);
     }
 
 }

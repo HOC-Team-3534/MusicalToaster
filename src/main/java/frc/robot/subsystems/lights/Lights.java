@@ -1,6 +1,7 @@
 package frc.robot.subsystems.lights;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -46,6 +47,10 @@ public class Lights extends SubsystemBase {
 
     public Command applyLightMode(LightModes mode) {
         return startEnd(() -> blinkin.set(mode.value), () -> blinkin.set(LightModes.Default.value));
+    }
+
+    public Command applyLightMode(Supplier<LightModes> mode) {
+        return startEnd(() -> blinkin.set(mode.get().value), () -> blinkin.set(LightModes.Default.value));
     }
 
 }

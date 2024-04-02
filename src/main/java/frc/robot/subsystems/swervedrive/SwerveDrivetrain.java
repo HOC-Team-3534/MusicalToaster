@@ -18,7 +18,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.SwerveDrivetrain {
     private static final SendableChooser<String> centricityChooser = new SendableChooser<>();
-    private final Timer poseUpdatedTimer = new Timer();
 
     public enum RobotCentricity {
         FieldCentric, RobotCentric
@@ -32,7 +31,7 @@ public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.Swerve
         centricityChooser.setDefaultOption("Field Centric", RobotCentricity.FieldCentric.toString());
         centricityChooser.addOption("Robot Centric", RobotCentricity.RobotCentric.toString());
         SmartDashboard.putData("Centricity Chooser", centricityChooser);
-        poseUpdatedTimer.start();
+
         for (SwerveModule module : getModules()) {
             var drive = module.getDriveMotor();
             var steer = module.getSteerMotor();
@@ -63,12 +62,7 @@ public class SwerveDrivetrain extends com.ctre.phoenix6.mechanisms.swerve.Swerve
     @Override
     public void addVisionMeasurement(Pose2d visionRobotPoseMeters,
             double timestampSeconds) {
-        poseUpdatedTimer.restart();
         super.addVisionMeasurement(visionRobotPoseMeters, timestampSeconds);
-    }
-
-    public double getTimeSincePoseUpdated() {
-        return poseUpdatedTimer.get();
     }
 
     /**

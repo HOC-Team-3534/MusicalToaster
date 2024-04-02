@@ -315,13 +315,10 @@ public class RobotContainer {
 				Climber.getInstance().map(climber -> climber.applyRequest(() -> resetClimber)).orElse(Commands.none()));
 
 		new Trigger(() -> getRobotState().isNoteInRobot()).whileTrue(Lights.getInstance().map(lights -> {
-			return lights.applyLightMode(LightModes.SolidGreen);
+			return lights.applyLightMode(() -> RobotState.poseNotCheckIn(0.2, 3.0)
+					? LightModes.SolidRed
+					: LightModes.SolidGreen);
 		}).orElse(Commands.none()));
-
-		new Trigger(() -> getRobotState().poseNotCheckIn()).and(() -> !getRobotState().isNoteInRobot())
-				.whileTrue(Lights.getInstance().map(lights -> {
-					return lights.applyLightMode(LightModes.SolidRed);
-				}).orElse(Commands.none()));
 
 		TGR.AmpLights.tgr()
 				.whileTrue(Lights.getInstance().map(lights -> lights.applyLightMode(LightModes.SolidYellow))
