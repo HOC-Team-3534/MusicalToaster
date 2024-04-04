@@ -70,7 +70,7 @@ public final class Constants {
                         .withAutonomousMaxSpeed(3.0)
                         .withWheelRadius(3.9 / 2.0)
                         .withDriveGains(0.21346, 2.38051, 0.02546)
-                        .withEncoderOffsets(-0.240722, 0.3996582, 0.32983, 0.23388)
+                        .withEncoderOffsets(-0.240478515625, 0.391845703125, 0.32568359375, 0.223388671875)
                         .withRobotDimensions(21.5, 21.5);
 
         static CameraLiterals CBOT_CAMERA_LITERALS = new CameraLiterals(

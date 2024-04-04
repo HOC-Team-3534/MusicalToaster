@@ -105,7 +105,7 @@ public class PhotonVisionCamera extends SubsystemBase {
         public Pose3d robotFieldPose;
         public long[] aprilTagsSeen = new long[2];
         public Timer lastTimeUpdated = new Timer();
-        public Pose2d updatedRobotPose;
+        public Pose2d updatedRobotPose = new Pose2d();
     }
 
     final CameraState m_cachedState = new CameraState();

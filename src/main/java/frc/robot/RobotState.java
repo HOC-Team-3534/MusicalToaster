@@ -154,6 +154,7 @@ public class RobotState {
 
             return distanceInMetersFromLastUpdate > distanceThreshold
                     && camera.getState().lastTimeUpdated.get() > timeThreshold;
+
         }).orElse(true);
     }
 

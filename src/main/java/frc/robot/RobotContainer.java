@@ -96,7 +96,7 @@ public class RobotContainer {
 
 	private final static ControlTurret aimForFlatShot = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(turretState.getCurrentAzimuth()))
-			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(0.0)));
+			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(5.0)));
 
 	private final static ControlTurret aimSubwoofer = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
@@ -316,7 +316,7 @@ public class RobotContainer {
 				Climber.getInstance().map(climber -> climber.applyRequest(() -> resetClimber)).orElse(Commands.none()));
 
 		new Trigger(() -> getRobotState().isNoteInRobot()).whileTrue(Lights.getInstance().map(lights -> {
-			return lights.applyLightMode(() -> RobotState.poseNotCheckIn(0.2, 3.0)
+			return lights.applyLightMode(() -> RobotState.poseNotCheckIn(0.2, 2.0)
 					? LightModes.SolidRed
 					: LightModes.SolidGreen);
 		}).orElse(Commands.none()));

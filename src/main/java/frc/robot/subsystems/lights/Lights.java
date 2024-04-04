@@ -50,7 +50,7 @@ public class Lights extends SubsystemBase {
     }
 
     public Command applyLightMode(Supplier<LightModes> mode) {
-        return startEnd(() -> blinkin.set(mode.get().value), () -> blinkin.set(LightModes.Default.value));
+        return runEnd(() -> blinkin.set(mode.get().value), () -> blinkin.set(LightModes.Default.value));
     }
 
 }
