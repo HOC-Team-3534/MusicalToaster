@@ -42,7 +42,7 @@ public class ControllerInputs {
         ShootSpeaker(operatorController.rightTrigger(0.15), true),
         Extake(driverController.rightBumper(), false),
         PrepareShootForSubwoofer(operatorController.x(), true),
-        Climb(operatorController.start().and(() -> driverController.getHID().getStartButton()), false),
+        Climb(operatorController.start().and(() -> operatorController.getHID().getLeftBumper()), false),
         ReloadNote(operatorController.back(), true),
         AmpLights(operatorController.y(), false),
         RollNoteFurtherIntoTurret(operatorController.a(), true),
