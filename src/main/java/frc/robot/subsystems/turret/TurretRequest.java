@@ -34,12 +34,14 @@ public interface TurretRequest {
     static final double upperLimit_elevationDegrees = 50;
 
     static final Rotation2d azimuthTolerance = Rotation2d.fromDegrees(1.5);
+    static final Rotation2d upCloseAzimuthTolerance = Rotation2d.fromDegrees(3.0);
+    static final Rotation2d upCloseElevationTolerance = Rotation2d.fromDegrees(1.5);
     static final Rotation2d azimuthIndexFromIntakeTolerance = Rotation2d.fromDegrees(70);
     static final Rotation2d elevationTolerance = Rotation2d.fromDegrees(0.5);
     static final Rotation2d elevationWhenRotating = Rotation2d.fromDegrees(30.0);
     static final Rotation2d wideAzimuthToleranceForTilt = Rotation2d.fromDegrees(25);
-    static final Rotation2d stillAzimuthTolerance = azimuthTolerance.plus(Rotation2d.fromDegrees(3));
-    static final Rotation2d stillElevationTolerance = elevationTolerance.plus(Rotation2d.fromDegrees(5));
+    static final Rotation2d stillAzimuthTolerance = Rotation2d.fromDegrees(3);
+    static final Rotation2d stillElevationTolerance = Rotation2d.fromDegrees(1);
 
     static final Rotation2d elevationIntakeTolerance = Rotation2d.fromDegrees(5);
 
@@ -157,12 +159,23 @@ public interface TurretRequest {
                         targetElevation = Optional.of(elevationWhenRotating);
                     }
 
-                    var withinTolerance = MathUtils.withinTolerance(azimuthError, azimuthTolerance)
-                            && MathUtils.withinTolerance(elevationError, elevationTolerance)
+                    var upClose = targetElevation.get().getDegrees() > 42;
+
+                    var modAzimuthTolerance = upClose
+                            ? upCloseAzimuthTolerance
+                            : azimuthTolerance;
+
+                    var modElevationTolerance = upClose
+                            ? upCloseElevationTolerance
+                            : elevationTolerance;
+
+                    var withinTolerance = MathUtils.withinTolerance(azimuthError, modAzimuthTolerance)
+                            && MathUtils.withinTolerance(elevationError, modElevationTolerance)
                             && MathUtils.withinTolerance(shooterError, shooterTolerance);
 
-                    var withinStillTolerance = MathUtils.withinTolerance(azimuthError, azimuthTolerance)
-                            && MathUtils.withinTolerance(elevationError, elevationTolerance)
+                    var withinStillTolerance = upClose
+                            && MathUtils.withinTolerance(azimuthError, stillAzimuthTolerance)
+                            && MathUtils.withinTolerance(elevationError, stillElevationTolerance)
                             && parameters.turretState.hasTurretAnglesBeenStill();
 
                     var goodToShoot = (withinTolerance || withinStillTolerance)
