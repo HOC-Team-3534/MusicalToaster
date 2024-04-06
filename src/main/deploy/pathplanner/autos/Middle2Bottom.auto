@@ -22,12 +22,6 @@
           "data": {
             "pathName": "GrabWingBottomFromMiddle"
           }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "GrabWingTopFromMiddle"
-          }
         }
       ]
     }
