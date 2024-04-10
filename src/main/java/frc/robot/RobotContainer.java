@@ -98,6 +98,10 @@ public class RobotContainer {
 			.withTargetAzimuthFunction((turretState) -> Optional.of(turretState.getCurrentAzimuth()))
 			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(5.0)));
 
+	private final static ControlTurret aimForOverTheStage = new ControlTurret()
+			.withTargetAzimuthFunction((turretState) -> Optional.of(turretState.getCurrentAzimuth()))
+			.withTargetElevationFunction(turretState -> Optional.of(Rotation2d.fromDegrees(35.0)));
+
 	private final static ControlTurret aimSubwoofer = new ControlTurret()
 			.withTargetAzimuthFunction((turretState) -> Optional.of(new Rotation2d()))
 			.withTargetElevationFunction((turretState) -> {
@@ -137,6 +141,7 @@ public class RobotContainer {
 	private final static ControlShooter shooterSteal = new ControlShooter().withVelocity(15);
 	private final static ControlShooter shooterExtake = new ControlShooter().withVelocity(15);
 	private final static ControlShooter shootFlatShot = new ControlShooter().withVelocity(80);
+	private final static ControlShooter shootOverTheStage = new ControlShooter().withVelocity(80.0);
 
 	private static SendableChooserWithChangeDetector<Autos.AutoNotes>[] noteHiearchyChoosers = new SendableChooserWithChangeDetector[5];
 	private static SendableChooserWithChangeDetector<ShooterType>[] shootOrStealChoosers = new SendableChooserWithChangeDetector[5];
@@ -296,6 +301,7 @@ public class RobotContainer {
 		TGR.ShootSpeaker.tgr().whileTrue(getShootCommand(() -> ShooterType.Speaker));
 		TGR.PrepareShootForSubwoofer.tgr().whileTrue(getShootCommand(() -> ShooterType.Subwoofer));
 		TGR.ShootFlatShot.tgr().whileTrue(getShootCommand(() -> ShooterType.FlatShot));
+		TGR.ShootOverTheStage.tgr().whileTrue(getShootCommand(() -> ShooterType.ShootOverStage));
 
 		TGR.ReloadNote.tgr().whileTrue(getShootCommand(() -> ShooterType.ReloadNote));
 
@@ -349,7 +355,8 @@ public class RobotContainer {
 		ReloadNote(reloadNote, shooterOff),
 		ExtakeFromTurret(extakeTurret, shooterExtake),
 		BumpNoteForward(bumpNoteForward, shooterOff),
-		FlatShot(aimForFlatShot, shootFlatShot);
+		FlatShot(aimForFlatShot, shootFlatShot),
+		ShootOverStage(aimForOverTheStage, shootOverTheStage);
 
 		TurretRequest turretRequest;
 		ShooterRequest shooterRequest;

@@ -47,6 +47,7 @@ public class ControllerInputs {
         AmpLights(operatorController.y(), false),
         RollNoteFurtherIntoTurret(operatorController.a(), true),
         ShootFlatShot(operatorController.leftTrigger(0.15), true),
+        ShootOverTheStage(operatorController.leftBumper(),true),
 
         ResetNoteinRobot(driverController.back(), false),
         // // Below are debugging actions
